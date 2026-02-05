@@ -193,16 +193,6 @@ function App() {
     );
   };
 
-  // Auth Pages
-  const AuthLayout = () => (
-    <div className="min-h-screen bg-background">
-      <Routes>
-        <Route path="login" element={<LoginForm onLogin={handleLogin} />} />
-        <Route path="forgot-password" element={<ForgotPasswordForm />} />
-      </Routes>
-    </div>
-  );
-
   return (
     <ThemeProvider>
       <Routes>

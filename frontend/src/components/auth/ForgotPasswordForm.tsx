@@ -77,7 +77,7 @@ export function ForgotPasswordForm() {
                 <span className="bg-gradient-to-r from-ko-500 to-ko-600 bg-clip-text text-transparent">{mobile}</span>
               </p>
               <Button
-                onClick={() => onNavigate('login')}
+                onClick={() => navigate('login')}
                 variant="outline"
                 className="border-border text-foreground hover:bg-muted"
               >
