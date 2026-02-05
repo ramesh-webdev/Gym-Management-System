@@ -15,7 +15,6 @@ export interface Member extends User {
   membershipType: string;
   membershipExpiry: Date;
   joinDate: Date;
-  attendanceCount: number;
   payments: Payment[];
   workoutPlan?: WorkoutPlan;
   dietPlan?: DietPlan;
@@ -42,6 +41,18 @@ export interface MembershipPlan {
   isActive: boolean;
 }
 
+// Product Types
+export interface Product {
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+  category: 'supplements' | 'gear' | 'clothing' | 'other';
+  image: string;
+  stock: number;
+  status: 'active' | 'inactive';
+}
+
 // Payment Types
 export interface Payment {
   id: string;
@@ -55,15 +66,7 @@ export interface Payment {
   invoiceNumber: string;
 }
 
-// Attendance Types
-export interface Attendance {
-  id: string;
-  memberId: string;
-  memberName: string;
-  checkIn: Date;
-  checkOut?: Date;
-  date: Date;
-}
+
 
 // Schedule Types
 export interface ScheduleSlot {
@@ -128,7 +131,7 @@ export interface Notification {
   userId: string;
   title: string;
   message: string;
-  type: 'info' | 'success' | 'warning' | 'error';
+  type: 'info' | 'success' | 'warning' | 'error' | 'payment';
   isRead: boolean;
   createdAt: Date;
 }
@@ -141,7 +144,6 @@ export interface DashboardStats {
   totalRevenue: number;
   monthlyRevenue: number;
   pendingPayments: number;
-  todayAttendance: number;
   expiringMemberships: number;
 }
 
@@ -149,7 +151,7 @@ export interface DashboardStats {
 export interface Report {
   id: string;
   name: string;
-  type: 'revenue' | 'attendance' | 'members' | 'trainers';
+  type: 'revenue' | 'members' | 'trainers';
   dateRange: {
     start: Date;
     end: Date;

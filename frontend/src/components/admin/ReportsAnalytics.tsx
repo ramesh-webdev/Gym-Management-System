@@ -5,12 +5,9 @@ import {
   TrendingUp,
   Users,
   DollarSign,
-  Activity,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
-  BarChart,
-  Bar,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -38,16 +35,7 @@ const revenueByPlanData = [
   { name: 'Elite', value: 20, color: '#8b5cf6' },
 ];
 
-const attendanceByHourData = [
-  { hour: '6AM', count: 25 },
-  { hour: '8AM', count: 65 },
-  { hour: '10AM', count: 45 },
-  { hour: '12PM', count: 35 },
-  { hour: '2PM', count: 30 },
-  { hour: '4PM', count: 55 },
-  { hour: '6PM', count: 85 },
-  { hour: '8PM', count: 60 },
-];
+
 
 const trainerPerformanceData = [
   { name: 'Marcus', clients: 45, rating: 4.9 },
@@ -89,7 +77,6 @@ export function ReportsAnalytics() {
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {[
           { label: 'Total Members', value: '1,247', change: '+12%', icon: Users, color: 'bg-blue-500/20 text-blue-500' },
-          { label: 'Avg. Attendance', value: '87/day', change: '+8%', icon: Activity, color: 'bg-purple-500/20 text-purple-500' },
           { label: 'Revenue Growth', value: '+23%', change: '+5%', icon: TrendingUp, color: 'bg-lime-500/20 text-lime-500' },
           { label: 'Avg. Member Value', value: '$487', change: '+15%', icon: DollarSign, color: 'bg-green-500/20 text-green-500' },
         ].map((stat, index) => (
@@ -119,8 +106,8 @@ export function ReportsAnalytics() {
               <AreaChart data={memberGrowthData}>
                 <defs>
                   <linearGradient id="colorMembers" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#a3ff00" stopOpacity={0.3}/>
-                    <stop offset="95%" stopColor="#a3ff00" stopOpacity={0}/>
+                    <stop offset="5%" stopColor="#a3ff00" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#a3ff00" stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
@@ -189,29 +176,7 @@ export function ReportsAnalytics() {
 
       {/* Charts Row 2 */}
       <div className="grid lg:grid-cols-2 gap-6">
-        {/* Attendance by Hour */}
-        <div className="p-6 rounded-xl bg-card/50 border border-border">
-          <h3 className="font-display text-lg font-bold text-foreground mb-4">Peak Hours</h3>
-          <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={attendanceByHourData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                <XAxis dataKey="hour" stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: 'hsl(var(--card))',
-                    border: '1px solid hsl(var(--border))',
-                    borderRadius: '8px',
-                  }}
-                  labelStyle={{ color: 'hsl(var(--foreground))' }}
-                  itemStyle={{ color: '#a3ff00' }}
-                />
-                <Bar dataKey="count" fill="#a3ff00" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
+
 
         {/* Trainer Performance */}
         <div className="p-6 rounded-xl bg-card/50 border border-border">
@@ -250,7 +215,6 @@ export function ReportsAnalytics() {
           {[
             { name: 'Member List', description: 'Complete member directory', icon: Users },
             { name: 'Payment Summary', description: 'Revenue breakdown', icon: DollarSign },
-            { name: 'Attendance Report', description: 'Daily check-in logs', icon: Activity },
             { name: 'Trainer Schedule', description: 'Class and session times', icon: Calendar },
           ].map((report, index) => (
             <button

@@ -10,18 +10,46 @@ module.exports = {
         ring: "hsl(var(--ring))",
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
+        // KO Fitness Brand Colors
+        ko: {
+          DEFAULT: "#FF6B00", // Primary Orange
+          50: "#fff4ed",
+          100: "#ffe4d4",
+          200: "#ffc5a8",
+          300: "#ff9d71",
+          400: "#ff6b00", // Bright Orange
+          500: "#FF6B00", // Primary Orange
+          600: "#E03B00", // Deep Reddish-Orange
+          700: "#b82e00",
+          800: "#952500",
+          900: "#7a1f00",
+        },
+        koBlue: {
+          DEFAULT: "#004F8C", // Primary Blue
+          50: "#e6f2f9",
+          100: "#b3d6ed",
+          200: "#80bae1",
+          300: "#4d9ed5",
+          400: "#1a82c9",
+          500: "#004F8C", // Primary Blue
+          600: "#003f70",
+          700: "#002f54",
+          800: "#001f38",
+          900: "#000f1c",
+        },
+        // Keep lime for backward compatibility, but map to ko colors
         lime: {
-          DEFAULT: "#a3ff00",
-          50: "#f4ffe6",
-          100: "#e5ffb3",
-          200: "#d4ff80",
-          300: "#c3ff4d",
-          400: "#b3ff1a",
-          500: "#a3ff00",
-          600: "#82cc00",
-          700: "#629900",
-          800: "#416600",
-          900: "#213300",
+          DEFAULT: "#FF6B00",
+          50: "#fff4ed",
+          100: "#ffe4d4",
+          200: "#ffc5a8",
+          300: "#ff9d71",
+          400: "#ff6b00",
+          500: "#FF6B00",
+          600: "#E03B00",
+          700: "#b82e00",
+          800: "#952500",
+          900: "#7a1f00",
         },
         primary: {
           DEFAULT: "hsl(var(--primary))",
@@ -76,8 +104,8 @@ module.exports = {
       },
       boxShadow: {
         xs: "0 1px 2px 0 rgb(0 0 0 / 0.05)",
-        glow: "0 0 20px rgba(163, 255, 0, 0.3)",
-        "glow-lg": "0 0 40px rgba(163, 255, 0, 0.4)",
+        glow: "0 0 20px rgba(255, 107, 0, 0.3)",
+        "glow-lg": "0 0 40px rgba(255, 107, 0, 0.4)",
       },
       keyframes: {
         "accordion-down": {

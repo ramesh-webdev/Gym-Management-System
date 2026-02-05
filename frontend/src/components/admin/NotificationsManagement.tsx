@@ -7,6 +7,7 @@ import {
   AlertTriangle,
   Info,
   Send,
+  Plus,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,12 +19,27 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { mockNotifications } from '@/data/mockData';
+import type { Notification } from '@/types';
 
 export function NotificationsManagement() {
   const [notifications, setNotifications] = useState(mockNotifications);
   const [filter, setFilter] = useState<'all' | 'unread' | 'read'>('all');
   const [isComposeOpen, setIsComposeOpen] = useState(false);
+  
+  // Form state
+  const [notificationType, setNotificationType] = useState<string>('info');
+  const [recipients, setRecipients] = useState<string>('all');
+  const [title, setTitle] = useState<string>('');
+  const [message, setMessage] = useState<string>('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const filteredNotifications = notifications.filter((n) => {
     if (filter === 'unread') return !n.isRead;
@@ -45,16 +61,50 @@ export function NotificationsManagement() {
     setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
   };
 
+  const handleSendNotification = async () => {
+    if (!title.trim() || !message.trim()) {
+      return;
+    }
+
+    setIsSubmitting(true);
+    
+    // Simulate API call
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
+    // Create new notification
+    const newNotification: Notification = {
+      id: `notif-${Date.now()}`,
+      userId: 'all',
+      title: title.trim(),
+      message: message.trim(),
+      type: notificationType as 'info' | 'success' | 'warning' | 'error',
+      isRead: false,
+      createdAt: new Date(),
+    };
+
+    setNotifications((prev) => [newNotification, ...prev]);
+    
+    // Reset form
+    setTitle('');
+    setMessage('');
+    setNotificationType('info');
+    setRecipients('all');
+    setIsComposeOpen(false);
+    setIsSubmitting(false);
+  };
+
   const getIcon = (type: string) => {
     switch (type) {
       case 'success':
-        return <Check className="w-5 h-5 text-lime-500" />;
+        return <Check className="w-5 h-5 text-ko-500" />;
       case 'warning':
         return <AlertTriangle className="w-5 h-5 text-yellow-500" />;
       case 'error':
         return <Trash2 className="w-5 h-5 text-red-500" />;
+      case 'payment':
+        return <Info className="w-5 h-5 text-koBlue-500" />;
       default:
-        return <Info className="w-5 h-5 text-blue-500" />;
+        return <Info className="w-5 h-5 text-koBlue-500" />;
     }
   };
 
@@ -79,52 +129,101 @@ export function NotificationsManagement() {
           </Button>
           <Dialog open={isComposeOpen} onOpenChange={setIsComposeOpen}>
             <DialogTrigger asChild>
-              <Button className="bg-lime-500 text-primary-foreground hover:bg-lime-400">
-                <Send className="w-4 h-4 mr-2" />
-                Send Notification
+              <Button className="bg-gradient-to-r from-ko-500 to-ko-600 text-primary-foreground hover:from-ko-600 hover:to-ko-700">
+                <Plus className="w-4 h-4 mr-2" />
+                Create Notification
               </Button>
             </DialogTrigger>
             <DialogContent className="bg-card border-border text-foreground max-w-lg">
               <DialogHeader>
-                <DialogTitle className="font-display text-2xl">Send Notification</DialogTitle>
+                <DialogTitle className="font-display text-2xl flex items-center gap-2">
+                  <Plus className="w-5 h-5" />
+                  Create Notification
+                </DialogTitle>
               </DialogHeader>
-              <div className="space-y-4 pt-4">
+              <div className="space-y-5 pt-4">
+                {/* Notification Type */}
                 <div>
-                  <label className="text-sm text-muted-foreground mb-2 block">Recipients</label>
-                  <select className="w-full h-10 px-3 rounded-md bg-muted/50 border border-border text-foreground">
-                    <option>All Members</option>
-                    <option>Active Members</option>
-                    <option>Expired Members</option>
-                    <option>Specific Member</option>
-                  </select>
+                  <label className="text-sm font-medium text-foreground mb-2 block">
+                    Notification Type
+                  </label>
+                  <Select value={notificationType} onValueChange={setNotificationType}>
+                    <SelectTrigger className="w-full h-10 bg-muted/50 border-border text-foreground">
+                      <SelectValue placeholder="Select type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="info">Info</SelectItem>
+                      <SelectItem value="success">Success</SelectItem>
+                      <SelectItem value="warning">Warning</SelectItem>
+                      <SelectItem value="error">Error</SelectItem>
+                      <SelectItem value="payment">Payment</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
+
+                {/* Recipients */}
                 <div>
-                  <label className="text-sm text-muted-foreground mb-2 block">Subject</label>
-                  <Input className="bg-muted/50 border-border text-foreground" placeholder="Notification subject..." />
+                  <label className="text-sm font-medium text-foreground mb-2 block">
+                    Recipients
+                  </label>
+                  <Select value={recipients} onValueChange={setRecipients}>
+                    <SelectTrigger className="w-full h-10 bg-muted/50 border-border text-foreground">
+                      <SelectValue placeholder="Select recipients" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Members</SelectItem>
+                      <SelectItem value="active">Active Members</SelectItem>
+                      <SelectItem value="expired">Expired Members</SelectItem>
+                      <SelectItem value="specific">Specific Member</SelectItem>
+                      <SelectItem value="trainers">All Trainers</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
+
+                {/* Title */}
                 <div>
-                  <label className="text-sm text-muted-foreground mb-2 block">Message</label>
-                  <Textarea
-                    className="bg-muted/50 border-border text-foreground resize-none"
-                    rows={4}
-                    placeholder="Type your message..."
+                  <label className="text-sm font-medium text-foreground mb-2 block">
+                    Title
+                  </label>
+                  <Input
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    className="bg-muted/50 border-border text-foreground placeholder:text-muted-foreground"
+                    placeholder="Notification title"
                   />
                 </div>
+
+                {/* Message */}
                 <div>
-                  <label className="text-sm text-muted-foreground mb-2 block">Priority</label>
-                  <div className="flex gap-3">
-                    {['Low', 'Normal', 'High'].map((priority) => (
-                      <button
-                        key={priority}
-                        className="px-4 py-2 rounded-lg bg-muted/50 border border-border text-muted-foreground hover:border-lime-500/50 hover:text-foreground transition-colors"
-                      >
-                        {priority}
-                      </button>
-                    ))}
-                  </div>
+                  <label className="text-sm font-medium text-foreground mb-2 block">
+                    Message
+                  </label>
+                  <Textarea
+                    value={message}
+                    onChange={(e) => setMessage(e.target.value)}
+                    className="bg-muted/50 border-border text-foreground placeholder:text-muted-foreground resize-none"
+                    rows={4}
+                    placeholder="Type your message here..."
+                  />
                 </div>
-                <Button className="w-full bg-lime-500 text-primary-foreground hover:bg-lime-400">
-                  Send Notification
+
+                {/* Send Button */}
+                <Button
+                  onClick={handleSendNotification}
+                  disabled={!title.trim() || !message.trim() || isSubmitting}
+                  className="w-full bg-gradient-to-r from-koBlue-500 to-koBlue-600 text-primary-foreground hover:from-koBlue-600 hover:to-koBlue-700 font-semibold h-11 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isSubmitting ? (
+                    <>
+                      <span className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin mr-2" />
+                      Sending...
+                    </>
+                  ) : (
+                    <>
+                      <Send className="w-4 h-4 mr-2" />
+                      Send Notification
+                    </>
+                  )}
                 </Button>
               </div>
             </DialogContent>
@@ -143,15 +242,15 @@ export function NotificationsManagement() {
             key={index}
             className={`p-4 rounded-xl border ${
               stat.highlight
-                ? 'bg-lime-500/5 border-lime-500/20'
+                ? 'bg-ko-500/5 border-ko-500/20'
                 : 'bg-card/50 border-border'
             }`}
           >
             <div className="flex items-center gap-3 mb-2">
-              <stat.icon className={`w-5 h-5 ${stat.highlight ? 'text-lime-500' : 'text-muted-foreground'}`} />
+              <stat.icon className={`w-5 h-5 ${stat.highlight ? 'text-ko-500' : 'text-muted-foreground'}`} />
               <span className="text-muted-foreground text-sm">{stat.label}</span>
             </div>
-            <p className={`font-display text-3xl font-bold ${stat.highlight ? 'text-lime-500' : 'text-foreground'}`}>
+            <p className={`font-display text-3xl font-bold ${stat.highlight ? 'bg-gradient-to-r from-ko-500 to-ko-600 bg-clip-text text-transparent' : 'text-foreground'}`}>
               {stat.value}
             </p>
           </div>
@@ -166,13 +265,13 @@ export function NotificationsManagement() {
             onClick={() => setFilter(f)}
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
               filter === f
-                ? 'bg-lime-500 text-primary-foreground'
+                ? 'bg-gradient-to-r from-ko-500 to-ko-600 text-primary-foreground'
                 : 'bg-muted/50 text-muted-foreground hover:bg-muted'
             }`}
           >
             {f.charAt(0).toUpperCase() + f.slice(1)}
             {f === 'unread' && unreadCount > 0 && (
-              <span className="ml-2 px-2 py-0.5 rounded-full bg-muted text-lime-500 text-xs">
+              <span className="ml-2 px-2 py-0.5 rounded-full bg-ko-500/10 text-ko-500 text-xs font-semibold">
                 {unreadCount}
               </span>
             )}
@@ -188,7 +287,7 @@ export function NotificationsManagement() {
             className={`p-4 rounded-xl border transition-colors ${
               notification.isRead
                 ? 'bg-card/30 border-border'
-                : 'bg-lime-500/5 border-lime-500/20'
+                : 'bg-ko-500/5 border-ko-500/20'
             }`}
           >
             <div className="flex items-start gap-4">
@@ -212,7 +311,7 @@ export function NotificationsManagement() {
                         variant="ghost"
                         size="icon"
                         onClick={() => markAsRead(notification.id)}
-                        className="text-muted-foreground hover:text-lime-500 hover:bg-lime-500/10"
+                        className="text-muted-foreground hover:text-ko-500 hover:bg-ko-500/10"
                       >
                         <Check className="w-4 h-4" />
                       </Button>

@@ -13,28 +13,28 @@
     --card-foreground: 0 0% 10%;
     --popover: 0 0% 100%;
     --popover-foreground: 0 0% 10%;
-    --primary: 78 100% 50%;
-    --primary-foreground: 0 0% 0%;
+    --primary: 20 100% 50%; /* KO Fitness Orange #FF6B00 */
+    --primary-foreground: 0 0% 100%;
     --secondary: 0 0% 96%;
     --secondary-foreground: 0 0% 10%;
     --muted: 0 0% 92%;
     --muted-foreground: 0 0% 45%;
-    --accent: 78 100% 50%;
-    --accent-foreground: 0 0% 0%;
+    --accent: 20 100% 50%; /* KO Fitness Orange */
+    --accent-foreground: 0 0% 100%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
     --border: 0 0% 88%;
     --input: 0 0% 88%;
-    --ring: 78 100% 50%;
+    --ring: 20 100% 50%; /* KO Fitness Orange */
     --radius: 0.625rem;
     --sidebar-background: 0 0% 98%;
     --sidebar-foreground: 0 0% 20%;
-    --sidebar-primary: 78 100% 50%;
-    --sidebar-primary-foreground: 0 0% 0%;
+    --sidebar-primary: 20 100% 50%; /* KO Fitness Orange */
+    --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 0 0% 94%;
     --sidebar-accent-foreground: 0 0% 10%;
     --sidebar-border: 0 0% 88%;
-    --sidebar-ring: 78 100% 50%;
+    --sidebar-ring: 20 100% 50%; /* KO Fitness Orange */
   }
 
   .dark {
@@ -45,27 +45,27 @@
     --card-foreground: 0 0% 98%;
     --popover: 0 0% 8%;
     --popover-foreground: 0 0% 98%;
-    --primary: 78 100% 50%;
-    --primary-foreground: 0 0% 0%;
+    --primary: 20 100% 50%; /* KO Fitness Orange #FF6B00 */
+    --primary-foreground: 0 0% 100%;
     --secondary: 0 0% 15%;
     --secondary-foreground: 0 0% 98%;
     --muted: 0 0% 20%;
     --muted-foreground: 0 0% 60%;
-    --accent: 78 100% 50%;
-    --accent-foreground: 0 0% 0%;
+    --accent: 20 100% 50%; /* KO Fitness Orange */
+    --accent-foreground: 0 0% 100%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
     --border: 0 0% 20%;
     --input: 0 0% 20%;
-    --ring: 78 100% 50%;
+    --ring: 20 100% 50%; /* KO Fitness Orange */
     --sidebar-background: 0 0% 5%;
     --sidebar-foreground: 0 0% 90%;
-    --sidebar-primary: 78 100% 50%;
-    --sidebar-primary-foreground: 0 0% 0%;
+    --sidebar-primary: 20 100% 50%; /* KO Fitness Orange */
+    --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 0 0% 15%;
     --sidebar-accent-foreground: 0 0% 98%;
     --sidebar-border: 0 0% 20%;
-    --sidebar-ring: 78 100% 50%;
+    --sidebar-ring: 20 100% 50%; /* KO Fitness Orange */
   }
 }
 
@@ -97,13 +97,13 @@
     font-family: 'Shadows Into Light', cursive;
   }
   .text-gradient {
-    @apply bg-clip-text text-transparent bg-gradient-to-r from-lime-500 to-lime-600;
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-ko-500 to-ko-600;
   }
   .glow-primary {
-    box-shadow: 0 0 20px rgba(163, 255, 0, 0.3), 0 0 40px rgba(163, 255, 0, 0.1);
+    box-shadow: 0 0 20px rgba(255, 107, 0, 0.3), 0 0 40px rgba(255, 107, 0, 0.1);
   }
   .glow-text {
-    text-shadow: 0 0 20px rgba(163, 255, 0, 0.5);
+    text-shadow: 0 0 20px rgba(255, 107, 0, 0.5);
   }
 }
 
@@ -120,7 +120,7 @@
   border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #a3ff00;
+  background: #FF6B00;
 }
 
 /* Animation keyframes */
@@ -129,8 +129,8 @@
   50% { transform: translateY(-10px); }
 }
 @keyframes pulse-glow {
-  0%, 100% { box-shadow: 0 0 20px rgba(163, 255, 0, 0.3); }
-  50% { box-shadow: 0 0 40px rgba(163, 255, 0, 0.6); }
+  0%, 100% { box-shadow: 0 0 20px rgba(255, 107, 0, 0.3); }
+  50% { box-shadow: 0 0 40px rgba(255, 107, 0, 0.6); }
 }
 @keyframes slide-up {
   from { opacity: 0; transform: translateY(30px); }

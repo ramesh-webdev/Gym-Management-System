@@ -17,10 +17,69 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { mockMembershipPlans } from '@/data/mockData';
+import type { MembershipPlan } from '@/types';
 
 export function MembershipPlans() {
+  const [plans, setPlans] = useState<MembershipPlan[]>(mockMembershipPlans);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-  const [plans] = useState(mockMembershipPlans);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [currentPlan, setCurrentPlan] = useState<Partial<MembershipPlan>>({});
+
+  const handleAddPlan = (e: React.FormEvent) => {
+    e.preventDefault();
+    const formData = new FormData(e.target as HTMLFormElement);
+    const newPlan: MembershipPlan = {
+      id: Date.now().toString(),
+      name: formData.get('name') as string,
+      description: formData.get('description') as string,
+      price: Number(formData.get('price')),
+      duration: Number(formData.get('duration')),
+      features: (formData.get('features') as string).split(',').map(f => f.trim()).filter(Boolean),
+      isActive: true, // Default to active
+      isPopular: false,
+    };
+
+    setPlans([...plans, newPlan]);
+    setIsAddDialogOpen(false);
+  };
+
+  const handleEditClick = (plan: MembershipPlan) => {
+    setCurrentPlan(plan);
+    setIsEditDialogOpen(true);
+  };
+
+  const handleUpdatePlan = (e: React.FormEvent) => {
+    e.preventDefault();
+    const formData = new FormData(e.target as HTMLFormElement);
+
+    setPlans(plans.map(p =>
+      p.id === currentPlan.id
+        ? {
+          ...p,
+          name: formData.get('name') as string,
+          description: formData.get('description') as string,
+          price: Number(formData.get('price')),
+          duration: Number(formData.get('duration')),
+          features: (formData.get('features') as string).split(',').map(f => f.trim()).filter(Boolean),
+        }
+        : p
+    ));
+    setIsEditDialogOpen(false);
+  };
+
+  const handleDeletePlan = (id: string) => {
+    if (confirm('Are you sure you want to delete this plan?')) {
+      setPlans(plans.filter(p => p.id !== id));
+    }
+  };
+
+  const getDurationLabel = (duration: number) => {
+    if (duration === 1) return '/month';
+    if (duration === 3) return '/quarter';
+    if (duration === 6) return '/half-year';
+    if (duration === 12) return '/year';
+    return `/${duration}mo`;
+  };
 
   return (
     <div className="p-6 space-y-6">
@@ -30,6 +89,8 @@ export function MembershipPlans() {
           <h1 className="font-display text-3xl font-bold text-foreground">Membership Plans</h1>
           <p className="text-muted-foreground">Manage gym membership plans and pricing</p>
         </div>
+
+        {/* Add Plan Dialog */}
         <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
           <DialogTrigger asChild>
             <Button className="bg-lime-500 text-primary-foreground hover:bg-lime-400">
@@ -41,33 +102,69 @@ export function MembershipPlans() {
             <DialogHeader>
               <DialogTitle className="font-display text-2xl">Add New Plan</DialogTitle>
             </DialogHeader>
-            <div className="space-y-4 pt-4">
+            <form onSubmit={handleAddPlan} className="space-y-4 pt-4">
               <div>
                 <label className="text-sm text-muted-foreground mb-2 block">Plan Name</label>
-                <Input className="bg-muted/50 border-border text-foreground" placeholder="e.g. Premium" />
+                <Input name="name" required className="bg-muted/50 border-border text-foreground" placeholder="e.g. Premium" />
               </div>
               <div>
                 <label className="text-sm text-muted-foreground mb-2 block">Description</label>
-                <Input className="bg-muted/50 border-border text-foreground" placeholder="Brief description..." />
+                <Input name="description" required className="bg-muted/50 border-border text-foreground" placeholder="Brief description..." />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="text-sm text-muted-foreground mb-2 block">Price ($)</label>
-                  <Input type="number" className="bg-muted/50 border-border text-foreground" placeholder="49" />
+                  <label className="text-sm text-muted-foreground mb-2 block">Price (₹)</label>
+                  <Input name="price" type="number" required className="bg-muted/50 border-border text-foreground" placeholder="1000" />
                 </div>
                 <div>
                   <label className="text-sm text-muted-foreground mb-2 block">Duration (months)</label>
-                  <Input type="number" className="bg-muted/50 border-border text-foreground" placeholder="1" />
+                  <Input name="duration" type="number" required className="bg-muted/50 border-border text-foreground" placeholder="1" />
                 </div>
               </div>
               <div>
                 <label className="text-sm text-muted-foreground mb-2 block">Features (comma separated)</label>
-                <Input className="bg-muted/50 border-border text-foreground" placeholder="Gym access, Classes, ..." />
+                <Input name="features" required className="bg-muted/50 border-border text-foreground" placeholder="Gym access, Classes, ..." />
               </div>
-              <Button className="w-full bg-lime-500 text-primary-foreground hover:bg-lime-400">
+              <Button type="submit" className="w-full bg-lime-500 text-primary-foreground hover:bg-lime-400">
                 Create Plan
               </Button>
-            </div>
+            </form>
+          </DialogContent>
+        </Dialog>
+
+        {/* Edit Plan Dialog */}
+        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+          <DialogContent className="bg-card border-border text-foreground max-w-lg">
+            <DialogHeader>
+              <DialogTitle className="font-display text-2xl">Edit Plan</DialogTitle>
+            </DialogHeader>
+            <form onSubmit={handleUpdatePlan} className="space-y-4 pt-4">
+              <div>
+                <label className="text-sm text-muted-foreground mb-2 block">Plan Name</label>
+                <Input name="name" defaultValue={currentPlan.name} required className="bg-muted/50 border-border text-foreground" />
+              </div>
+              <div>
+                <label className="text-sm text-muted-foreground mb-2 block">Description</label>
+                <Input name="description" defaultValue={currentPlan.description} required className="bg-muted/50 border-border text-foreground" />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm text-muted-foreground mb-2 block">Price (₹)</label>
+                  <Input name="price" type="number" defaultValue={currentPlan.price} required className="bg-muted/50 border-border text-foreground" />
+                </div>
+                <div>
+                  <label className="text-sm text-muted-foreground mb-2 block">Duration (months)</label>
+                  <Input name="duration" type="number" defaultValue={currentPlan.duration} required className="bg-muted/50 border-border text-foreground" />
+                </div>
+              </div>
+              <div>
+                <label className="text-sm text-muted-foreground mb-2 block">Features (comma separated)</label>
+                <Input name="features" defaultValue={currentPlan.features?.join(', ')} required className="bg-muted/50 border-border text-foreground" />
+              </div>
+              <Button type="submit" className="w-full bg-lime-500 text-primary-foreground hover:bg-lime-400">
+                Update Plan
+              </Button>
+            </form>
           </DialogContent>
         </Dialog>
       </div>
@@ -77,11 +174,10 @@ export function MembershipPlans() {
         {plans.map((plan) => (
           <div
             key={plan.id}
-            className={`relative p-6 rounded-xl border transition-colors ${
-              plan.isPopular
-                ? 'bg-lime-500/5 border-lime-500/30'
-                : 'bg-card/50 border-border hover:border-border'
-            }`}
+            className={`relative p-6 rounded-xl border transition-colors ${plan.isPopular
+              ? 'bg-lime-500/5 border-lime-500/30'
+              : 'bg-card/50 border-border hover:border-border'
+              }`}
           >
             {/* Popular Badge */}
             {plan.isPopular && (
@@ -102,11 +198,17 @@ export function MembershipPlans() {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="bg-card border-border">
-                  <DropdownMenuItem className="text-foreground hover:bg-muted/50 cursor-pointer">
+                  <DropdownMenuItem
+                    onClick={() => handleEditClick(plan)}
+                    className="text-foreground hover:bg-muted/50 cursor-pointer"
+                  >
                     <Edit className="w-4 h-4 mr-2" />
                     Edit
                   </DropdownMenuItem>
-                  <DropdownMenuItem className="text-red-500 hover:bg-red-500/10 cursor-pointer">
+                  <DropdownMenuItem
+                    onClick={() => handleDeletePlan(plan.id)}
+                    className="text-red-500 hover:bg-red-500/10 cursor-pointer"
+                  >
                     <Trash2 className="w-4 h-4 mr-2" />
                     Delete
                   </DropdownMenuItem>
@@ -117,15 +219,15 @@ export function MembershipPlans() {
             {/* Plan Header */}
             <div className="mb-6">
               <h3 className="font-display text-2xl font-bold text-foreground mb-2">{plan.name}</h3>
-              <p className="text-muted-foreground text-sm">{plan.description}</p>
+              <p className="text-muted-foreground text-sm min-h-[40px]">{plan.description}</p>
             </div>
 
             {/* Price */}
             <div className="flex items-baseline gap-1 mb-6">
               <span className="font-display text-5xl font-bold text-lime-500">
-                ${plan.price}
+                ₹{plan.price}
               </span>
-              <span className="text-muted-foreground">/{plan.duration}mo</span>
+              <span className="text-muted-foreground">{getDurationLabel(plan.duration)}</span>
             </div>
 
             {/* Features */}

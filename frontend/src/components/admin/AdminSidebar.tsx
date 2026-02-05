@@ -1,18 +1,18 @@
 import { useState } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard,
   Users,
   UserCog,
   CreditCard,
-  Calendar,
   Receipt,
   BarChart3,
   Bell,
   Settings,
-  Dumbbell,
   ChevronLeft,
   ChevronRight,
   LogOut,
+  ShoppingBag,
   Menu,
   X,
 } from 'lucide-react';
@@ -21,23 +21,24 @@ import { ThemeToggle } from '@/components/ui/ThemeToggle';
 
 interface AdminSidebarProps {
   currentPage: string;
-  onNavigate: (page: string) => void;
   onLogout: () => void;
 }
 
 const menuItems = [
-  { id: 'admin-dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { id: 'admin-members', label: 'Members', icon: Users },
-  { id: 'admin-trainers', label: 'Trainers & Staff', icon: UserCog },
-  { id: 'admin-plans', label: 'Membership Plans', icon: CreditCard },
-  { id: 'admin-attendance', label: 'Attendance', icon: Calendar },
-  { id: 'admin-payments', label: 'Payments', icon: Receipt },
-  { id: 'admin-reports', label: 'Reports', icon: BarChart3 },
-  { id: 'admin-notifications', label: 'Notifications', icon: Bell },
-  { id: 'admin-settings', label: 'Settings', icon: Settings },
+  { id: 'admin-dashboard', label: 'Dashboard', icon: LayoutDashboard, path: '/admin/dashboard' },
+  { id: 'admin-members', label: 'Members', icon: Users, path: '/admin/members' },
+  { id: 'admin-trainers', label: 'Trainers & Staff', icon: UserCog, path: '/admin/trainers' },
+  { id: 'admin-plans', label: 'Membership Plans', icon: CreditCard, path: '/admin/plans' },
+  { id: 'admin-products', label: 'Products', icon: ShoppingBag, path: '/admin/products' },
+  { id: 'admin-payments', label: 'Payments', icon: Receipt, path: '/admin/payments' },
+  { id: 'admin-reports', label: 'Reports', icon: BarChart3, path: '/admin/reports' },
+  { id: 'admin-notifications', label: 'Notifications', icon: Bell, path: '/admin/notifications' },
+  { id: 'admin-settings', label: 'Settings', icon: Settings, path: '/admin/settings' },
 ];
 
-export function AdminSidebar({ currentPage, onNavigate, onLogout }: AdminSidebarProps) {
+export function AdminSidebar({ currentPage, onLogout }: AdminSidebarProps) {
+  const navigate = useNavigate();
+  const location = useLocation();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
 
@@ -68,18 +69,23 @@ export function AdminSidebar({ currentPage, onNavigate, onLogout }: AdminSidebar
         )}
       >
         {/* Logo */}
-        <div className="h-16 flex items-center justify-center border-b border-border">
+        <div className="h-16 flex items-center justify-center border-b border-border px-3">
           <button
-            onClick={() => onNavigate('admin-dashboard')}
-            className="flex items-center gap-3"
+            onClick={() => navigate('/admin/dashboard')}
+            className="flex items-center justify-center w-full"
           >
-            <div className="w-10 h-10 rounded-lg bg-lime-500 flex items-center justify-center flex-shrink-0">
-              <Dumbbell className="w-6 h-6 text-primary-foreground" />
-            </div>
-            {!isCollapsed && (
-              <span className="font-display text-xl font-bold text-foreground">
-                GYM<span className="text-lime-500">FLOW</span>
-              </span>
+            {isCollapsed ? (
+              <img
+                src="/favicon_logo.png"
+                alt="KO Fitness"
+                className="h-10 w-10 object-contain"
+              />
+            ) : (
+              <img
+                src="/Logo.png"
+                alt="KO Fitness Logo"
+                className="h-16 w-auto object-contain"
+              />
             )}
           </button>
         </div>
@@ -100,18 +106,18 @@ export function AdminSidebar({ currentPage, onNavigate, onLogout }: AdminSidebar
         <nav className="flex-1 py-6 px-3 overflow-y-auto">
           <ul className="space-y-1">
             {menuItems.map((item) => {
-              const isActive = currentPage === item.id;
+              const isActive = location.pathname === item.path;
               return (
                 <li key={item.id}>
                   <button
                     onClick={() => {
-                      onNavigate(item.id);
+                      navigate(item.path);
                       setIsMobileOpen(false);
                     }}
                     className={cn(
                       'w-full flex items-center gap-3 px-3 py-3 rounded-lg transition-all duration-200 group',
                       isActive
-                        ? 'bg-lime-500 text-primary-foreground'
+                        ? 'bg-gradient-to-r from-ko-500 to-ko-600 text-primary-foreground'
                         : 'text-muted-foreground hover:bg-muted hover:text-foreground'
                     )}
                   >

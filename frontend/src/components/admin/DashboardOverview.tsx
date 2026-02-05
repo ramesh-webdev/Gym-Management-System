@@ -2,7 +2,6 @@ import { useEffect, useRef } from 'react';
 import {
   Users,
   TrendingUp,
-  Calendar,
   DollarSign,
   AlertCircle,
   ArrowUpRight,
@@ -17,8 +16,6 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  BarChart,
-  Bar,
 } from 'recharts';
 import gsap from 'gsap';
 
@@ -32,15 +29,7 @@ const revenueData = [
   { month: 'Jul', revenue: 5230 },
 ];
 
-const attendanceData = [
-  { day: 'Mon', count: 85 },
-  { day: 'Tue', count: 92 },
-  { day: 'Wed', count: 78 },
-  { day: 'Thu', count: 88 },
-  { day: 'Fri', count: 95 },
-  { day: 'Sat', count: 110 },
-  { day: 'Sun', count: 65 },
-];
+
 
 export function DashboardOverview() {
   const cardsRef = useRef<HTMLDivElement>(null);
@@ -72,15 +61,7 @@ export function DashboardOverview() {
       change: '+8%',
       trend: 'up',
       icon: TrendingUp,
-      color: 'bg-lime-500/20 text-lime-500',
-    },
-    {
-      title: "Today's Attendance",
-      value: mockDashboardStats.todayAttendance.toString(),
-      change: '+15%',
-      trend: 'up',
-      icon: Calendar,
-      color: 'bg-purple-500/20 text-purple-500',
+      color: 'bg-ko-500/20 bg-gradient-to-r from-ko-500 to-ko-600 bg-clip-text text-transparent',
     },
     {
       title: 'Monthly Revenue',
@@ -119,9 +100,8 @@ export function DashboardOverview() {
               <div className={`w-12 h-12 rounded-lg ${stat.color} flex items-center justify-center`}>
                 <stat.icon className="w-6 h-6" />
               </div>
-              <div className={`flex items-center gap-1 text-sm ${
-                stat.trend === 'up' ? 'text-lime-500' : 'text-red-500'
-              }`}>
+              <div className={`flex items-center gap-1 text-sm ${stat.trend === 'up' ? 'bg-gradient-to-r from-ko-500 to-ko-600 bg-clip-text text-transparent' : 'text-red-500'
+                }`}>
                 {stat.trend === 'up' ? (
                   <ArrowUpRight className="w-4 h-4" />
                 ) : (
@@ -168,29 +148,7 @@ export function DashboardOverview() {
           </div>
         </div>
 
-        {/* Attendance Chart */}
-        <div className="p-6 rounded-xl bg-card/50 border border-border">
-          <h3 className="font-display text-xl font-bold text-foreground mb-6">Weekly Attendance</h3>
-          <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={attendanceData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                <XAxis dataKey="day" stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: 'hsl(var(--card))',
-                    border: '1px solid hsl(var(--border))',
-                    borderRadius: '8px',
-                  }}
-                  labelStyle={{ color: 'hsl(var(--foreground))' }}
-                  itemStyle={{ color: '#a3ff00' }}
-                />
-                <Bar dataKey="count" fill="#a3ff00" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
+
       </div>
 
       {/* Recent Activity */}
@@ -216,11 +174,10 @@ export function DashboardOverview() {
                   <p className="text-foreground font-medium">{member.name}</p>
                   <p className="text-muted-foreground text-sm">{member.membershipType} Plan</p>
                 </div>
-                <span className={`px-2 py-1 rounded-full text-xs ${
-                  member.status === 'active'
-                    ? 'bg-lime-500/20 text-lime-600 dark:text-lime-500'
-                    : 'bg-red-500/20 text-red-500'
-                }`}>
+                <span className={`px-2 py-1 rounded-full text-xs ${member.status === 'active'
+                  ? 'bg-ko-500/20 bg-gradient-to-r from-ko-500 to-ko-600 bg-clip-text text-transparent'
+                  : 'bg-red-500/20 text-red-500'
+                  }`}>
                   {member.status}
                 </span>
               </div>
@@ -249,13 +206,12 @@ export function DashboardOverview() {
                 </div>
                 <div className="text-right">
                   <p className="text-foreground font-medium">${payment.amount}</p>
-                  <span className={`text-xs ${
-                    payment.status === 'paid'
-                      ? 'text-lime-600 dark:text-lime-500'
-                      : payment.status === 'pending'
+                  <span className={`text-xs ${payment.status === 'paid'
+                    ? 'bg-gradient-to-r from-ko-500 to-ko-600 bg-clip-text text-transparent'
+                    : payment.status === 'pending'
                       ? 'text-yellow-500'
                       : 'text-red-500'
-                  }`}>
+                    }`}>
                     {payment.status}
                   </span>
                 </div>

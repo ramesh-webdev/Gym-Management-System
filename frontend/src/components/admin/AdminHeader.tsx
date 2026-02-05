@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Search, Bell, User, ChevronDown, LogOut, Settings } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -13,12 +14,12 @@ import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { mockNotifications } from '@/data/mockData';
 
 interface AdminHeaderProps {
-  onNavigate: (page: string) => void;
   onLogout: () => void;
   userName?: string;
 }
 
-export function AdminHeader({ onNavigate, onLogout, userName = 'Admin User' }: AdminHeaderProps) {
+export function AdminHeader({ onLogout, userName = 'Admin User' }: AdminHeaderProps) {
+  const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
   const unreadNotifications = mockNotifications.filter(n => !n.isRead).length;
 
@@ -33,7 +34,7 @@ export function AdminHeader({ onNavigate, onLogout, userName = 'Admin User' }: A
             placeholder="Search members, trainers, payments..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="bg-muted border-border text-foreground placeholder:text-muted-foreground focus:border-lime-500 pl-10 h-10"
+            className="bg-muted border-border text-foreground placeholder:text-muted-foreground focus:border-ko-500 pl-10 h-10"
           />
         </div>
       </div>
@@ -53,7 +54,7 @@ export function AdminHeader({ onNavigate, onLogout, userName = 'Admin User' }: A
             >
               <Bell className="w-5 h-5" />
               {unreadNotifications > 0 && (
-                <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-lime-500 text-primary-foreground text-xs font-bold flex items-center justify-center">
+                <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-gradient-to-br from-ko-500 to-ko-600 text-primary-foreground text-xs font-bold flex items-center justify-center">
                   {unreadNotifications}
                 </span>
               )}
@@ -68,12 +69,12 @@ export function AdminHeader({ onNavigate, onLogout, userName = 'Admin User' }: A
                 <div
                   key={notification.id}
                   className={`p-3 border-b border-border hover:bg-muted cursor-pointer ${
-                    !notification.isRead ? 'bg-lime-500/5' : ''
+                    !notification.isRead ? 'bg-ko-500/5' : ''
                   }`}
                 >
                   <div className="flex items-start gap-3">
                     <div className={`w-2 h-2 rounded-full mt-2 flex-shrink-0 ${
-                      notification.type === 'success' ? 'bg-lime-500' :
+                      notification.type === 'success' ? 'bg-gradient-to-r from-ko-500 to-ko-600' :
                       notification.type === 'warning' ? 'bg-yellow-500' :
                       notification.type === 'error' ? 'bg-red-500' :
                       'bg-blue-500'
@@ -93,8 +94,8 @@ export function AdminHeader({ onNavigate, onLogout, userName = 'Admin User' }: A
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => onNavigate('admin-notifications')}
-                className="w-full text-lime-600 dark:text-lime-500 hover:text-lime-500 hover:bg-lime-500/10"
+                onClick={() => navigate('/admin/notifications')}
+                className="w-full bg-gradient-to-r from-ko-500 to-ko-600 bg-clip-text text-transparent hover:from-ko-600 hover:to-ko-700 hover:bg-ko-500/10"
               >
                 View All Notifications
               </Button>
@@ -109,8 +110,8 @@ export function AdminHeader({ onNavigate, onLogout, userName = 'Admin User' }: A
               variant="ghost"
               className="flex items-center gap-3 text-foreground hover:bg-muted"
             >
-              <div className="w-8 h-8 rounded-full bg-lime-500/20 flex items-center justify-center">
-                <User className="w-4 h-4 text-lime-500" />
+              <div className="w-8 h-8 rounded-full bg-ko-500/20 flex items-center justify-center">
+                <User className="w-4 h-4 bg-gradient-to-r from-ko-500 to-ko-600 bg-clip-text text-transparent" />
               </div>
               <span className="hidden sm:inline text-sm font-medium">{userName}</span>
               <ChevronDown className="w-4 h-4 text-muted-foreground" />
@@ -118,14 +119,14 @@ export function AdminHeader({ onNavigate, onLogout, userName = 'Admin User' }: A
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-48 bg-card border-border">
             <DropdownMenuItem
-              onClick={() => onNavigate('admin-settings')}
+              onClick={() => navigate('/admin/settings')}
               className="text-foreground hover:bg-muted cursor-pointer"
             >
               <User className="w-4 h-4 mr-2" />
               Profile
             </DropdownMenuItem>
             <DropdownMenuItem
-              onClick={() => onNavigate('admin-settings')}
+              onClick={() => navigate('/admin/settings')}
               className="text-foreground hover:bg-muted cursor-pointer"
             >
               <Settings className="w-4 h-4 mr-2" />

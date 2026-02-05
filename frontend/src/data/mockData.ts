@@ -1,5 +1,5 @@
 import type {
-  User, Member, Trainer, MembershipPlan, Payment, Attendance,
+  User, Member, Trainer, MembershipPlan, Payment, Product,
   ScheduleSlot, WorkoutPlan, DietPlan, Notification, DashboardStats
 } from '@/types';
 
@@ -29,49 +29,129 @@ export const mockUsers: User[] = [
 export const mockMembershipPlans: MembershipPlan[] = [
   {
     id: '1',
-    name: 'Basic',
-    description: 'Perfect for beginners starting their fitness journey',
-    price: 29,
+    name: 'Monthly',
+    description: 'Flexible monthly commitment for beginners',
+    price: 1300,
     duration: 1,
     features: [
       'Access to gym equipment',
       'Locker room access',
       'Basic fitness assessment',
-      'Open gym hours only',
+      'Open gym hours',
     ],
     isActive: true,
   },
   {
     id: '2',
-    name: 'Pro',
-    description: 'Most popular choice for serious fitness enthusiasts',
-    price: 49,
-    duration: 1,
+    name: 'Quarterly',
+    description: 'Commit to 3 months and save',
+    price: 3400,
+    duration: 3,
     features: [
-      'All Basic features',
-      'Group fitness classes',
-      'Sauna & steam room',
-      '2 PT sessions/month',
-      'Nutrition consultation',
+      'All Monthly features',
+      '1 Free PT session',
+      'Diet consultation',
+      'Quarterly progress check',
+    ],
+    isActive: true,
+  },
+  {
+    id: '3',
+    name: 'Half Yearly',
+    description: '6 months of dedicated fitness',
+    price: 6300,
+    duration: 6,
+    features: [
+      'All Quarterly features',
+      '3 Free PT sessions',
+      'Advanced body composition analysis',
+      'Priority class booking',
     ],
     isPopular: true,
     isActive: true,
   },
   {
-    id: '3',
-    name: 'Elite',
-    description: 'Ultimate package for maximum results',
-    price: 79,
-    duration: 1,
+    id: '4',
+    name: 'Annually',
+    description: 'Best value for year-round fitness',
+    price: 9000,
+    duration: 12,
     features: [
-      'All Pro features',
-      'Unlimited PT sessions',
+      'All Half Yearly features',
+      '6 Free PT sessions',
       'Personal locker',
-      'Priority class booking',
-      'Recovery treatments',
-      'Guest passes (2/month)',
+      'Unlimited guest passes',
+      'Free merchandise pack',
     ],
     isActive: true,
+  },
+  {
+    id: '5',
+    name: 'Personal Training',
+    description: 'Dedicated 1-on-1 coaching',
+    price: 4000,
+    duration: 1,
+    features: [
+      'Customized workout plan',
+      'Nutritional guidance',
+      'Weekly progress tracking',
+      '24/7 Trainer support',
+    ],
+    isActive: true,
+  },
+];
+
+// Mock Products
+export const mockProducts: Product[] = [
+  {
+    id: 'prod1',
+    name: 'Whey Protein Isolate',
+    description: 'Premium whey protein isolate for muscle recovery. 25g protein per serving.',
+    price: 4500,
+    category: 'supplements',
+    image: 'https://images.unsplash.com/photo-1579722820308-d74e571900a9?auto=format&fit=crop&q=80&w=1000',
+    stock: 50,
+    status: 'active',
+  },
+  {
+    id: 'prod2',
+    name: 'Pre-Workout Energy',
+    description: 'High energy pre-workout formula for intense training sessions.',
+    price: 3200,
+    category: 'supplements',
+    image: 'https://images.unsplash.com/photo-1593095948071-474c5cc2989d?auto=format&fit=crop&q=80&w=1000',
+    stock: 35,
+    status: 'active',
+  },
+  {
+    id: 'prod3',
+    name: 'KO Fitness T-Shirt',
+    description: 'Breathable performance fabric t-shirt with KO Fitness logo.',
+    price: 1200,
+    category: 'clothing',
+    image: 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&q=80&w=1000',
+    stock: 100,
+    status: 'active',
+  },
+  {
+    id: 'prod4',
+    name: 'Lifting Straps',
+    description: 'Heavy duty lifting straps for deadlifts and pull exercises.',
+    price: 800,
+    category: 'gear',
+    image: 'https://images.unsplash.com/photo-1517963683444-15f51bac37d9?auto=format&fit=crop&q=80&w=1000',
+    stock: 25,
+    status: 'active',
+  },
+  {
+    id: 'prod5',
+    name: 'Multivitamin Complex',
+    description: 'Daily essential vitamins and minerals for active lifestyles.',
+    price: 1500,
+    category: 'supplements',
+    image: 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?auto=format&fit=crop&q=80&w=1000',
+    stock: 60,
+    status: 'inactive',
   },
 ];
 
@@ -90,7 +170,6 @@ export const mockMembers: Member[] = [
     membershipType: 'Pro',
     membershipExpiry: new Date('2024-06-15'),
     joinDate: new Date('2023-03-15'),
-    attendanceCount: 156,
     payments: [],
   },
   {
@@ -106,7 +185,6 @@ export const mockMembers: Member[] = [
     membershipType: 'Elite',
     membershipExpiry: new Date('2024-08-20'),
     joinDate: new Date('2023-05-20'),
-    attendanceCount: 203,
     payments: [],
   },
   {
@@ -122,7 +200,6 @@ export const mockMembers: Member[] = [
     membershipType: 'Basic',
     membershipExpiry: new Date('2024-02-10'),
     joinDate: new Date('2023-07-10'),
-    attendanceCount: 89,
     payments: [],
   },
   {
@@ -138,7 +215,6 @@ export const mockMembers: Member[] = [
     membershipType: 'Pro',
     membershipExpiry: new Date('2023-12-05'),
     joinDate: new Date('2023-01-05'),
-    attendanceCount: 245,
     payments: [],
   },
   {
@@ -154,7 +230,6 @@ export const mockMembers: Member[] = [
     membershipType: 'Pro',
     membershipExpiry: new Date('2024-09-01'),
     joinDate: new Date('2023-09-01'),
-    attendanceCount: 134,
     payments: [],
   },
 ];
@@ -282,48 +357,7 @@ export const mockPayments: Payment[] = [
   },
 ];
 
-// Mock Attendance
-export const mockAttendance: Attendance[] = [
-  {
-    id: 'a1',
-    memberId: 'm1',
-    memberName: 'Sarah Johnson',
-    checkIn: new Date('2024-01-25T08:30:00'),
-    checkOut: new Date('2024-01-25T10:00:00'),
-    date: new Date('2024-01-25'),
-  },
-  {
-    id: 'a2',
-    memberId: 'm2',
-    memberName: 'Michael Chen',
-    checkIn: new Date('2024-01-25T07:00:00'),
-    checkOut: new Date('2024-01-25T09:30:00'),
-    date: new Date('2024-01-25'),
-  },
-  {
-    id: 'a3',
-    memberId: 'm5',
-    memberName: 'Amanda Brown',
-    checkIn: new Date('2024-01-25T18:00:00'),
-    date: new Date('2024-01-25'),
-  },
-  {
-    id: 'a4',
-    memberId: 'm1',
-    memberName: 'Sarah Johnson',
-    checkIn: new Date('2024-01-24T08:45:00'),
-    checkOut: new Date('2024-01-24T10:15:00'),
-    date: new Date('2024-01-24'),
-  },
-  {
-    id: 'a5',
-    memberId: 'm3',
-    memberName: 'Emily Davis',
-    checkIn: new Date('2024-01-24T17:30:00'),
-    checkOut: new Date('2024-01-24T18:45:00'),
-    date: new Date('2024-01-24'),
-  },
-];
+
 
 // Mock Schedule
 export const mockSchedule: ScheduleSlot[] = [
@@ -381,7 +415,6 @@ export const mockDashboardStats: DashboardStats = {
   totalRevenue: 48750,
   monthlyRevenue: 5230,
   pendingPayments: 12,
-  todayAttendance: 87,
   expiringMemberships: 23,
 };
 
@@ -507,7 +540,7 @@ export const mockTestimonials = [
     name: 'Jennifer Lee',
     role: 'Member since 2022',
     avatar: 'https://i.pravatar.cc/150?u=jennifer',
-    content: 'GymFlow completely transformed my fitness journey. The trainers are exceptional and the facilities are top-notch!',
+    content: 'KO Fitness completely transformed my fitness journey. The trainers are exceptional and the facilities are top-notch!',
     rating: 5,
   },
   {

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { ArrowRight, Dumbbell, Flame, Heart, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import gsap from 'gsap';
@@ -41,11 +42,8 @@ const programs = [
   },
 ];
 
-interface ProgramsSectionProps {
-  onNavigate: (page: string) => void;
-}
-
-export function ProgramsSection({ onNavigate }: ProgramsSectionProps) {
+export function ProgramsSection() {
+  const navigate = useNavigate();
   const sectionRef = useRef<HTMLDivElement>(null);
   const cardsRef = useRef<HTMLDivElement>(null);
   const [hoveredCard, setHoveredCard] = useState<number | null>(null);
@@ -92,11 +90,11 @@ export function ProgramsSection({ onNavigate }: ProgramsSectionProps) {
       <div className="w-full px-4 sm:px-6 lg:px-12 xl:px-20">
         {/* Header */}
         <div className="text-center mb-16">
-          <span className="inline-block text-lime-600 dark:text-lime-500 font-accent text-xl mb-4">
+          <span className="inline-block bg-gradient-to-r from-ko-500 to-ko-600 bg-clip-text text-transparent font-accent text-xl mb-4">
             What We Offer
           </span>
           <h2 className="font-display text-5xl lg:text-6xl font-bold text-foreground">
-            OUR <span className="text-lime-500">PROGRAMS</span>
+            OUR <span className="bg-gradient-to-r from-ko-500 to-ko-600 bg-clip-text text-transparent">PROGRAMS</span>
           </h2>
         </div>
 
@@ -117,9 +115,8 @@ export function ProgramsSection({ onNavigate }: ProgramsSectionProps) {
                 <img
                   src={program.image}
                   alt={program.name}
-                  className={`w-full h-full object-cover transition-transform duration-700 ${
-                    hoveredCard === index ? 'scale-110' : 'scale-100'
-                  }`}
+                  className={`w-full h-full object-cover transition-transform duration-700 ${hoveredCard === index ? 'scale-110' : 'scale-100'
+                    }`}
                 />
                 {/* Gradient Overlay */}
                 <div className={`absolute inset-0 bg-gradient-to-t ${program.color} via-background/60 to-background/90`} />
@@ -128,20 +125,19 @@ export function ProgramsSection({ onNavigate }: ProgramsSectionProps) {
               {/* Content */}
               <div className="relative h-full flex flex-col justify-end p-6">
                 {/* Icon */}
-                <div className="w-12 h-12 rounded-xl bg-lime-500/20 backdrop-blur-sm flex items-center justify-center mb-4 group-hover:bg-lime-500 transition-colors">
-                  <program.icon className="w-6 h-6 text-lime-500 group-hover:text-primary-foreground transition-colors" />
+                <div className="w-12 h-12 rounded-xl bg-ko-500/20 backdrop-blur-sm flex items-center justify-center mb-4 group-hover:bg-gradient-to-br group-hover:from-ko-500 group-hover:to-ko-600 transition-colors">
+                  <program.icon className="w-6 h-6 bg-gradient-to-r from-ko-500 to-ko-600 bg-clip-text text-transparent group-hover:text-primary-foreground transition-colors" />
                 </div>
 
                 {/* Title */}
-                <h3 className="font-display text-3xl font-bold text-white mb-2 group-hover:text-lime-500 transition-colors">
+                <h3 className="font-display text-3xl font-bold text-white mb-2 group-hover:bg-gradient-to-r group-hover:from-ko-500 group-hover:to-ko-600 group-hover:bg-clip-text group-hover:text-transparent transition-colors">
                   {program.name}
                 </h3>
 
                 {/* Description - shows on hover */}
                 <div
-                  className={`overflow-hidden transition-all duration-500 ${
-                    hoveredCard === index ? 'max-h-40 opacity-100' : 'max-h-0 opacity-0'
-                  }`}
+                  className={`overflow-hidden transition-all duration-500 ${hoveredCard === index ? 'max-h-40 opacity-100' : 'max-h-0 opacity-0'
+                    }`}
                 >
                   <p className="text-white/70 text-sm mb-4">
                     {program.description}
@@ -149,8 +145,8 @@ export function ProgramsSection({ onNavigate }: ProgramsSectionProps) {
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => onNavigate('login')}
-                    className="text-lime-500 hover:text-lime-400 hover:bg-lime-500/10 p-0"
+                    onClick={() => navigate('/login')}
+                    className="bg-gradient-to-r from-ko-500 to-ko-600 bg-clip-text text-transparent hover:from-ko-600 hover:to-ko-700 hover:bg-ko-500/10 p-0"
                   >
                     Learn More
                     <ArrowRight className="ml-1 w-4 h-4" />
@@ -160,11 +156,10 @@ export function ProgramsSection({ onNavigate }: ProgramsSectionProps) {
 
               {/* Border Glow */}
               <div
-                className={`absolute inset-0 rounded-2xl border-2 transition-all duration-500 ${
-                  hoveredCard === index
-                    ? 'border-lime-500 shadow-glow'
+                className={`absolute inset-0 rounded-2xl border-2 transition-all duration-500 ${hoveredCard === index
+                    ? 'border-ko-500 shadow-glow'
                     : 'border-white/10'
-                }`}
+                  }`}
               />
             </div>
           ))}

@@ -1,39 +1,39 @@
 import { useState } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard,
   CreditCard,
-  Calendar,
   Dumbbell,
-  Apple,
-  Receipt,
   Settings,
-  Dumbbell as LogoIcon,
   ChevronLeft,
   ChevronRight,
   LogOut,
   Menu,
   X,
+  ShoppingBag,
+  Utensils,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
 
 interface MemberSidebarProps {
   currentPage: string;
-  onNavigate: (page: string) => void;
   onLogout: () => void;
 }
 
 const menuItems = [
-  { id: 'member-dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { id: 'member-membership', label: 'My Membership', icon: CreditCard },
-  { id: 'member-attendance', label: 'Attendance', icon: Calendar },
-  { id: 'member-workout', label: 'Workout Plan', icon: Dumbbell },
-  { id: 'member-diet', label: 'Diet Plan', icon: Apple },
-  { id: 'member-payments', label: 'Payments', icon: Receipt },
-  { id: 'member-settings', label: 'Settings', icon: Settings },
+  { id: 'member-dashboard', label: 'Dashboard', icon: LayoutDashboard, path: '/member/dashboard' },
+  { id: 'member-membership', label: 'My Membership', icon: CreditCard, path: '/member/membership' },
+  { id: 'member-workout', label: 'Workout Plan', icon: Dumbbell, path: '/member/workout' },
+  { id: 'member-diet', label: 'Diet Plan', icon: Utensils, path: '/member/diet' },
+  { id: 'member-shop', label: 'Shop', icon: ShoppingBag, path: '/member/shop' },
+  { id: 'member-payments', label: 'Payments', icon: CreditCard, path: '/member/payments' },
+  { id: 'member-settings', label: 'Settings', icon: Settings, path: '/member/settings' },
 ];
 
-export function MemberSidebar({ currentPage, onNavigate, onLogout }: MemberSidebarProps) {
+export function MemberSidebar({ currentPage, onLogout }: MemberSidebarProps) {
+  const navigate = useNavigate();
+  const location = useLocation();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
 
@@ -64,18 +64,23 @@ export function MemberSidebar({ currentPage, onNavigate, onLogout }: MemberSideb
         )}
       >
         {/* Logo */}
-        <div className="h-16 flex items-center justify-center border-b border-border">
+        <div className="h-16 flex items-center justify-center border-b border-border px-3">
           <button
-            onClick={() => onNavigate('member-dashboard')}
-            className="flex items-center gap-3"
+            onClick={() => navigate('/member/dashboard')}
+            className="flex items-center justify-center w-full"
           >
-            <div className="w-10 h-10 rounded-lg bg-lime-500 flex items-center justify-center flex-shrink-0">
-              <LogoIcon className="w-6 h-6 text-primary-foreground" />
-            </div>
-            {!isCollapsed && (
-              <span className="font-display text-xl font-bold text-foreground">
-                GYM<span className="text-lime-500">FLOW</span>
-              </span>
+            {isCollapsed ? (
+              <img
+                src="/favicon_logo.png"
+                alt="KO Fitness"
+                className="h-10 w-10 object-contain"
+              />
+            ) : (
+              <img
+                src="/Logo.png"
+                alt="KO Fitness Logo"
+                className="h-16 w-auto object-contain"
+              />
             )}
           </button>
         </div>
@@ -96,18 +101,18 @@ export function MemberSidebar({ currentPage, onNavigate, onLogout }: MemberSideb
         <nav className="flex-1 py-6 px-3 overflow-y-auto">
           <ul className="space-y-1">
             {menuItems.map((item) => {
-              const isActive = currentPage === item.id;
+              const isActive = location.pathname === item.path;
               return (
                 <li key={item.id}>
                   <button
                     onClick={() => {
-                      onNavigate(item.id);
+                      navigate(item.path);
                       setIsMobileOpen(false);
                     }}
                     className={cn(
                       'w-full flex items-center gap-3 px-3 py-3 rounded-lg transition-all duration-200 group',
                       isActive
-                        ? 'bg-lime-500 text-primary-foreground'
+                        ? 'bg-gradient-to-r from-ko-500 to-ko-600 text-primary-foreground'
                         : 'text-muted-foreground hover:bg-muted hover:text-foreground'
                     )}
                   >

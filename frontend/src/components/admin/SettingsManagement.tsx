@@ -37,7 +37,7 @@ export function SettingsManagement() {
         <Button
           onClick={handleSave}
           disabled={isSaving}
-          className="bg-lime-500 text-primary-foreground hover:bg-lime-400"
+          className="bg-gradient-to-r from-ko-500 to-ko-600 text-primary-foreground hover:from-ko-600 hover:to-ko-700"
         >
           {isSaving ? (
             <span className="flex items-center gap-2">
@@ -66,7 +66,7 @@ export function SettingsManagement() {
             <TabsTrigger
               key={tab.id}
               value={tab.id}
-              className="data-[state=active]:bg-lime-500 data-[state=active]:text-primary-foreground text-muted-foreground"
+              className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-ko-500 data-[state=active]:to-ko-600 data-[state=active]:text-primary-foreground text-muted-foreground"
             >
               <tab.icon className="w-4 h-4 mr-2" />
               {tab.label}
@@ -78,7 +78,7 @@ export function SettingsManagement() {
         <TabsContent value="gym" className="space-y-6">
           <div className="p-6 rounded-xl bg-card/50 border border-border">
             <h3 className="font-display text-xl font-bold text-foreground mb-6">Gym Information</h3>
-            
+
             {/* Logo Upload */}
             <div className="flex items-center gap-6 mb-6">
               <div className="w-24 h-24 rounded-xl bg-muted/50 border border-border flex items-center justify-center">
@@ -97,7 +97,7 @@ export function SettingsManagement() {
               <div>
                 <label className="text-sm text-muted-foreground mb-2 block">Gym Name</label>
                 <Input
-                  defaultValue="GymFlow Fitness"
+                  defaultValue="KO Fitness"
                   className="bg-muted/50 border-border text-foreground"
                 />
               </div>
@@ -105,7 +105,7 @@ export function SettingsManagement() {
                 <label className="text-sm text-muted-foreground mb-2 block">Email</label>
                 <Input
                   type="email"
-                  defaultValue="info@gymflow.com"
+                  defaultValue="info@kofitness.com"
                   className="bg-muted/50 border-border text-foreground"
                 />
               </div>
@@ -162,11 +162,11 @@ export function SettingsManagement() {
         <TabsContent value="profile" className="space-y-6">
           <div className="p-6 rounded-xl bg-card/50 border border-border">
             <h3 className="font-display text-xl font-bold text-foreground mb-6">Personal Information</h3>
-            
+
             {/* Avatar */}
             <div className="flex items-center gap-6 mb-6">
-              <div className="w-20 h-20 rounded-full bg-lime-500/20 flex items-center justify-center">
-                <span className="text-lime-500 text-2xl font-bold">A</span>
+              <div className="w-20 h-20 rounded-full bg-ko-500/20 flex items-center justify-center">
+                <span className="bg-gradient-to-r from-ko-500 to-ko-600 bg-clip-text text-transparent text-2xl font-bold">A</span>
               </div>
               <div>
                 <Button variant="outline" className="border-border text-foreground hover:bg-muted/50 mb-2">
@@ -195,7 +195,7 @@ export function SettingsManagement() {
                 <label className="text-sm text-muted-foreground mb-2 block">Email</label>
                 <Input
                   type="email"
-                  defaultValue="admin@gymflow.com"
+                  defaultValue="admin@kofitness.com"
                   className="bg-muted/50 border-border text-foreground"
                 />
               </div>
@@ -227,7 +227,7 @@ export function SettingsManagement() {
                 { label: 'New member registrations', description: 'Get notified when a new member joins', checked: true },
                 { label: 'Payment received', description: 'Get notified when a payment is received', checked: true },
                 { label: 'Membership expiring', description: 'Get notified when memberships are about to expire', checked: true },
-                { label: 'Low attendance alerts', description: 'Get notified when attendance is below average', checked: false },
+
                 { label: 'System updates', description: 'Get notified about system updates and maintenance', checked: true },
               ].map((item, index) => (
                 <div key={index} className="flex items-center justify-between p-4 rounded-lg bg-muted/50">
@@ -237,7 +237,7 @@ export function SettingsManagement() {
                   </div>
                   <label className="relative inline-flex items-center cursor-pointer">
                     <input type="checkbox" defaultChecked={item.checked} className="sr-only peer" />
-                    <div className="w-11 h-6 bg-muted peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-background after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-background after:border-border after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-lime-500"></div>
+                    <div className="w-11 h-6 bg-muted peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-background after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-background after:border-border after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gradient-to-r peer-checked:from-ko-500 peer-checked:to-ko-600"></div>
                   </label>
                 </div>
               ))}
@@ -274,7 +274,7 @@ export function SettingsManagement() {
                   className="bg-muted/50 border-border text-foreground"
                 />
               </div>
-              <Button className="bg-lime-500 text-primary-foreground hover:bg-lime-400">
+              <Button className="bg-gradient-to-r from-ko-500 to-ko-600 text-primary-foreground hover:from-ko-600 hover:to-ko-700">
                 Update Password
               </Button>
             </div>
@@ -289,7 +289,7 @@ export function SettingsManagement() {
               </div>
               <label className="relative inline-flex items-center cursor-pointer">
                 <input type="checkbox" className="sr-only peer" />
-                <div className="w-11 h-6 bg-muted peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-background after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-background after:border-border after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-lime-500"></div>
+                <div className="w-11 h-6 bg-muted peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-background after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-background after:border-border after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gradient-to-r peer-checked:from-ko-500 peer-checked:to-ko-600"></div>
               </label>
             </div>
           </div>
@@ -310,7 +310,7 @@ export function SettingsManagement() {
                     <p className="text-muted-foreground text-sm">Expires 12/25</p>
                   </div>
                 </div>
-                <Badge className="bg-lime-500/20 text-lime-500">Default</Badge>
+                <Badge className="bg-ko-500/20 bg-gradient-to-r from-ko-500 to-ko-600 bg-clip-text text-transparent">Default</Badge>
               </div>
             </div>
             <Button variant="outline" className="mt-4 border-border text-foreground hover:bg-muted/50">
@@ -334,7 +334,7 @@ export function SettingsManagement() {
                   </div>
                   <div className="flex items-center gap-4">
                     <span className="text-foreground font-medium">{invoice.amount}</span>
-                    <Badge className="bg-lime-500/20 text-lime-500">{invoice.status}</Badge>
+                    <Badge className="bg-ko-500/20 bg-gradient-to-r from-ko-500 to-ko-600 bg-clip-text text-transparent">{invoice.status}</Badge>
                   </div>
                 </div>
               ))}

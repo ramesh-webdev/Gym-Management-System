@@ -161,7 +161,6 @@ export function MembersManagement() {
               <TableHead className="text-muted-foreground">Plan</TableHead>
               <TableHead className="text-muted-foreground">Status</TableHead>
               <TableHead className="text-muted-foreground">Expiry Date</TableHead>
-              <TableHead className="text-muted-foreground">Attendance</TableHead>
               <TableHead className="text-muted-foreground text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -184,10 +183,10 @@ export function MembersManagement() {
                 <TableCell className="text-muted-foreground">{member.membershipId}</TableCell>
                 <TableCell>
                   <span className={`px-2 py-1 rounded-full text-xs ${member.membershipType === 'Elite'
-                      ? 'bg-purple-500/20 text-purple-600 dark:text-purple-400'
-                      : member.membershipType === 'Pro'
-                        ? 'bg-blue-500/20 text-blue-600 dark:text-blue-400'
-                        : 'bg-muted text-muted-foreground'
+                    ? 'bg-purple-500/20 text-purple-600 dark:text-purple-400'
+                    : member.membershipType === 'Pro'
+                      ? 'bg-blue-500/20 text-blue-600 dark:text-blue-400'
+                      : 'bg-muted text-muted-foreground'
                     }`}>
                     {member.membershipType}
                   </span>
@@ -195,9 +194,6 @@ export function MembersManagement() {
                 <TableCell>{getStatusBadge(member.status)}</TableCell>
                 <TableCell className="text-muted-foreground">
                   {member.membershipExpiry.toLocaleDateString()}
-                </TableCell>
-                <TableCell className="text-muted-foreground">
-                  {member.attendanceCount} visits
                 </TableCell>
                 <TableCell className="text-right">
                   <DropdownMenu>

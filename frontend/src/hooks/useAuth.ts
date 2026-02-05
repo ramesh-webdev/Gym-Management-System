@@ -17,7 +17,7 @@ export function useAuth() {
     const mockUser: User = {
       id: '1',
       name: role === 'admin' ? 'Admin User' : role === 'trainer' ? 'Trainer User' : 'Member User',
-      email,
+      phone: email, // Using email param as phone for now based on login flow context changes
       role,
       status: 'active',
       createdAt: new Date(),

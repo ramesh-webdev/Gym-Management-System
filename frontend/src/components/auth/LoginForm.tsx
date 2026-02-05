@@ -1,15 +1,16 @@
 import { useState } from 'react';
-import { Eye, EyeOff, Dumbbell, ArrowLeft } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Eye, EyeOff, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 
 interface LoginFormProps {
-  onNavigate: (page: string) => void;
   onLogin: (mobile: string, password: string, role: 'admin' | 'member' | 'trainer') => void;
 }
 
-export function LoginForm({ onNavigate, onLogin }: LoginFormProps) {
+export function LoginForm({ onLogin }: LoginFormProps) {
+  const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
   const [mobile, setMobile] = useState('');
   const [password, setPassword] = useState('');
@@ -28,13 +29,10 @@ export function LoginForm({ onNavigate, onLogin }: LoginFormProps) {
     // Demo login logic
     if (mobile.endsWith('0')) { // Admin: 9876543210
       onLogin(mobile, password, 'admin');
-      onNavigate('admin-dashboard');
     } else if (mobile.endsWith('1')) { // Trainer: 9876543221 (using mockData logic indirectly or just simple rule)
       onLogin(mobile, password, 'trainer'); // Actually mockData uses ...20, ...21 for trainers
-      onNavigate('trainer-dashboard');
     } else {
       onLogin(mobile, password, 'member');
-      onNavigate('member-dashboard');
     }
 
     setIsLoading(false);
@@ -53,12 +51,12 @@ export function LoginForm({ onNavigate, onLogin }: LoginFormProps) {
       </div>
 
       {/* Decorative Elements */}
-      <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-lime-500/10 rounded-full blur-[150px]" />
-      <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-lime-500/5 rounded-full blur-[150px]" />
+      <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-ko-500/10 rounded-full blur-[150px]" />
+      <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-ko-500/5 rounded-full blur-[150px]" />
 
       {/* Back Button */}
       <button
-        onClick={() => onNavigate('home')}
+        onClick={() => navigate('/')}
         className="absolute top-6 left-6 flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors z-10"
       >
         <ArrowLeft className="w-5 h-5" />
@@ -70,9 +68,11 @@ export function LoginForm({ onNavigate, onLogin }: LoginFormProps) {
         <div className="p-8 rounded-2xl bg-card/80 backdrop-blur-xl border border-border">
           {/* Logo */}
           <div className="text-center mb-8">
-            <div className="w-16 h-16 rounded-xl bg-lime-500 flex items-center justify-center mx-auto mb-4">
-              <Dumbbell className="w-8 h-8 text-primary-foreground" />
-            </div>
+            <img
+              src="/Logo.png"
+              alt="KO Fitness Logo"
+              className="h-20 w-auto mx-auto mb-4"
+            />
             <h1 className="font-display text-3xl font-bold text-foreground mb-2">
               Welcome Back
             </h1>
@@ -107,7 +107,7 @@ export function LoginForm({ onNavigate, onLogin }: LoginFormProps) {
                   }}
                   required
                   pattern="[0-9]{10}"
-                  className="rounded-l-none bg-muted border-border text-foreground placeholder:text-muted-foreground focus:border-lime-500 h-12"
+                  className="rounded-l-none bg-muted border-border text-foreground placeholder:text-muted-foreground focus:border-ko-500 h-12"
                 />
               </div>
             </div>
@@ -123,7 +123,7 @@ export function LoginForm({ onNavigate, onLogin }: LoginFormProps) {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  className="bg-muted border-border text-foreground placeholder:text-muted-foreground focus:border-lime-500 h-12 pr-12"
+                  className="bg-muted border-border text-foreground placeholder:text-muted-foreground focus:border-ko-500 h-12 pr-12"
                 />
                 <button
                   type="button"
@@ -153,8 +153,8 @@ export function LoginForm({ onNavigate, onLogin }: LoginFormProps) {
               </div>
               <button
                 type="button"
-                onClick={() => onNavigate('forgot-password')}
-                className="text-sm text-lime-600 dark:text-lime-500 hover:text-lime-500 transition-colors"
+                onClick={() => navigate('/forgot-password')}
+                className="text-sm bg-gradient-to-r from-ko-500 to-ko-600 bg-clip-text text-transparent hover:from-ko-600 hover:to-ko-700 transition-colors"
               >
                 Forgot password?
               </button>
@@ -185,21 +185,21 @@ export function LoginForm({ onNavigate, onLogin }: LoginFormProps) {
               <button
                 type="button"
                 onClick={() => { setMobile('9876543210'); setPassword('admin123'); }}
-                className="px-3 py-1.5 rounded-full bg-muted text-muted-foreground text-xs hover:bg-lime-500/20 hover:text-lime-600 dark:hover:text-lime-500 transition-colors"
+                className="px-3 py-1.5 rounded-full bg-muted text-muted-foreground text-xs hover:bg-ko-500/20 hover:bg-gradient-to-r hover:from-ko-500 hover:to-ko-600 hover:bg-clip-text hover:text-transparent transition-colors"
               >
                 Admin
               </button>
               <button
                 type="button"
                 onClick={() => { setMobile('9876543220'); setPassword('trainer123'); }}
-                className="px-3 py-1.5 rounded-full bg-muted text-muted-foreground text-xs hover:bg-lime-500/20 hover:text-lime-600 dark:hover:text-lime-500 transition-colors"
+                className="px-3 py-1.5 rounded-full bg-muted text-muted-foreground text-xs hover:bg-ko-500/20 hover:bg-gradient-to-r hover:from-ko-500 hover:to-ko-600 hover:bg-clip-text hover:text-transparent transition-colors"
               >
                 Trainer
               </button>
               <button
                 type="button"
                 onClick={() => { setMobile('9876543212'); setPassword('member123'); }}
-                className="px-3 py-1.5 rounded-full bg-muted text-muted-foreground text-xs hover:bg-lime-500/20 hover:text-lime-600 dark:hover:text-lime-500 transition-colors"
+                className="px-3 py-1.5 rounded-full bg-muted text-muted-foreground text-xs hover:bg-ko-500/20 hover:bg-gradient-to-r hover:from-ko-500 hover:to-ko-600 hover:bg-clip-text hover:text-transparent transition-colors"
               >
                 Member
               </button>
