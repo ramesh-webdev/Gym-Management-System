@@ -41,6 +41,7 @@ export function AdminSidebar({ currentPage, onLogout }: AdminSidebarProps) {
   const location = useLocation();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
+  console.log(currentPage);
 
   return (
     <>

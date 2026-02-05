@@ -36,6 +36,8 @@ export function MemberSidebar({ currentPage, onLogout }: MemberSidebarProps) {
   const location = useLocation();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
+  console.log(currentPage);
+  
 
   return (
     <>
