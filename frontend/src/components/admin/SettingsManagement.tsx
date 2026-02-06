@@ -37,10 +37,10 @@ export function SettingsManagement() {
   const [showPassword, setShowPassword] = useState(false);
 
   // Mock staff data
-  const [staffUsers, setStaffUsers] = useState([
+  const staffUsers =[
     { id: '1', name: 'Super Admin', phone: '9876543210', role: 'Super Admin', status: 'active', permissions: ['All Access'] },
     { id: '2', name: 'Manager Sarah', phone: '9876543211', role: 'Staff Admin', status: 'active', permissions: ['Dashboard', 'Members'] },
-  ]);
+  ];
 
   const handleSave = async () => {
     setIsSaving(true);

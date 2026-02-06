@@ -191,20 +191,6 @@ export function LoginForm({ onLogin }: LoginFormProps) {
               </button>
               <button
                 type="button"
-                onClick={() => { setMobile('9876543211'); setPassword('manager123'); }}
-                className="px-3 py-1.5 rounded-full bg-muted text-muted-foreground text-xs hover:bg-ko-500/20 hover:bg-gradient-to-r hover:from-ko-500 hover:to-ko-600 hover:bg-clip-text hover:text-transparent transition-colors"
-              >
-                Manager
-              </button>
-              <button
-                type="button"
-                onClick={() => { setMobile('9876543220'); setPassword('trainer123'); }}
-                className="px-3 py-1.5 rounded-full bg-muted text-muted-foreground text-xs hover:bg-ko-500/20 hover:bg-gradient-to-r hover:from-ko-500 hover:to-ko-600 hover:bg-clip-text hover:text-transparent transition-colors"
-              >
-                Trainer
-              </button>
-              <button
-                type="button"
                 onClick={() => { setMobile('9876543212'); setPassword('member123'); }}
                 className="px-3 py-1.5 rounded-full bg-muted text-muted-foreground text-xs hover:bg-ko-500/20 hover:bg-gradient-to-r hover:from-ko-500 hover:to-ko-600 hover:bg-clip-text hover:text-transparent transition-colors"
               >

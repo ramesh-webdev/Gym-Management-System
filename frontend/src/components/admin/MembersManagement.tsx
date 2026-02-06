@@ -9,6 +9,7 @@ import {
   Mail,
   Dumbbell,
 } from 'lucide-react';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -49,6 +50,19 @@ export function MembersManagement() {
     membershipPlan: '',
     hasPersonalTraining: false,
   });
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editingMember, setEditingMember] = useState<any>(null);
+
+  const handleEdit = (member: any) => {
+    const [firstName, ...lastNameParts] = member.name.split(' ');
+    setEditingMember({
+      ...member,
+      firstName,
+      lastName: lastNameParts.join(' '),
+      mobile: member.phone,
+    });
+    setIsEditDialogOpen(true);
+  };
 
   const filteredMembers = mockMembers.filter((member) => {
     const matchesSearch =
@@ -183,6 +197,83 @@ export function MembersManagement() {
             </div>
           </DialogContent>
         </Dialog>
+
+        {/* Edit Member Dialog */}
+        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+          <DialogContent className="bg-card border-border text-foreground max-w-lg">
+            <DialogHeader>
+              <DialogTitle className="font-display text-2xl">Edit Member</DialogTitle>
+            </DialogHeader>
+            {editingMember && (
+              <div className="space-y-4 pt-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm text-muted-foreground mb-2 block">First Name</label>
+                    <Input
+                      className="bg-muted/50 border-border text-foreground"
+                      placeholder="John"
+                      value={editingMember.firstName}
+                      onChange={(e) => setEditingMember({ ...editingMember, firstName: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm text-muted-foreground mb-2 block">Last Name</label>
+                    <Input
+                      className="bg-muted/50 border-border text-foreground"
+                      placeholder="Doe"
+                      value={editingMember.lastName}
+                      onChange={(e) => setEditingMember({ ...editingMember, lastName: e.target.value })}
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="text-sm text-muted-foreground mb-2 block">Mobile Number</label>
+                  <Input
+                    className="bg-muted/50 border-border text-foreground"
+                    placeholder="9876543210"
+                    value={editingMember.mobile}
+                    onChange={(e) => setEditingMember({ ...editingMember, mobile: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className="text-sm text-muted-foreground mb-2 block">Membership Plan</label>
+                  <select
+                    className="w-full h-10 px-3 rounded-md bg-muted/50 border border-border text-foreground"
+                    value={editingMember.membershipType}
+                    onChange={(e) => setEditingMember({ ...editingMember, membershipType: e.target.value })}
+                  >
+                    <option value="">Select a plan</option>
+                    {mockMembershipPlans.map((plan) => (
+                      <option key={plan.id} value={plan.name}>{plan.name} - ₹{plan.price}/mo</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="flex items-center gap-3 p-4 rounded-lg bg-muted/50 border border-border">
+                  <input
+                    type="checkbox"
+                    id="edit-hasPT"
+                    checked={editingMember.hasPersonalTraining}
+                    onChange={(e) => setEditingMember({ ...editingMember, hasPersonalTraining: e.target.checked })}
+                    className="w-4 h-4 rounded border-border accent-ko-500"
+                  />
+                  <label htmlFor="edit-hasPT" className="text-sm text-foreground cursor-pointer flex items-center gap-2">
+                    <Dumbbell className="w-4 h-4 text-ko-500" />
+                    Has Personal Training
+                  </label>
+                </div>
+                <Button
+                  className="w-full bg-gradient-to-r from-ko-500 to-ko-600 text-primary-foreground hover:from-ko-600 hover:to-ko-700"
+                  onClick={() => {
+                    toast.success('Member updated successfully (Demo)');
+                    setIsEditDialogOpen(false);
+                  }}
+                >
+                  Save Changes
+                </Button>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
 
       {/* Filters */}
@@ -293,7 +384,10 @@ export function MembersManagement() {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="bg-card border-border">
-                      <DropdownMenuItem className="text-foreground hover:bg-muted cursor-pointer">
+                      <DropdownMenuItem
+                        className="text-foreground hover:bg-muted cursor-pointer"
+                        onClick={() => handleEdit(member)}
+                      >
                         <Edit className="w-4 h-4 mr-2" />
                         Edit
                       </DropdownMenuItem>
