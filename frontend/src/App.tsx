@@ -35,27 +35,31 @@ import { MemberSettings } from '@/components/member/MemberSettings';
 import { ScrollToTop } from '@/components/ui/ScrollToTop';
 import type { User } from '@/types';
 
+/** Read and parse stored user so it's available on first render (avoids redirect to login on refresh). */
+function getStoredUser(): User | null {
+  try {
+    const saved = localStorage.getItem('user');
+    if (!saved) return null;
+    const parsed = JSON.parse(saved) as User;
+    parsed.createdAt = new Date(parsed.createdAt);
+    if (parsed.lastLogin) parsed.lastLogin = new Date(parsed.lastLogin);
+    return parsed;
+  } catch {
+    localStorage.removeItem('user');
+    return null;
+  }
+}
+
 function App() {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<User | null>(() => getStoredUser());
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Load user from localStorage on mount
+  // Keep state in sync with localStorage (e.g. login from another tab)
   useEffect(() => {
-    const savedUser = localStorage.getItem('user');
-    if (savedUser) {
-      try {
-        const parsedUser = JSON.parse(savedUser);
-        // Convert date strings back to Date objects
-        parsedUser.createdAt = new Date(parsedUser.createdAt);
-        parsedUser.lastLogin = new Date(parsedUser.lastLogin);
-        setUser(parsedUser);
-      } catch (error) {
-        console.error('Error parsing saved user:', error);
-        localStorage.removeItem('user');
-      }
-    }
-  }, []);
+    const stored = getStoredUser();
+    if (stored?.id !== user?.id) setUser(stored);
+  }, [user?.id]);
 
   // Scroll to top on route change
   useEffect(() => {
