@@ -16,7 +16,7 @@ export interface Member extends User {
   membershipExpiry: Date;
   joinDate: Date;
   payments: Payment[];
-  workoutPlan?: WorkoutPlan;
+  hasPersonalTraining: boolean;
   dietPlan?: DietPlan;
 }
 
@@ -81,28 +81,7 @@ export interface ScheduleSlot {
   booked: number;
 }
 
-// Workout & Diet Plans
-export interface WorkoutPlan {
-  id: string;
-  memberId: string;
-  trainerId: string;
-  name: string;
-  description: string;
-  exercises: Exercise[];
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-export interface Exercise {
-  id: string;
-  name: string;
-  sets: number;
-  reps: string;
-  weight?: string;
-  rest: string;
-  notes?: string;
-}
-
+// Diet Plans
 export interface DietPlan {
   id: string;
   memberId: string;
@@ -123,6 +102,30 @@ export interface Meal {
   foods: string[];
   calories: number;
   time: string;
+}
+
+// Recipe Types
+export interface Recipe {
+  id: string;
+  name: string;
+  description: string;
+  category: 'breakfast' | 'lunch' | 'dinner' | 'snack' | 'dessert' | 'smoothie';
+  image?: string;
+  prepTime: number; // in minutes
+  cookTime: number; // in minutes
+  servings: number;
+  calories: number;
+  macros: {
+    protein: number;
+    carbs: number;
+    fats: number;
+  };
+  ingredients: string[];
+  instructions: string[];
+  tags: string[];
+  createdBy: string; // admin/trainer ID
+  createdAt: Date;
+  isActive: boolean;
 }
 
 // Notification Types

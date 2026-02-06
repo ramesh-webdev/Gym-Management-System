@@ -1,21 +1,33 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Clock,
   TrendingUp,
   CreditCard,
-  Dumbbell,
   Apple,
   ChevronRight,
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { mockMembers, mockWorkoutPlan, mockDietPlan } from '@/data/mockData';
+import { mockMembers } from '@/data/mockData';
+import { getDietPlanForMember } from '@/utils/dietPlanUtils';
+import { getCurrentMember } from '@/utils/memberUtils';
 import gsap from 'gsap';
+import { Button } from '../ui/button';
 
 export function MemberDashboard() {
   const navigate = useNavigate();
   const cardsRef = useRef<HTMLDivElement>(null);
-  const member = mockMembers[0]; // Current logged-in member
+  const [userId, setUserId] = useState<string | undefined>(() => {
+    try {
+      const saved = localStorage.getItem('user');
+      return saved ? JSON.parse(saved).id : undefined;
+    } catch {
+      return undefined;
+    }
+  });
+  
+  const member = getCurrentMember(userId) || mockMembers[0]; // Fallback to first member if not found
+  const hasPersonalTraining = member.hasPersonalTraining;
+  const dietPlan = member ? getDietPlanForMember(member.id) : null;
 
   useEffect(() => {
     const ctx = gsap.context(() => {
@@ -39,7 +51,7 @@ export function MemberDashboard() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="font-display text-3xl font-bold text-foreground">
-            Welcome back, <span className="text-lime-500">{member.name.split(' ')[0]}</span>!
+            Welcome back, <span className="bg-gradient-to-r from-ko-500 to-ko-600 bg-clip-text text-transparent">{member.name.split(' ')[0]}</span>!
           </h1>
           <p className="text-muted-foreground">Here's your fitness journey at a glance</p>
         </div>
@@ -52,7 +64,7 @@ export function MemberDashboard() {
       {/* Quick Stats */}
       <div ref={cardsRef} className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: 'Days Left', value: daysUntilExpiry, icon: Clock, color: daysUntilExpiry < 30 ? 'bg-red-500/20 text-red-500' : 'bg-lime-500/20 text-lime-500' },
+          { label: 'Days Left', value: daysUntilExpiry, icon: Clock, color: daysUntilExpiry < 30 ? 'bg-red-500/20 text-red-500' : 'bg-ko-500/20 bg-gradient-to-r from-ko-500 to-ko-600 bg-clip-text text-transparent' },
           { label: 'Current Streak', value: '12 days', icon: TrendingUp, color: 'bg-purple-500/20 text-purple-500' },
           { label: 'Plan', value: member.membershipType, icon: CreditCard, color: 'bg-orange-500/20 text-orange-500' },
         ].map((stat, index) => (
@@ -70,9 +82,9 @@ export function MemberDashboard() {
       </div>
 
       {/* Main Content Grid */}
-      <div className="grid lg:grid-cols-3 gap-6">
+      <div className="grid lg:grid-cols-2 gap-6">
         {/* Membership Status */}
-        <div className="lg:col-span-2 p-6 rounded-xl bg-card/50 border border-border">
+        <div className="p-6 rounded-xl bg-card/50 border border-border">
           <div className="flex items-center justify-between mb-6">
             <h3 className="font-display text-xl font-bold text-foreground">Membership Status</h3>
             <Button
@@ -82,7 +94,6 @@ export function MemberDashboard() {
               className="bg-gradient-to-r from-ko-500 to-ko-600 bg-clip-text text-transparent hover:from-ko-600 hover:to-ko-700"
             >
               View Details
-              <ChevronRight className="w-4 h-4 ml-1" />
             </Button>
           </div>
 
@@ -129,86 +140,50 @@ export function MemberDashboard() {
             </div>
           </div>
         </div>
-
-        {/* Next Workout */}
-        <div className="p-6 rounded-xl bg-card/50 border border-border">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="font-display text-xl font-bold text-foreground">Today's Workout</h3>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => navigate('/member/workout')}
-              className="bg-gradient-to-r from-ko-500 to-ko-600 bg-clip-text text-transparent hover:from-ko-600 hover:to-ko-700"
-            >
-              <ChevronRight className="w-4 h-4" />
-            </Button>
-          </div>
-
-          <div className="space-y-4">
-            {mockWorkoutPlan.exercises.slice(0, 3).map((exercise, index) => (
-              <div key={index} className="flex items-center gap-3 p-3 rounded-lg bg-muted">
-                <div className="w-8 h-8 rounded-full bg-lime-500/20 flex items-center justify-center flex-shrink-0">
-                  <span className="text-lime-600 dark:text-lime-500 text-sm font-bold">{index + 1}</span>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-foreground font-medium truncate">{exercise.name}</p>
-                  <p className="text-muted-foreground text-sm">{exercise.sets} sets × {exercise.reps}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <Button
-            variant="outline"
-            onClick={() => navigate('/member/workout')}
-            className="w-full mt-4 border-border text-foreground hover:bg-muted"
-          >
-            <Dumbbell className="w-4 h-4 mr-2" />
-            View Full Plan
-          </Button>
-        </div>
       </div>
 
       {/* Bottom Row */}
-      <div className="grid lg:grid-cols-2 gap-6">
-        {/* Diet Plan Preview */}
-        <div className="p-6 rounded-xl bg-card/50 border border-border">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="font-display text-xl font-bold text-foreground">Today's Nutrition</h3>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => navigate('/member/diet')}
-              className="bg-gradient-to-r from-ko-500 to-ko-600 bg-clip-text text-transparent hover:from-ko-600 hover:to-ko-700"
-            >
-              View Plan
-              <ChevronRight className="w-4 h-4 ml-1" />
-            </Button>
-          </div>
+      <div className={`grid ${hasPersonalTraining ? 'lg:grid-cols-2' : 'lg:grid-cols-1'} gap-6`}>
+        {/* Diet Plan Preview - Only show if member has personal training */}
+        {hasPersonalTraining && dietPlan && (
+          <div className="p-6 rounded-xl bg-card/50 border border-border">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="font-display text-xl font-bold text-foreground">Today's Nutrition</h3>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => navigate('/member/diet')}
+                className="bg-gradient-to-r from-ko-500 to-ko-600 bg-clip-text text-transparent hover:from-ko-600 hover:to-ko-700"
+              >
+                View Plan
+                <ChevronRight className="w-4 h-4 ml-1" />
+              </Button>
+            </div>
 
-          <div className="grid grid-cols-3 gap-4 mb-4">
-            <div className="text-center p-3 rounded-lg bg-muted">
-              <p className="text-muted-foreground text-xs mb-1">Protein</p>
-              <p className="font-display text-xl font-bold bg-gradient-to-r from-ko-500 to-ko-600 bg-clip-text text-transparent">{mockDietPlan.macros.protein}g</p>
+            <div className="grid grid-cols-3 gap-4 mb-4">
+              <div className="text-center p-3 rounded-lg bg-muted">
+                <p className="text-muted-foreground text-xs mb-1">Protein</p>
+                <p className="font-display text-xl font-bold bg-gradient-to-r from-ko-500 to-ko-600 bg-clip-text text-transparent">{dietPlan.macros.protein}g</p>
+              </div>
+              <div className="text-center p-3 rounded-lg bg-muted">
+                <p className="text-muted-foreground text-xs mb-1">Carbs</p>
+                <p className="font-display text-xl font-bold text-blue-500">{dietPlan.macros.carbs}g</p>
+              </div>
+              <div className="text-center p-3 rounded-lg bg-muted">
+                <p className="text-muted-foreground text-xs mb-1">Fats</p>
+                <p className="font-display text-xl font-bold text-orange-500">{dietPlan.macros.fats}g</p>
+              </div>
             </div>
-            <div className="text-center p-3 rounded-lg bg-muted">
-              <p className="text-muted-foreground text-xs mb-1">Carbs</p>
-              <p className="font-display text-xl font-bold text-blue-500">{mockDietPlan.macros.carbs}g</p>
-            </div>
-            <div className="text-center p-3 rounded-lg bg-muted">
-              <p className="text-muted-foreground text-xs mb-1">Fats</p>
-              <p className="font-display text-xl font-bold text-orange-500">{mockDietPlan.macros.fats}g</p>
-            </div>
-          </div>
 
-          <div className="flex items-center justify-between p-3 rounded-lg bg-muted">
-            <div className="flex items-center gap-3">
-              <Apple className="w-5 h-5 text-lime-500" />
-              <span className="text-foreground">Daily Calories</span>
+            <div className="flex items-center justify-between p-3 rounded-lg bg-muted">
+              <div className="flex items-center gap-3">
+                <Apple className="w-5 h-5 bg-gradient-to-r from-ko-500 to-ko-600 bg-clip-text text-transparent" />
+                <span className="text-foreground">Daily Calories</span>
+              </div>
+              <span className="font-display text-xl font-bold text-foreground">{dietPlan.dailyCalories}</span>
             </div>
-            <span className="font-display text-xl font-bold text-foreground">{mockDietPlan.dailyCalories}</span>
           </div>
-        </div>
+        )}
 
         {/* Recent Activity */}
         <div className="p-6 rounded-xl bg-card/50 border border-border">
@@ -218,16 +193,13 @@ export function MemberDashboard() {
 
           <div className="space-y-3">
             {[
-              { activity: 'Workout Completed', date: 'Today, 9:30 AM', type: 'workout' },
               { activity: 'Payment Received', date: 'Jan 1, 2024', type: 'payment' },
-              { activity: 'Workout Completed', date: 'Yesterday, 6:00 PM', type: 'workout' },
+              { activity: 'Membership Renewed', date: 'Dec 15, 2023', type: 'payment' },
+              { activity: 'Product Purchased', date: 'Dec 10, 2023', type: 'payment' },
             ].map((item, index) => (
               <div key={index} className="flex items-center gap-3 p-3 rounded-lg bg-muted">
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${item.type === 'workout' ? 'bg-ko-500/20' :
-                  'bg-green-500/20'
-                  }`}>
-                  {item.type === 'workout' ? <Dumbbell className="w-4 h-4 bg-gradient-to-r from-ko-500 to-ko-600 bg-clip-text text-transparent" /> :
-                    <CreditCard className="w-4 h-4 text-green-500" />}
+                <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 bg-green-500/20">
+                  <CreditCard className="w-4 h-4 text-green-500" />
                 </div>
                 <div className="flex-1">
                   <p className="text-foreground font-medium">{item.activity}</p>

@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Apple,
   Flame,
@@ -6,12 +7,84 @@ import {
   ChevronRight,
   Info,
   Utensils,
+  AlertCircle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { mockDietPlan } from '@/data/mockData';
+import { getCurrentMember } from '@/utils/memberUtils';
+import { getDietPlanForMember } from '@/utils/dietPlanUtils';
+import type { DietPlan } from '@/types';
 
 export function MemberDiet() {
+  const navigate = useNavigate();
   const [activeMeal, setActiveMeal] = useState<string | null>(null);
+  const [dietPlan, setDietPlan] = useState<DietPlan | null>(null);
+  const [userId, setUserId] = useState<string | undefined>(() => {
+    try {
+      const saved = localStorage.getItem('user');
+      return saved ? JSON.parse(saved).id : undefined;
+    } catch {
+      return undefined;
+    }
+  });
+
+  const member = getCurrentMember(userId);
+
+  // Redirect if member doesn't have personal training and load diet plan
+  useEffect(() => {
+    if (!member || !member.hasPersonalTraining) {
+      navigate('/member/dashboard');
+    } else {
+      // Load diet plan for this member
+      const plan = getDietPlanForMember(member.id);
+      setDietPlan(plan);
+    }
+  }, [member, navigate]);
+
+  // Refresh diet plan when storage changes (for real-time updates)
+  useEffect(() => {
+    const handleDietPlanUpdate = () => {
+      if (member) {
+        const plan = getDietPlanForMember(member.id);
+        setDietPlan(plan);
+      }
+    };
+
+    // Listen for custom event (same tab) and storage event (different tab)
+    window.addEventListener('dietPlansUpdated', handleDietPlanUpdate);
+    window.addEventListener('storage', handleDietPlanUpdate);
+    // Also check on focus in case changes were made in another tab
+    window.addEventListener('focus', handleDietPlanUpdate);
+
+    return () => {
+      window.removeEventListener('dietPlansUpdated', handleDietPlanUpdate);
+      window.removeEventListener('storage', handleDietPlanUpdate);
+      window.removeEventListener('focus', handleDietPlanUpdate);
+    };
+  }, [member]);
+
+  // Don't render if no access
+  if (!member || !member.hasPersonalTraining) {
+    return null;
+  }
+
+  // Show message if no diet plan assigned
+  if (!dietPlan) {
+    return (
+      <div className="p-6 space-y-6">
+        <div className="flex flex-col items-center justify-center min-h-[60vh] text-center">
+          <div className="w-16 h-16 rounded-full bg-ko-500/20 flex items-center justify-center mb-4">
+            <AlertCircle className="w-8 h-8 text-ko-500" />
+          </div>
+          <h2 className="font-display text-2xl font-bold text-foreground mb-2">
+            No Diet Plan Assigned
+          </h2>
+          <p className="text-muted-foreground max-w-md">
+            Your personalized diet plan hasn't been created yet. Please contact your trainer or admin to get your diet plan assigned.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   const mealIcons: Record<string, typeof Apple> = {
     breakfast: Apple,
@@ -33,7 +106,7 @@ export function MemberDiet() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="font-display text-3xl font-bold text-foreground">My Diet Plan</h1>
-          <p className="text-muted-foreground">{mockDietPlan.name}</p>
+          <p className="text-muted-foreground">{dietPlan.name}</p>
         </div>
         <Button variant="outline" className="border-border text-foreground hover:bg-muted/50">
           <Info className="w-4 h-4 mr-2" />
@@ -57,15 +130,15 @@ export function MemberDiet() {
                 <path
                   d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
                   fill="none"
-                  stroke="#a3ff00"
+                  stroke="#FF6B00"
                   strokeWidth="3"
                   strokeDasharray="65, 100"
                 />
               </svg>
               <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <Flame className="w-6 h-6 text-lime-500 mb-1" />
+                <Flame className="w-6 h-6 bg-gradient-to-r from-ko-500 to-ko-600 bg-clip-text text-transparent mb-1" />
                 <span className="font-display text-2xl font-bold text-foreground">
-                  {mockDietPlan.dailyCalories}
+                  {dietPlan.dailyCalories}
                 </span>
                 <span className="text-muted-foreground text-xs">kcal</span>
               </div>
@@ -78,9 +151,9 @@ export function MemberDiet() {
             <h3 className="font-display text-lg font-bold text-foreground mb-4">Daily Macros</h3>
             <div className="grid sm:grid-cols-3 gap-4">
               {[
-                { label: 'Protein', value: mockDietPlan.macros.protein, unit: 'g', color: 'bg-lime-500', icon: Apple },
-                { label: 'Carbs', value: mockDietPlan.macros.carbs, unit: 'g', color: 'bg-blue-500', icon: Utensils },
-                { label: 'Fats', value: mockDietPlan.macros.fats, unit: 'g', color: 'bg-orange-500', icon: Droplets },
+                { label: 'Protein', value: dietPlan.macros.protein, unit: 'g', color: 'bg-ko-500', icon: Apple },
+                { label: 'Carbs', value: dietPlan.macros.carbs, unit: 'g', color: 'bg-blue-500', icon: Utensils },
+                { label: 'Fats', value: dietPlan.macros.fats, unit: 'g', color: 'bg-orange-500', icon: Droplets },
               ].map((macro, index) => (
                 <div key={index} className="p-4 rounded-xl bg-muted/50">
                   <div className="flex items-center gap-2 mb-3">
@@ -107,7 +180,7 @@ export function MemberDiet() {
       <div className="space-y-4">
         <h3 className="font-display text-xl font-bold text-foreground">Today's Meals</h3>
         
-        {mockDietPlan.meals.map((meal) => {
+        {dietPlan.meals.map((meal) => {
           const Icon = mealIcons[meal.type] || Apple;
           const colorClass = mealColors[meal.type] || 'bg-muted/50 text-foreground';
           const isExpanded = activeMeal === meal.id;
@@ -117,7 +190,7 @@ export function MemberDiet() {
               key={meal.id}
               className={`p-5 rounded-xl border transition-all ${
                 isExpanded
-                  ? 'bg-lime-500/5 border-lime-500/20'
+                  ? 'bg-ko-500/5 border-ko-500/20'
                   : 'bg-card/50 border-border hover:border-border'
               }`}
             >
@@ -149,14 +222,14 @@ export function MemberDiet() {
                   <ul className="space-y-2">
                     {meal.foods.map((food, index) => (
                       <li key={index} className="flex items-center gap-2 text-foreground">
-                        <div className="w-1.5 h-1.5 rounded-full bg-lime-500" />
+                        <div className="w-1.5 h-1.5 rounded-full bg-gradient-to-r from-ko-500 to-ko-600" />
                         {food}
                       </li>
                     ))}
                   </ul>
                   <div className="mt-4 flex items-center justify-between">
                     <span className="text-muted-foreground text-sm">Total Calories</span>
-                    <span className="font-display text-xl font-bold text-lime-500">
+                    <span className="font-display text-xl font-bold bg-gradient-to-r from-ko-500 to-ko-600 bg-clip-text text-transparent">
                       {meal.calories} kcal
                     </span>
                   </div>
@@ -180,8 +253,8 @@ export function MemberDiet() {
             'Prep meals in advance to stay on track',
           ].map((tip, index) => (
             <div key={index} className="flex items-start gap-3">
-              <div className="w-6 h-6 rounded-full bg-lime-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
-                <span className="text-lime-500 text-xs font-bold">{index + 1}</span>
+              <div className="w-6 h-6 rounded-full bg-ko-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                <span className="bg-gradient-to-r from-ko-500 to-ko-600 bg-clip-text text-transparent text-xs font-bold">{index + 1}</span>
               </div>
               <span className="text-muted-foreground">{tip}</span>
             </div>

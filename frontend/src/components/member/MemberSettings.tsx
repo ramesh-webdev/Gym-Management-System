@@ -147,7 +147,7 @@ export function MemberSettings() {
                 />
               </div>
               <div>
-                <label className="text-sm text-muted-foreground mb-2 block">Weekly Workout Days</label>
+                <label className="text-sm text-muted-foreground mb-2 block">Preferred Training Days</label>
                 <select className="w-full h-10 px-3 rounded-md bg-muted/50 border border-border text-foreground">
                   <option>3 days</option>
                   <option>4 days</option>
@@ -173,7 +173,7 @@ export function MemberSettings() {
             <h3 className="font-display text-xl font-bold text-foreground mb-6">Notification Preferences</h3>
             <div className="space-y-4">
               {[
-                { label: 'Workout Reminders', description: 'Get notified about your scheduled workouts', checked: true },
+                { label: 'Training Reminders', description: 'Get notified about your scheduled training sessions', checked: true },
                 { label: 'Meal Reminders', description: 'Get notified about your meal times', checked: true },
                 { label: 'Membership Updates', description: 'Get notified about membership changes', checked: true },
                 { label: 'Payment Reminders', description: 'Get notified before payment due dates', checked: true },

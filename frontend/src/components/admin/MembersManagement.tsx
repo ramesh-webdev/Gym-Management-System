@@ -7,6 +7,7 @@ import {
   UserCheck,
   UserX,
   Mail,
+  Dumbbell,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -38,7 +39,15 @@ export function MembersManagement() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [planFilter, setPlanFilter] = useState<string>('all');
+  const [ptFilter, setPtFilter] = useState<string>('all');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [newMemberData, setNewMemberData] = useState({
+    firstName: '',
+    lastName: '',
+    mobile: '',
+    membershipPlan: '',
+    hasPersonalTraining: false,
+  });
 
   const filteredMembers = mockMembers.filter((member) => {
     const matchesSearch =
@@ -48,14 +57,17 @@ export function MembersManagement() {
 
     const matchesStatus = statusFilter === 'all' || member.status === statusFilter;
     const matchesPlan = planFilter === 'all' || member.membershipType === planFilter;
+    const matchesPT = ptFilter === 'all' || 
+      (ptFilter === 'yes' && member.hasPersonalTraining) ||
+      (ptFilter === 'no' && !member.hasPersonalTraining);
 
-    return matchesSearch && matchesStatus && matchesPlan;
+    return matchesSearch && matchesStatus && matchesPlan && matchesPT;
   });
 
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'active':
-        return <Badge className="bg-lime-500/20 text-lime-500 hover:bg-lime-500/30">Active</Badge>;
+        return <Badge className="bg-ko-500/20 text-ko-500 hover:bg-ko-500/30">Active</Badge>;
       case 'inactive':
         return <Badge className="bg-red-500/20 text-red-400 hover:bg-red-500/30">Inactive</Badge>;
       case 'suspended':
@@ -75,7 +87,7 @@ export function MembersManagement() {
         </div>
         <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
           <DialogTrigger asChild>
-            <Button className="bg-lime-500 text-primary-foreground hover:bg-lime-400">
+            <Button className="bg-gradient-to-r from-ko-500 to-ko-600 text-primary-foreground hover:from-ko-600 hover:to-ko-700">
               <Plus className="w-4 h-4 mr-2" />
               Add Member
             </Button>
@@ -88,26 +100,72 @@ export function MembersManagement() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="text-sm text-muted-foreground mb-2 block">First Name</label>
-                  <Input className="bg-muted/50 border-border text-foreground" placeholder="John" />
+                  <Input 
+                    className="bg-muted/50 border-border text-foreground" 
+                    placeholder="John"
+                    value={newMemberData.firstName}
+                    onChange={(e) => setNewMemberData({...newMemberData, firstName: e.target.value})}
+                  />
                 </div>
                 <div>
                   <label className="text-sm text-muted-foreground mb-2 block">Last Name</label>
-                  <Input className="bg-muted/50 border-border text-foreground" placeholder="Doe" />
+                  <Input 
+                    className="bg-muted/50 border-border text-foreground" 
+                    placeholder="Doe"
+                    value={newMemberData.lastName}
+                    onChange={(e) => setNewMemberData({...newMemberData, lastName: e.target.value})}
+                  />
                 </div>
               </div>
               <div>
                 <label className="text-sm text-muted-foreground mb-2 block">Mobile Number</label>
-                <Input className="bg-muted/50 border-border text-foreground" placeholder="9876543210" />
+                <Input 
+                  className="bg-muted/50 border-border text-foreground" 
+                  placeholder="9876543210"
+                  value={newMemberData.mobile}
+                  onChange={(e) => setNewMemberData({...newMemberData, mobile: e.target.value})}
+                />
               </div>
               <div>
                 <label className="text-sm text-muted-foreground mb-2 block">Membership Plan</label>
-                <select className="w-full h-10 px-3 rounded-md bg-muted/50 border border-border text-foreground">
+                <select 
+                  className="w-full h-10 px-3 rounded-md bg-muted/50 border border-border text-foreground"
+                  value={newMemberData.membershipPlan}
+                  onChange={(e) => setNewMemberData({...newMemberData, membershipPlan: e.target.value})}
+                >
+                  <option value="">Select a plan</option>
                   {mockMembershipPlans.map((plan) => (
-                    <option key={plan.id} value={plan.id}>{plan.name} - ${plan.price}/mo</option>
+                    <option key={plan.id} value={plan.id}>{plan.name} - ₹{plan.price}/mo</option>
                   ))}
                 </select>
               </div>
-              <Button className="w-full bg-lime-500 text-primary-foreground hover:bg-lime-400">
+              <div className="flex items-center gap-3 p-4 rounded-lg bg-muted/50 border border-border">
+                <input
+                  type="checkbox"
+                  id="hasPT"
+                  checked={newMemberData.hasPersonalTraining}
+                  onChange={(e) => setNewMemberData({...newMemberData, hasPersonalTraining: e.target.checked})}
+                  className="w-4 h-4 rounded border-border accent-ko-500"
+                />
+                <label htmlFor="hasPT" className="text-sm text-foreground cursor-pointer flex items-center gap-2">
+                  <Dumbbell className="w-4 h-4 text-ko-500" />
+                  Has Personal Training
+                </label>
+              </div>
+              <Button 
+                className="w-full bg-gradient-to-r from-ko-500 to-ko-600 text-primary-foreground hover:from-ko-600 hover:to-ko-700"
+                onClick={() => {
+                  // In a real app, this would call an API
+                  setIsAddDialogOpen(false);
+                  setNewMemberData({
+                    firstName: '',
+                    lastName: '',
+                    mobile: '',
+                    membershipPlan: '',
+                    hasPersonalTraining: false,
+                  });
+                }}
+              >
                 Create Member
               </Button>
             </div>
@@ -148,6 +206,15 @@ export function MembersManagement() {
             <option value="Pro">Pro</option>
             <option value="Elite">Elite</option>
           </select>
+          <select
+            value={ptFilter}
+            onChange={(e) => setPtFilter(e.target.value)}
+            className="h-10 px-4 rounded-lg bg-muted/50 border border-border text-foreground text-sm"
+          >
+            <option value="all">All PT Status</option>
+            <option value="yes">With PT</option>
+            <option value="no">Without PT</option>
+          </select>
         </div>
       </div>
 
@@ -159,6 +226,7 @@ export function MembersManagement() {
               <TableHead className="text-muted-foreground">Member</TableHead>
               <TableHead className="text-muted-foreground">Membership ID</TableHead>
               <TableHead className="text-muted-foreground">Plan</TableHead>
+              <TableHead className="text-muted-foreground">PT Status</TableHead>
               <TableHead className="text-muted-foreground">Status</TableHead>
               <TableHead className="text-muted-foreground">Expiry Date</TableHead>
               <TableHead className="text-muted-foreground text-right">Actions</TableHead>
@@ -190,6 +258,16 @@ export function MembersManagement() {
                     }`}>
                     {member.membershipType}
                   </span>
+                </TableCell>
+                <TableCell>
+                  {member.hasPersonalTraining ? (
+                    <Badge className="bg-ko-500/20 text-ko-500 hover:bg-ko-500/30 flex items-center gap-1 w-fit">
+                      <Dumbbell className="w-3 h-3" />
+                      Yes
+                    </Badge>
+                  ) : (
+                    <Badge variant="secondary" className="text-muted-foreground">No</Badge>
+                  )}
                 </TableCell>
                 <TableCell>{getStatusBadge(member.status)}</TableCell>
                 <TableCell className="text-muted-foreground">

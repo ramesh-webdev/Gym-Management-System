@@ -3,7 +3,6 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard,
   CreditCard,
-  Dumbbell,
   Settings,
   ChevronLeft,
   ChevronRight,
@@ -12,6 +11,7 @@ import {
   X,
   ShoppingBag,
   Utensils,
+  ChefHat,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
@@ -19,19 +19,24 @@ import { ThemeToggle } from '@/components/ui/ThemeToggle';
 interface MemberSidebarProps {
   currentPage: string;
   onLogout: () => void;
+  hasPersonalTraining: boolean;
 }
 
-const menuItems = [
+const baseMenuItems = [
   { id: 'member-dashboard', label: 'Dashboard', icon: LayoutDashboard, path: '/member/dashboard' },
   { id: 'member-membership', label: 'My Membership', icon: CreditCard, path: '/member/membership' },
-  { id: 'member-workout', label: 'Workout Plan', icon: Dumbbell, path: '/member/workout' },
-  { id: 'member-diet', label: 'Diet Plan', icon: Utensils, path: '/member/diet' },
+  { id: 'member-diet', label: 'Diet Plan', icon: Utensils, path: '/member/diet', requiresPersonalTraining: true },
+  { id: 'member-recipes', label: 'Recipes', icon: ChefHat, path: '/member/recipes' },
   { id: 'member-shop', label: 'Shop', icon: ShoppingBag, path: '/member/shop' },
   { id: 'member-payments', label: 'Payments', icon: CreditCard, path: '/member/payments' },
   { id: 'member-settings', label: 'Settings', icon: Settings, path: '/member/settings' },
 ];
 
-export function MemberSidebar({ currentPage, onLogout }: MemberSidebarProps) {
+export function MemberSidebar({ currentPage, onLogout, hasPersonalTraining }: MemberSidebarProps) {
+  // Filter menu items based on personal training status
+  const menuItems = baseMenuItems.filter(item => 
+    !item.requiresPersonalTraining || hasPersonalTraining
+  );
   const navigate = useNavigate();
   const location = useLocation();
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -90,7 +95,7 @@ export function MemberSidebar({ currentPage, onLogout }: MemberSidebarProps) {
         {/* Toggle Button (Desktop) */}
         <button
           onClick={() => setIsCollapsed(!isCollapsed)}
-          className="hidden lg:flex absolute -right-3 top-20 w-6 h-6 rounded-full bg-lime-500 items-center justify-center text-primary-foreground hover:bg-lime-400 transition-colors"
+          className="hidden lg:flex absolute -right-3 top-20 w-6 h-6 rounded-full bg-gradient-to-br from-ko-500 to-ko-600 items-center justify-center text-primary-foreground hover:from-ko-600 hover:to-ko-700 transition-colors"
         >
           {isCollapsed ? (
             <ChevronRight className="w-4 h-4" />

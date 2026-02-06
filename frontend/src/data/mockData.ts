@@ -1,6 +1,6 @@
 import type {
   User, Member, Trainer, MembershipPlan, Payment, Product,
-  ScheduleSlot, WorkoutPlan, DietPlan, Notification, DashboardStats
+  ScheduleSlot, DietPlan, Notification, DashboardStats
 } from '@/types';
 
 // Mock Users
@@ -171,6 +171,7 @@ export const mockMembers: Member[] = [
     membershipExpiry: new Date('2024-06-15'),
     joinDate: new Date('2023-03-15'),
     payments: [],
+    hasPersonalTraining: true, // Has personal training, so diet plan is available
   },
   {
     id: 'm2',
@@ -186,6 +187,7 @@ export const mockMembers: Member[] = [
     membershipExpiry: new Date('2024-08-20'),
     joinDate: new Date('2023-05-20'),
     payments: [],
+    hasPersonalTraining: false, // No personal training
   },
   {
     id: 'm3',
@@ -201,6 +203,7 @@ export const mockMembers: Member[] = [
     membershipExpiry: new Date('2024-02-10'),
     joinDate: new Date('2023-07-10'),
     payments: [],
+    hasPersonalTraining: false, // No personal training
   },
   {
     id: 'm4',
@@ -216,6 +219,7 @@ export const mockMembers: Member[] = [
     membershipExpiry: new Date('2023-12-05'),
     joinDate: new Date('2023-01-05'),
     payments: [],
+    hasPersonalTraining: false, // No personal training
   },
   {
     id: 'm5',
@@ -231,6 +235,7 @@ export const mockMembers: Member[] = [
     membershipExpiry: new Date('2024-09-01'),
     joinDate: new Date('2023-09-01'),
     payments: [],
+    hasPersonalTraining: true, // Has personal training, so diet plan is available
   },
 ];
 
@@ -448,46 +453,6 @@ export const mockNotifications: Notification[] = [
     createdAt: new Date('2024-01-24T16:00:00'),
   },
 ];
-
-// Mock Workout Plan
-export const mockWorkoutPlan: WorkoutPlan = {
-  id: 'wp1',
-  memberId: 'm1',
-  trainerId: 't1',
-  name: 'Strength Building Program',
-  description: '12-week progressive overload program focused on compound movements',
-  exercises: [
-    {
-      id: 'e1',
-      name: 'Barbell Squat',
-      sets: 4,
-      reps: '8-10',
-      weight: '185 lbs',
-      rest: '2 min',
-      notes: 'Focus on depth',
-    },
-    {
-      id: 'e2',
-      name: 'Bench Press',
-      sets: 4,
-      reps: '8-10',
-      weight: '135 lbs',
-      rest: '2 min',
-      notes: 'Control the descent',
-    },
-    {
-      id: 'e3',
-      name: 'Deadlift',
-      sets: 3,
-      reps: '6-8',
-      weight: '225 lbs',
-      rest: '3 min',
-      notes: 'Keep back straight',
-    },
-  ],
-  createdAt: new Date('2024-01-01'),
-  updatedAt: new Date('2024-01-15'),
-};
 
 // Mock Diet Plan
 export const mockDietPlan: DietPlan = {

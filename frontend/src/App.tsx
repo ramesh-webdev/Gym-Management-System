@@ -7,7 +7,6 @@ import { AboutSection } from '@/components/public/AboutSection';
 import { ProgramsSection } from '@/components/public/ProgramsSection';
 import { BMISection } from '@/components/public/BMISection';
 import { PricingSection } from '@/components/public/PricingSection';
-import { TrainersSection } from '@/components/public/TrainersSection';
 import { TestimonialsSection } from '@/components/public/TestimonialsSection';
 import { ContactSection } from '@/components/public/ContactSection';
 import { Footer } from '@/components/public/Footer';
@@ -24,15 +23,18 @@ import { PaymentsManagement } from '@/components/admin/PaymentsManagement';
 import { ReportsAnalytics } from '@/components/admin/ReportsAnalytics';
 import { NotificationsManagement } from '@/components/admin/NotificationsManagement';
 import { SettingsManagement } from '@/components/admin/SettingsManagement';
+import { DietPlanManagement } from '@/components/admin/DietPlanManagement';
+import { RecipeManagement } from '@/components/admin/RecipeManagement';
 import { MemberSidebar } from '@/components/member/MemberSidebar';
 import { MemberDashboard } from '@/components/member/MemberDashboard';
 import { MemberMembership } from '@/components/member/MemberMembership';
-import { MemberWorkout } from './components/member/MemberWorkout';
 import { MemberDiet } from './components/member/MemberDiet';
 import { Shop } from './components/member/Shop';
+import { Recipes } from './components/member/Recipes';
 import { MemberPayments } from './components/member/MemberPayments';
 import { MemberSettings } from '@/components/member/MemberSettings';
 import { ScrollToTop } from '@/components/ui/ScrollToTop';
+import { hasPersonalTraining } from '@/utils/memberUtils';
 import type { User } from '@/types';
 
 /** Read and parse stored user so it's available on first render (avoids redirect to login on refresh). */
@@ -68,8 +70,23 @@ function App() {
 
   // Handle login
   const handleLogin = (mobile: string, _password: string, role: 'admin' | 'member' | 'trainer') => {
+    // For members, use member ID based on phone number to match mock data
+    let userId = '1';
+    if (role === 'member') {
+      // Map phone numbers to member IDs for testing
+      // 9876543212 -> m1 (has personal training)
+      // 9876543213 -> m2 (no personal training)
+      // etc.
+      if (mobile === '9876543212') userId = 'm1';
+      else if (mobile === '9876543213') userId = 'm2';
+      else if (mobile === '9876543214') userId = 'm3';
+      else if (mobile === '9876543215') userId = 'm4';
+      else if (mobile === '9876543216') userId = 'm5';
+      else userId = 'm1'; // Default to m1
+    }
+    
     const mockUser: User = {
-      id: '1',
+      id: userId,
       name: role === 'admin' ? 'Admin User' : role === 'trainer' ? 'Trainer User' : 'Sarah Johnson',
       phone: mobile,
       role,
@@ -123,7 +140,6 @@ function App() {
                 <ProgramsSection />
                 <BMISection />
                 <PricingSection />
-                <TrainersSection />
                 <TestimonialsSection />
                 <ContactSection />
               </>
@@ -132,7 +148,6 @@ function App() {
           <Route path="/about" element={<AboutSection />} />
           <Route path="/programs" element={<ProgramsSection />} />
           <Route path="/pricing" element={<PricingSection />} />
-          <Route path="/trainers" element={<TrainersSection />} />
           <Route path="/contact" element={<ContactSection />} />
         </Routes>
       </main>
@@ -161,6 +176,8 @@ function App() {
               <Route path="payments" element={<PaymentsManagement />} />
               <Route path="reports" element={<ReportsAnalytics />} />
               <Route path="notifications" element={<NotificationsManagement />} />
+              <Route path="diet-plans" element={<DietPlanManagement />} />
+              <Route path="recipes" element={<RecipeManagement />} />
               <Route path="settings" element={<SettingsManagement />} />
               <Route path="*" element={<Navigate to="/admin/dashboard" replace />} />
             </Routes>
@@ -176,17 +193,32 @@ function App() {
       return <Navigate to="/login" replace />;
     }
 
+    const memberHasPersonalTraining = hasPersonalTraining(user.id);
+
     return (
       <div className="min-h-screen bg-background flex">
-        <MemberSidebar currentPage={getCurrentPage()} onLogout={handleLogout} />
+        <MemberSidebar 
+          currentPage={getCurrentPage()} 
+          onLogout={handleLogout}
+          hasPersonalTraining={memberHasPersonalTraining}
+        />
         <div className="flex-1 lg:ml-64">
           <main className="min-h-screen pt-0">
             <Routes>
               <Route path="dashboard" element={<MemberDashboard />} />
               <Route path="membership" element={<MemberMembership />} />
-              <Route path="workout" element={<MemberWorkout />} />
-              <Route path="diet" element={<MemberDiet />} />
+              <Route 
+                path="diet" 
+                element={
+                  memberHasPersonalTraining ? (
+                    <MemberDiet />
+                  ) : (
+                    <Navigate to="/member/dashboard" replace />
+                  )
+                } 
+              />
               <Route path="shop" element={<Shop />} />
+              <Route path="recipes" element={<Recipes />} />
               <Route path="payments" element={<MemberPayments />} />
               <Route path="settings" element={<MemberSettings />} />
               <Route path="*" element={<Navigate to="/member/dashboard" replace />} />

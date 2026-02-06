@@ -6,6 +6,7 @@ import {
   AlertCircle,
   ArrowUpRight,
   ArrowDownRight,
+  Dumbbell,
 } from 'lucide-react';
 import { mockDashboardStats, mockMembers, mockPayments } from '@/data/mockData';
 import {
@@ -172,10 +173,18 @@ export function DashboardOverview() {
                 />
                 <div className="flex-1">
                   <p className="text-foreground font-medium">{member.name}</p>
-                  <p className="text-muted-foreground text-sm">{member.membershipType} Plan</p>
+                  <div className="flex items-center gap-2 mt-1">
+                    <p className="text-muted-foreground text-sm">{member.membershipType} Plan</p>
+                    {member.hasPersonalTraining && (
+                      <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-ko-500/20 text-ko-500">
+                        <Dumbbell className="w-3 h-3" />
+                        PT
+                      </span>
+                    )}
+                  </div>
                 </div>
                 <span className={`px-2 py-1 rounded-full text-xs ${member.status === 'active'
-                  ? 'bg-ko-500/20 bg-gradient-to-r from-ko-500 to-ko-600 bg-clip-text text-transparent'
+                  ? 'bg-ko-500/20 text-ko-500'
                   : 'bg-red-500/20 text-red-500'
                   }`}>
                   {member.status}

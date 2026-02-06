@@ -15,6 +15,8 @@ import {
   ShoppingBag,
   Menu,
   X,
+  Utensils,
+  ChefHat,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
@@ -29,6 +31,8 @@ const menuItems = [
   { id: 'admin-members', label: 'Members', icon: Users, path: '/admin/members' },
   { id: 'admin-trainers', label: 'Trainers & Staff', icon: UserCog, path: '/admin/trainers' },
   { id: 'admin-plans', label: 'Membership Plans', icon: CreditCard, path: '/admin/plans' },
+  { id: 'admin-diet-plans', label: 'Diet Plans', icon: Utensils, path: '/admin/diet-plans' },
+  { id: 'admin-recipes', label: 'Recipes', icon: ChefHat, path: '/admin/recipes' },
   { id: 'admin-products', label: 'Products', icon: ShoppingBag, path: '/admin/products' },
   { id: 'admin-payments', label: 'Payments', icon: Receipt, path: '/admin/payments' },
   { id: 'admin-reports', label: 'Reports', icon: BarChart3, path: '/admin/reports' },
