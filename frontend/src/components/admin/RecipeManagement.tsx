@@ -9,7 +9,6 @@ import {
   Clock,
   Users,
   Flame,
-  X,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';

@@ -9,11 +9,9 @@ import {
   Apple,
   Droplets,
   Flame,
-  X,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import {
   Dialog,
   DialogContent,
@@ -27,7 +25,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Badge } from '@/components/ui/badge';
 import { mockMembers } from '@/data/mockData';
 import { getAllDietPlans, saveDietPlan, deleteDietPlan as removeDietPlan } from '@/utils/dietPlanUtils';
 import type { DietPlan, Meal } from '@/types';
@@ -38,7 +35,6 @@ export function DietPlanManagement() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [currentPlan, setCurrentPlan] = useState<Partial<DietPlan>>({});
-  const [selectedMember, setSelectedMember] = useState<string>('');
 
   const filteredPlans = dietPlans.filter((plan) => {
     const member = mockMembers.find((m) => m.id === plan.memberId);
@@ -305,7 +301,6 @@ export function DietPlanManagement() {
       {/* Diet Plans Grid */}
       <div className="grid md:grid-cols-2 gap-6">
         {filteredPlans.map((plan) => {
-          const member = mockMembers.find((m) => m.id === plan.memberId);
           return (
             <div
               key={plan.id}

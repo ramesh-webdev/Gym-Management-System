@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowRight, Dumbbell, Flame, Heart, Zap } from 'lucide-react';
+import { ArrowRight, Dumbbell, Flame, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
@@ -34,9 +34,9 @@ const programs = [
   },
   {
     id: 4,
-    name: 'YOGA',
-    description: 'Find balance, flexibility, and inner peace through our mindful yoga practices.',
-    icon: Heart,
+    name: 'STRENGTH TRAINING',
+    description: 'Build functional strength and power with our comprehensive strength training programs designed for all fitness levels.',
+    icon: Dumbbell,
     image: '/trainer-4.jpg',
     color: 'from-purple-500/20 to-pink-500/20',
   },

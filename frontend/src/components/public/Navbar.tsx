@@ -23,7 +23,6 @@ export function Navbar() {
     { label: 'About', href: '/about' },
     { label: 'Programs', href: '/programs' },
     { label: 'Pricing', href: '/pricing' },
-    { label: 'Trainers', href: '/trainers' },
     { label: 'Contact', href: '/contact' },
   ];
 
@@ -57,7 +56,9 @@ export function Navbar() {
                   key={link.href}
                   onClick={() => navigate(link.href)}
                   className={`relative text-sm font-medium transition-colors group ${
-                    isActive ? 'text-foreground' : 'text-muted-foreground hover:text-foreground'
+                    isActive 
+                      ? 'text-foreground' 
+                      : 'text-foreground/80 hover:text-foreground'
                   }`}
                 >
                   {link.label}
@@ -111,7 +112,7 @@ export function Navbar() {
                 className={`text-lg font-medium transition-colors py-2 ${
                   location.pathname === link.href
                     ? 'text-foreground'
-                    : 'text-muted-foreground hover:text-foreground'
+                    : 'text-foreground/80 hover:text-foreground'
                 }`}
               >
                 {link.label}

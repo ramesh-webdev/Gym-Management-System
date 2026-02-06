@@ -18,14 +18,14 @@ export function MemberDiet() {
   const navigate = useNavigate();
   const [activeMeal, setActiveMeal] = useState<string | null>(null);
   const [dietPlan, setDietPlan] = useState<DietPlan | null>(null);
-  const [userId, setUserId] = useState<string | undefined>(() => {
-    try {
-      const saved = localStorage.getItem('user');
-      return saved ? JSON.parse(saved).id : undefined;
-    } catch {
-      return undefined;
-    }
-  });
+  let userId: string | undefined;
+
+  try {
+    const saved = localStorage.getItem("user");
+    userId = saved ? JSON.parse(saved).id : undefined;
+  } catch {
+    userId = undefined;
+  }
 
   const member = getCurrentMember(userId);
 

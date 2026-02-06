@@ -7,7 +7,6 @@ import {
   Utensils,
   Apple,
   ChevronRight,
-  Filter,
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -18,7 +17,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { getActiveRecipes, getRecipesByCategory } from '@/utils/recipeUtils';
+import { getActiveRecipes } from '@/utils/recipeUtils';
 import type { Recipe } from '@/types';
 
 export function Recipes() {
