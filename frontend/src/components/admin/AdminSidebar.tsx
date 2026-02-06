@@ -24,6 +24,7 @@ import { ThemeToggle } from '@/components/ui/ThemeToggle';
 interface AdminSidebarProps {
   currentPage: string;
   onLogout: () => void;
+  userPermissions?: string[];
 }
 
 const menuItems = [
@@ -40,12 +41,18 @@ const menuItems = [
   { id: 'admin-settings', label: 'Settings', icon: Settings, path: '/admin/settings' },
 ];
 
-export function AdminSidebar({ currentPage, onLogout }: AdminSidebarProps) {
+export { menuItems };
+
+export function AdminSidebar({ currentPage, onLogout, userPermissions }: AdminSidebarProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   console.log(currentPage);
+
+  const filteredMenuItems = menuItems.filter(item =>
+    !userPermissions || userPermissions.includes(item.id)
+  );
 
   return (
     <>
@@ -110,7 +117,7 @@ export function AdminSidebar({ currentPage, onLogout }: AdminSidebarProps) {
         {/* Navigation */}
         <nav className="flex-1 py-6 px-3 overflow-y-auto">
           <ul className="space-y-1">
-            {menuItems.map((item) => {
+            {filteredMenuItems.map((item) => {
               const isActive = location.pathname === item.path;
               return (
                 <li key={item.id}>

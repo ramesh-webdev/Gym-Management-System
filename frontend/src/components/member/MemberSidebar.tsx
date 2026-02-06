@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard,
   CreditCard,
-  Settings,
+  Shield,
   ChevronLeft,
   ChevronRight,
   LogOut,
@@ -29,12 +29,12 @@ const baseMenuItems = [
   { id: 'member-recipes', label: 'Recipes', icon: ChefHat, path: '/member/recipes' },
   { id: 'member-shop', label: 'Shop', icon: ShoppingBag, path: '/member/shop' },
   { id: 'member-payments', label: 'Payments', icon: CreditCard, path: '/member/payments' },
-  { id: 'member-settings', label: 'Settings', icon: Settings, path: '/member/settings' },
+  { id: 'member-settings', label: 'Account Security', icon: Shield, path: '/member/settings' },
 ];
 
 export function MemberSidebar({ currentPage, onLogout, hasPersonalTraining }: MemberSidebarProps) {
   // Filter menu items based on personal training status
-  const menuItems = baseMenuItems.filter(item => 
+  const menuItems = baseMenuItems.filter(item =>
     !item.requiresPersonalTraining || hasPersonalTraining
   );
   const navigate = useNavigate();
@@ -42,7 +42,7 @@ export function MemberSidebar({ currentPage, onLogout, hasPersonalTraining }: Me
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   console.log(currentPage);
-  
+
 
   return (
     <>

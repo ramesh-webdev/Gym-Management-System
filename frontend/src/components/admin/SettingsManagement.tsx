@@ -1,24 +1,46 @@
 import { useState } from 'react';
 import {
   Building2,
-  User,
-  Bell,
+  Users,
   Shield,
-  CreditCard,
   Save,
   Upload,
   Camera,
   Plus,
+  Edit2,
+  Lock,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import { Checkbox } from '@/components/ui/checkbox';
+import { menuItems } from './AdminSidebar';
+import { toast } from 'sonner';
 
 export function SettingsManagement() {
   const [activeTab, setActiveTab] = useState('gym');
   const [isSaving, setIsSaving] = useState(false);
+
+  const [showPassword, setShowPassword] = useState(false);
+
+  // Mock staff data
+  const [staffUsers, setStaffUsers] = useState([
+    { id: '1', name: 'Super Admin', phone: '9876543210', role: 'Super Admin', status: 'active', permissions: ['All Access'] },
+    { id: '2', name: 'Manager Sarah', phone: '9876543211', role: 'Staff Admin', status: 'active', permissions: ['Dashboard', 'Members'] },
+  ]);
 
   const handleSave = async () => {
     setIsSaving(true);
@@ -58,10 +80,8 @@ export function SettingsManagement() {
         <TabsList className="bg-card/50 border border-border p-1 mb-6">
           {[
             { id: 'gym', label: 'Gym Info', icon: Building2 },
-            { id: 'profile', label: 'Profile', icon: User },
-            { id: 'notifications', label: 'Notifications', icon: Bell },
+            { id: 'staff', label: 'Staff Access', icon: Users },
             { id: 'security', label: 'Security', icon: Shield },
-            { id: 'billing', label: 'Billing', icon: CreditCard },
           ].map((tab) => (
             <TabsTrigger
               key={tab.id}
@@ -158,93 +178,6 @@ export function SettingsManagement() {
           </div>
         </TabsContent>
 
-        {/* Profile Tab */}
-        <TabsContent value="profile" className="space-y-6">
-          <div className="p-6 rounded-xl bg-card/50 border border-border">
-            <h3 className="font-display text-xl font-bold text-foreground mb-6">Personal Information</h3>
-
-            {/* Avatar */}
-            <div className="flex items-center gap-6 mb-6">
-              <div className="w-20 h-20 rounded-full bg-ko-500/20 flex items-center justify-center">
-                <span className="bg-gradient-to-r from-ko-500 to-ko-600 bg-clip-text text-transparent text-2xl font-bold">A</span>
-              </div>
-              <div>
-                <Button variant="outline" className="border-border text-foreground hover:bg-muted/50 mb-2">
-                  <Upload className="w-4 h-4 mr-2" />
-                  Change Avatar
-                </Button>
-              </div>
-            </div>
-
-            <div className="grid sm:grid-cols-2 gap-6">
-              <div>
-                <label className="text-sm text-muted-foreground mb-2 block">First Name</label>
-                <Input
-                  defaultValue="Admin"
-                  className="bg-muted/50 border-border text-foreground"
-                />
-              </div>
-              <div>
-                <label className="text-sm text-muted-foreground mb-2 block">Last Name</label>
-                <Input
-                  defaultValue="User"
-                  className="bg-muted/50 border-border text-foreground"
-                />
-              </div>
-              <div>
-                <label className="text-sm text-muted-foreground mb-2 block">Email</label>
-                <Input
-                  type="email"
-                  defaultValue="admin@kofitness.com"
-                  className="bg-muted/50 border-border text-foreground"
-                />
-              </div>
-              <div>
-                <label className="text-sm text-muted-foreground mb-2 block">Phone</label>
-                <Input
-                  defaultValue="+1 555-0000"
-                  className="bg-muted/50 border-border text-foreground"
-                />
-              </div>
-              <div className="sm:col-span-2">
-                <label className="text-sm text-muted-foreground mb-2 block">Bio</label>
-                <Textarea
-                  defaultValue="Gym administrator with 5+ years of experience."
-                  className="bg-muted/50 border-border text-foreground resize-none"
-                  rows={4}
-                />
-              </div>
-            </div>
-          </div>
-        </TabsContent>
-
-        {/* Notifications Tab */}
-        <TabsContent value="notifications" className="space-y-6">
-          <div className="p-6 rounded-xl bg-card/50 border border-border">
-            <h3 className="font-display text-xl font-bold text-foreground mb-6">Notification Preferences</h3>
-            <div className="space-y-4">
-              {[
-                { label: 'New member registrations', description: 'Get notified when a new member joins', checked: true },
-                { label: 'Payment received', description: 'Get notified when a payment is received', checked: true },
-                { label: 'Membership expiring', description: 'Get notified when memberships are about to expire', checked: true },
-
-                { label: 'System updates', description: 'Get notified about system updates and maintenance', checked: true },
-              ].map((item, index) => (
-                <div key={index} className="flex items-center justify-between p-4 rounded-lg bg-muted/50">
-                  <div>
-                    <p className="text-foreground font-medium">{item.label}</p>
-                    <p className="text-muted-foreground text-sm">{item.description}</p>
-                  </div>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input type="checkbox" defaultChecked={item.checked} className="sr-only peer" />
-                    <div className="w-11 h-6 bg-muted peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-background after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-background after:border-border after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gradient-to-r peer-checked:from-ko-500 peer-checked:to-ko-600"></div>
-                  </label>
-                </div>
-              ))}
-            </div>
-          </div>
-        </TabsContent>
-
         {/* Security Tab */}
         <TabsContent value="security" className="space-y-6">
           <div className="p-6 rounded-xl bg-card/50 border border-border">
@@ -295,46 +228,170 @@ export function SettingsManagement() {
           </div>
         </TabsContent>
 
-        {/* Billing Tab */}
-        <TabsContent value="billing" className="space-y-6">
+        {/* Staff Access Tab */}
+        <TabsContent value="staff" className="space-y-6">
           <div className="p-6 rounded-xl bg-card/50 border border-border">
-            <h3 className="font-display text-xl font-bold text-foreground mb-6">Payment Methods</h3>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between p-4 rounded-lg bg-muted/50 border border-lime-500/30">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-8 bg-muted rounded flex items-center justify-center">
-                    <CreditCard className="w-6 h-6 text-foreground" />
-                  </div>
-                  <div>
-                    <p className="text-foreground font-medium">•••• •••• •••• 4242</p>
-                    <p className="text-muted-foreground text-sm">Expires 12/25</p>
-                  </div>
-                </div>
-                <Badge className="bg-ko-500/20 bg-gradient-to-r from-ko-500 to-ko-600 bg-clip-text text-transparent">Default</Badge>
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h3 className="font-display text-xl font-bold text-foreground">Staff & Admin Management</h3>
+                <p className="text-muted-foreground text-sm">Create and manage admin users with restricted access</p>
               </div>
-            </div>
-            <Button variant="outline" className="mt-4 border-border text-foreground hover:bg-muted/50">
-              <Plus className="w-4 h-4 mr-2" />
-              Add Payment Method
-            </Button>
-          </div>
-
-          <div className="p-6 rounded-xl bg-card/50 border border-border">
-            <h3 className="font-display text-xl font-bold text-foreground mb-6">Billing History</h3>
-            <div className="space-y-3">
-              {[
-                { date: 'Jan 1, 2024', amount: '$99.00', status: 'Paid' },
-                { date: 'Dec 1, 2023', amount: '$99.00', status: 'Paid' },
-                { date: 'Nov 1, 2023', amount: '$99.00', status: 'Paid' },
-              ].map((invoice, index) => (
-                <div key={index} className="flex items-center justify-between p-4 rounded-lg bg-muted/50">
-                  <div>
-                    <p className="text-foreground font-medium">Pro Plan Subscription</p>
-                    <p className="text-muted-foreground text-sm">{invoice.date}</p>
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button className="bg-gradient-to-r from-ko-500 to-ko-600 text-primary-foreground hover:from-ko-600 hover:to-ko-700">
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add Staff
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-[500px] bg-card border-border">
+                  <DialogHeader>
+                    <DialogTitle>Add New Staff User</DialogTitle>
+                    <DialogDescription>
+                      Create a new admin user and select their allowed pages.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="grid gap-4 py-4">
+                    <div className="grid gap-2">
+                      <label className="text-sm font-medium">Full Name</label>
+                      <Input placeholder="John Doe" className="bg-muted border-border" />
+                    </div>
+                    <div className="grid gap-2">
+                      <label className="text-sm font-medium">Phone Number</label>
+                      <Input placeholder="9876543210" className="bg-muted border-border" />
+                    </div>
+                    <div className="grid gap-2">
+                      <label className="text-sm font-medium">Password</label>
+                      <div className="relative">
+                        <Input
+                          type={showPassword ? "text" : "password"}
+                          placeholder="••••••••"
+                          className="bg-muted border-border pr-10"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                        >
+                          {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </button>
+                      </div>
+                    </div>
+                    <div className="grid gap-2">
+                      <label className="text-sm font-medium">Pages Access</label>
+                      <div className="grid grid-cols-2 gap-3 p-3 rounded-lg border border-border bg-muted/50 max-h-[200px] overflow-y-auto">
+                        {menuItems.map((item) => (
+                          <div key={item.id} className="flex items-center space-x-2">
+                            <Checkbox id={item.id} className="border-border data-[state=checked]:bg-ko-500" />
+                            <label htmlFor={item.id} className="text-sm cursor-pointer truncate">
+                              {item.label}
+                            </label>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
                   </div>
+                  <DialogFooter>
+                    <Button
+                      className="w-full bg-gradient-to-r from-ko-500 to-ko-600 text-primary-foreground"
+                      onClick={() => toast.success('Staff user created successfully (Demo)')}
+                    >
+                      Create User
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            </div>
+
+            <div className="space-y-4">
+              {staffUsers.map((staff) => (
+                <div key={staff.id} className="flex items-center justify-between p-4 rounded-lg bg-muted/50 border border-border">
                   <div className="flex items-center gap-4">
-                    <span className="text-foreground font-medium">{invoice.amount}</span>
-                    <Badge className="bg-ko-500/20 bg-gradient-to-r from-ko-500 to-ko-600 bg-clip-text text-transparent">{invoice.status}</Badge>
+                    <div className="w-10 h-10 rounded-full bg-ko-500/10 flex items-center justify-center font-bold text-ko-500">
+                      {staff.name[0]}
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <p className="text-foreground font-medium">{staff.name}</p>
+                        {staff.phone === '9876543210' && (
+                          <Lock className="w-3 h-3 text-muted-foreground" />
+                        )}
+                      </div>
+                      <p className="text-muted-foreground text-xs">{staff.phone} • {staff.role}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-6">
+                    <div className="text-right hidden sm:block">
+                      <Badge variant="outline" className="text-[10px] mb-1">
+                        {staff.phone === '9876543210' ? 'All Access' : staff.permissions.join(', ')}
+                      </Badge>
+                      <div className="flex items-center justify-end gap-2">
+                        <div className={`w-2 h-2 rounded-full ${staff.status === 'active' ? 'bg-ko-500' : 'bg-red-500'}`} />
+                        <span className="text-xs text-muted-foreground capitalize">{staff.status}</span>
+                      </div>
+                    </div>
+
+                    {staff.phone !== '9876543210' ? (
+                      <Dialog>
+                        <DialogTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-ko-500">
+                            <Edit2 className="w-4 h-4" />
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent className="sm:max-w-[500px] bg-card border-border">
+                          <DialogHeader>
+                            <DialogTitle>Edit Staff: {staff.name}</DialogTitle>
+                          </DialogHeader>
+                          <div className="grid gap-4 py-4">
+                            <div className="grid gap-2">
+                              <label className="text-sm font-medium">Full Name</label>
+                              <Input defaultValue={staff.name} className="bg-muted border-border" />
+                            </div>
+                            <div className="grid gap-2">
+                              <label className="text-sm font-medium">Phone Number</label>
+                              <Input defaultValue={staff.phone} className="bg-muted border-border" />
+                            </div>
+                            <div className="grid gap-2">
+                              <label className="text-sm font-medium">Status</label>
+                              <select
+                                defaultValue={staff.status}
+                                className="flex h-10 w-full rounded-md border border-border bg-muted px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ko-500"
+                              >
+                                <option value="active">Active</option>
+                                <option value="inactive">Inactive</option>
+                              </select>
+                            </div>
+                            <div className="grid gap-2">
+                              <label className="text-sm font-medium">Update Password (Optional)</label>
+                              <Input type="password" placeholder="••••••••" className="bg-muted border-border" />
+                            </div>
+                            <div className="grid gap-2">
+                              <label className="text-sm font-medium">Pages Access</label>
+                              <div className="grid grid-cols-2 gap-3 p-3 rounded-lg border border-border bg-muted/50 max-h-[200px] overflow-y-auto">
+                                {menuItems.map((item) => (
+                                  <div key={item.id} className="flex items-center space-x-2">
+                                    <Checkbox
+                                      id={`edit-${staff.id}-${item.id}`}
+                                      defaultChecked={staff.permissions.includes(item.label)}
+                                      className="border-border data-[state=checked]:bg-ko-500"
+                                    />
+                                    <label htmlFor={`edit-${staff.id}-${item.id}`} className="text-sm cursor-pointer truncate">
+                                      {item.label}
+                                    </label>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                          <DialogFooter>
+                            <Button className="w-full bg-gradient-to-r from-ko-500 to-ko-600 text-primary-foreground">
+                              Save Changes
+                            </Button>
+                          </DialogFooter>
+                        </DialogContent>
+                      </Dialog>
+                    ) : (
+                      <div className="w-8 h-8" /> // Spacer for super admin
+                    )}
                   </div>
                 </div>
               ))}

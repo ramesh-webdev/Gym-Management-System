@@ -12,7 +12,7 @@ import { ContactSection } from '@/components/public/ContactSection';
 import { Footer } from '@/components/public/Footer';
 import { LoginForm } from '@/components/auth/LoginForm';
 import { ForgotPasswordForm } from '@/components/auth/ForgotPasswordForm';
-import { AdminSidebar } from '@/components/admin/AdminSidebar';
+import { AdminSidebar, menuItems } from '@/components/admin/AdminSidebar';
 import { AdminHeader } from '@/components/admin/AdminHeader';
 import { DashboardOverview } from '@/components/admin/DashboardOverview';
 import { MembersManagement } from '@/components/admin/MembersManagement';
@@ -84,19 +84,32 @@ function App() {
       else if (mobile === '9876543216') userId = 'm5';
       else userId = 'm1'; // Default to m1
     }
-    
+
+    // For admins/staff, handle specific permissions for the demo
+    let permissions: string[] | undefined = undefined;
+    if (role === 'admin') {
+      if (mobile === '9876543210') {
+        permissions = menuItems.map(i => i.id); // All
+      } else if (mobile === '9876543211') {
+        permissions = ['admin-dashboard', 'admin-members']; // Restricted
+      } else {
+        permissions = menuItems.map(i => i.id); // Default to all for other admins
+      }
+    }
+
     const mockUser: User = {
       id: userId,
-      name: role === 'admin' ? 'Admin User' : role === 'trainer' ? 'Trainer User' : 'Sarah Johnson',
+      name: mobile === '9876543210' ? 'Super Admin' : mobile === '9876543211' ? 'Manager Sarah' : role === 'admin' ? 'Admin User' : role === 'trainer' ? 'Trainer User' : 'Sarah Johnson',
       phone: mobile,
       role,
       status: 'active',
       createdAt: new Date(),
       lastLogin: new Date(),
+      permissions,
     };
     setUser(mockUser);
     localStorage.setItem('user', JSON.stringify(mockUser));
-    
+
     // Navigate based on role
     if (role === 'admin') {
       navigate('/admin/dashboard');
@@ -161,9 +174,23 @@ function App() {
       return <Navigate to="/login" replace />;
     }
 
+    // Check permissions for restricted admins
+    const currentPath = location.pathname;
+    const currentMenuItem = menuItems.find(item => item.path === currentPath);
+
+    if (currentMenuItem && user.permissions && !user.permissions.includes(currentMenuItem.id)) {
+      // Redirect to the first allowed menu item or dashboard if current page is restricted
+      const firstAllowedItem = menuItems.find(item => user.permissions?.includes(item.id));
+      return <Navigate to={firstAllowedItem?.path || '/admin/dashboard'} replace />;
+    }
+
     return (
       <div className="min-h-screen bg-background flex">
-        <AdminSidebar currentPage={getCurrentPage()} onLogout={handleLogout} />
+        <AdminSidebar
+          currentPage={getCurrentPage()}
+          onLogout={handleLogout}
+          userPermissions={user.permissions}
+        />
         <div className="flex-1 lg:ml-64">
           <AdminHeader onLogout={handleLogout} userName={user?.name} />
           <main className="min-h-[calc(100vh-4rem)]">
@@ -197,8 +224,8 @@ function App() {
 
     return (
       <div className="min-h-screen bg-background flex">
-        <MemberSidebar 
-          currentPage={getCurrentPage()} 
+        <MemberSidebar
+          currentPage={getCurrentPage()}
           onLogout={handleLogout}
           hasPersonalTraining={memberHasPersonalTraining}
         />
@@ -207,15 +234,15 @@ function App() {
             <Routes>
               <Route path="dashboard" element={<MemberDashboard />} />
               <Route path="membership" element={<MemberMembership />} />
-              <Route 
-                path="diet" 
+              <Route
+                path="diet"
                 element={
                   memberHasPersonalTraining ? (
                     <MemberDiet />
                   ) : (
                     <Navigate to="/member/dashboard" replace />
                   )
-                } 
+                }
               />
               <Route path="shop" element={<Shop />} />
               <Route path="recipes" element={<Recipes />} />
@@ -235,13 +262,13 @@ function App() {
         {/* Auth Routes */}
         <Route path="/login" element={<LoginForm onLogin={handleLogin} />} />
         <Route path="/forgot-password" element={<ForgotPasswordForm />} />
-        
+
         {/* Admin Routes */}
         <Route path="/admin/*" element={<AdminLayout />} />
-        
+
         {/* Member Routes */}
         <Route path="/member/*" element={<MemberLayout />} />
-        
+
         {/* Public Routes - must be last */}
         <Route path="/*" element={<PublicLayout />} />
       </Routes>

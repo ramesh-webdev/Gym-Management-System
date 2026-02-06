@@ -8,6 +8,7 @@ export interface User {
   status: 'active' | 'inactive' | 'suspended';
   createdAt: Date;
   lastLogin?: Date;
+  permissions?: string[]; // Optional permissions for restricted admins
 }
 
 export interface Member extends User {

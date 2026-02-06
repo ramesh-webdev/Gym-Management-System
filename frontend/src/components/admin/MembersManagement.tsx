@@ -45,6 +45,7 @@ export function MembersManagement() {
     firstName: '',
     lastName: '',
     mobile: '',
+    password: '',
     membershipPlan: '',
     hasPersonalTraining: false,
   });
@@ -57,7 +58,7 @@ export function MembersManagement() {
 
     const matchesStatus = statusFilter === 'all' || member.status === statusFilter;
     const matchesPlan = planFilter === 'all' || member.membershipType === planFilter;
-    const matchesPT = ptFilter === 'all' || 
+    const matchesPT = ptFilter === 'all' ||
       (ptFilter === 'yes' && member.hasPersonalTraining) ||
       (ptFilter === 'no' && !member.hasPersonalTraining);
 
@@ -100,38 +101,48 @@ export function MembersManagement() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="text-sm text-muted-foreground mb-2 block">First Name</label>
-                  <Input 
-                    className="bg-muted/50 border-border text-foreground" 
+                  <Input
+                    className="bg-muted/50 border-border text-foreground"
                     placeholder="John"
                     value={newMemberData.firstName}
-                    onChange={(e) => setNewMemberData({...newMemberData, firstName: e.target.value})}
+                    onChange={(e) => setNewMemberData({ ...newMemberData, firstName: e.target.value })}
                   />
                 </div>
                 <div>
                   <label className="text-sm text-muted-foreground mb-2 block">Last Name</label>
-                  <Input 
-                    className="bg-muted/50 border-border text-foreground" 
+                  <Input
+                    className="bg-muted/50 border-border text-foreground"
                     placeholder="Doe"
                     value={newMemberData.lastName}
-                    onChange={(e) => setNewMemberData({...newMemberData, lastName: e.target.value})}
+                    onChange={(e) => setNewMemberData({ ...newMemberData, lastName: e.target.value })}
                   />
                 </div>
               </div>
               <div>
                 <label className="text-sm text-muted-foreground mb-2 block">Mobile Number</label>
-                <Input 
-                  className="bg-muted/50 border-border text-foreground" 
+                <Input
+                  className="bg-muted/50 border-border text-foreground"
                   placeholder="9876543210"
                   value={newMemberData.mobile}
-                  onChange={(e) => setNewMemberData({...newMemberData, mobile: e.target.value})}
+                  onChange={(e) => setNewMemberData({ ...newMemberData, mobile: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="text-sm text-muted-foreground mb-2 block">Password</label>
+                <Input
+                  type="password"
+                  className="bg-muted/50 border-border text-foreground"
+                  placeholder="••••••••"
+                  value={newMemberData.password}
+                  onChange={(e) => setNewMemberData({ ...newMemberData, password: e.target.value })}
                 />
               </div>
               <div>
                 <label className="text-sm text-muted-foreground mb-2 block">Membership Plan</label>
-                <select 
+                <select
                   className="w-full h-10 px-3 rounded-md bg-muted/50 border border-border text-foreground"
                   value={newMemberData.membershipPlan}
-                  onChange={(e) => setNewMemberData({...newMemberData, membershipPlan: e.target.value})}
+                  onChange={(e) => setNewMemberData({ ...newMemberData, membershipPlan: e.target.value })}
                 >
                   <option value="">Select a plan</option>
                   {mockMembershipPlans.map((plan) => (
@@ -144,7 +155,7 @@ export function MembersManagement() {
                   type="checkbox"
                   id="hasPT"
                   checked={newMemberData.hasPersonalTraining}
-                  onChange={(e) => setNewMemberData({...newMemberData, hasPersonalTraining: e.target.checked})}
+                  onChange={(e) => setNewMemberData({ ...newMemberData, hasPersonalTraining: e.target.checked })}
                   className="w-4 h-4 rounded border-border accent-ko-500"
                 />
                 <label htmlFor="hasPT" className="text-sm text-foreground cursor-pointer flex items-center gap-2">
@@ -152,7 +163,7 @@ export function MembersManagement() {
                   Has Personal Training
                 </label>
               </div>
-              <Button 
+              <Button
                 className="w-full bg-gradient-to-r from-ko-500 to-ko-600 text-primary-foreground hover:from-ko-600 hover:to-ko-700"
                 onClick={() => {
                   // In a real app, this would call an API
@@ -161,6 +172,7 @@ export function MembersManagement() {
                     firstName: '',
                     lastName: '',
                     mobile: '',
+                    password: '',
                     membershipPlan: '',
                     hasPersonalTraining: false,
                   });
