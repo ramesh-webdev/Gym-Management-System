@@ -9,6 +9,20 @@ export interface User {
   createdAt: Date;
   lastLogin?: Date;
   permissions?: string[]; // Optional permissions for restricted admins
+  isOnboarded?: boolean; // Track if the user has completed onboarding
+}
+
+export interface MemberOnboardingData {
+  age?: number;
+  gender?: 'male' | 'female' | 'other';
+  weight?: number; // in kg
+  height?: number; // in cm
+  fitnessGoals?: string[];
+  medicalConditions?: string;
+  emergencyContact?: {
+    name: string;
+    phone: string;
+  };
 }
 
 export interface Member extends User {
@@ -19,6 +33,7 @@ export interface Member extends User {
   payments: Payment[];
   hasPersonalTraining: boolean;
   dietPlan?: DietPlan;
+  onboardingData?: MemberOnboardingData;
 }
 
 export interface Trainer extends User {

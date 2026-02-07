@@ -8,6 +8,10 @@ import {
   UserX,
   Mail,
   Dumbbell,
+  Scale,
+  Activity,
+  Ruler,
+  User as UserIcon,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -62,6 +66,14 @@ export function MembersManagement() {
       mobile: member.phone,
     });
     setIsEditDialogOpen(true);
+  };
+
+  const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
+  const [selectedMemberForDetails, setSelectedMemberForDetails] = useState<any>(null);
+
+  const handleViewDetails = (member: any) => {
+    setSelectedMemberForDetails(member);
+    setIsDetailsDialogOpen(true);
   };
 
   const filteredMembers = mockMembers.filter((member) => {
@@ -274,6 +286,77 @@ export function MembersManagement() {
             )}
           </DialogContent>
         </Dialog>
+
+        {/* Member Details / Metrics Dialog */}
+        <Dialog open={isDetailsDialogOpen} onOpenChange={setIsDetailsDialogOpen}>
+          <DialogContent className="bg-card border-border text-foreground max-w-lg">
+            <DialogHeader>
+              <DialogTitle className="font-display text-2xl">Member Metrics</DialogTitle>
+            </DialogHeader>
+            {selectedMemberForDetails && (
+              <div className="space-y-6 pt-4">
+                <div className="flex items-center gap-4 p-4 rounded-xl bg-muted/30 border border-border">
+                  <div className="w-12 h-12 rounded-full bg-ko-500/10 flex items-center justify-center text-ko-500 font-bold text-xl">
+                    {selectedMemberForDetails.name.charAt(0)}
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-lg">{selectedMemberForDetails.name}</h3>
+                    <p className="text-sm text-muted-foreground">{selectedMemberForDetails.membershipId} • {selectedMemberForDetails.membershipType} Plan</p>
+                  </div>
+                </div>
+
+                {selectedMemberForDetails.onboardingData ? (
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="p-4 rounded-xl bg-muted/50 border border-border space-y-1">
+                      <div className="flex items-center gap-2 text-muted-foreground text-xs uppercase tracking-wider font-semibold">
+                        <Scale className="w-3 h-3 text-ko-500" /> Weight
+                      </div>
+                      <p className="text-xl font-bold">{selectedMemberForDetails.onboardingData.weight} <span className="text-sm font-normal text-muted-foreground">kg</span></p>
+                    </div>
+                    <div className="p-4 rounded-xl bg-muted/50 border border-border space-y-1">
+                      <div className="flex items-center gap-2 text-muted-foreground text-xs uppercase tracking-wider font-semibold">
+                        <Ruler className="w-3 h-3 text-ko-500" /> Height
+                      </div>
+                      <p className="text-xl font-bold">{selectedMemberForDetails.onboardingData.height} <span className="text-sm font-normal text-muted-foreground">cm</span></p>
+                    </div>
+                    <div className="p-4 rounded-xl bg-muted/50 border border-border space-y-1">
+                      <div className="flex items-center gap-2 text-muted-foreground text-xs uppercase tracking-wider font-semibold">
+                        <UserIcon className="w-3 h-3 text-ko-500" /> Age
+                      </div>
+                      <p className="text-xl font-bold">{selectedMemberForDetails.onboardingData.age} <span className="text-sm font-normal text-muted-foreground">years</span></p>
+                    </div>
+                    <div className="p-4 rounded-xl bg-muted/50 border border-border space-y-1">
+                      <div className="flex items-center gap-2 text-muted-foreground text-xs uppercase tracking-wider font-semibold">
+                        <Activity className="w-3 h-3 text-ko-500" /> Goals
+                      </div>
+                      <div className="flex flex-wrap gap-1">
+                        {selectedMemberForDetails.onboardingData.fitnessGoals?.map((goal: string) => (
+                          <Badge key={goal} variant="secondary" className="text-[10px] px-1.5 py-0">
+                            {goal}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="p-8 text-center border-2 border-dashed border-border rounded-2xl">
+                    <p className="text-muted-foreground italic">Onboarding incomplete for this member.</p>
+                  </div>
+                )}
+
+                {selectedMemberForDetails.onboardingData?.emergencyContact && (
+                  <div className="space-y-3">
+                    <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Emergency Contact</h4>
+                    <div className="p-4 rounded-xl bg-red-500/5 border border-red-500/10">
+                      <p className="font-bold text-foreground">{selectedMemberForDetails.onboardingData.emergencyContact.name}</p>
+                      <p className="text-sm text-muted-foreground">+91 {selectedMemberForDetails.onboardingData.emergencyContact.phone}</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
 
       {/* Filters */}
@@ -390,6 +473,13 @@ export function MembersManagement() {
                       >
                         <Edit className="w-4 h-4 mr-2" />
                         Edit
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        className="text-foreground hover:bg-muted cursor-pointer"
+                        onClick={() => handleViewDetails(member)}
+                      >
+                        <UserIcon className="w-4 h-4 mr-2" />
+                        View Metrics
                       </DropdownMenuItem>
                       <DropdownMenuItem className="text-foreground hover:bg-muted cursor-pointer">
                         <Mail className="w-4 h-4 mr-2" />

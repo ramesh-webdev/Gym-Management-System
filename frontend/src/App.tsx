@@ -28,12 +28,14 @@ import { RecipeManagement } from '@/components/admin/RecipeManagement';
 import { MemberSidebar } from '@/components/member/MemberSidebar';
 import { MemberDashboard } from '@/components/member/MemberDashboard';
 import { MemberMembership } from '@/components/member/MemberMembership';
-import { MemberDiet } from './components/member/MemberDiet';
-import { Shop } from './components/member/Shop';
-import { Recipes } from './components/member/Recipes';
-import { MemberPayments } from './components/member/MemberPayments';
+import { MemberDiet } from '@/components/member/MemberDiet';
+import { Shop } from '@/components/member/Shop';
+import { Recipes } from '@/components/member/Recipes';
+import { MemberPayments } from '@/components/member/MemberPayments';
 import { MemberSettings } from '@/components/member/MemberSettings';
+import { MemberOnboarding } from './components/member/MemberOnboarding';
 import { ScrollToTop } from '@/components/ui/ScrollToTop';
+import { cn } from '@/lib/utils';
 import { hasPersonalTraining } from '@/utils/memberUtils';
 import type { User } from '@/types';
 
@@ -69,20 +71,28 @@ function App() {
   }, [location.pathname]);
 
   // Handle login
-  const handleLogin = (mobile: string, _password: string, role: 'admin' | 'member' | 'trainer') => {
+  const handleLogin = (mobile: string, _password: string, role: 'admin' | 'member' | 'trainer', name?: string, isOnboarded?: boolean) => {
     // For members, use member ID based on phone number to match mock data
     let userId = '1';
+    let defaultName = '';
+    let finalIsOnboarded = isOnboarded;
+
     if (role === 'member') {
       // Map phone numbers to member IDs for testing
-      // 9876543212 -> m1 (has personal training)
-      // 9876543213 -> m2 (no personal training)
-      // etc.
-      if (mobile === '9876543212') userId = 'm1';
-      else if (mobile === '9876543213') userId = 'm2';
-      else if (mobile === '9876543214') userId = 'm3';
-      else if (mobile === '9876543215') userId = 'm4';
-      else if (mobile === '9876543216') userId = 'm5';
-      else userId = 'm1'; // Default to m1
+      if (mobile === '9876543212') { userId = 'm1'; defaultName = 'Sarah Johnson'; }
+      else if (mobile === '9876543213') { userId = 'm2'; defaultName = 'Michael Chen'; }
+      else if (mobile === '9876543214') { userId = 'm3'; defaultName = 'Emily Davis'; }
+      else if (mobile === '9876543215') { userId = 'm4'; defaultName = 'James Wilson'; }
+      else if (mobile === '9876543216') { userId = 'm5'; defaultName = 'Amanda Brown'; }
+      else {
+        userId = `m-${Date.now()}`;
+        defaultName = name || 'New Member';
+        if (finalIsOnboarded === undefined) finalIsOnboarded = false;
+      }
+
+      if (finalIsOnboarded === undefined) finalIsOnboarded = true; // Existing mock members are already onboarded
+    } else {
+      finalIsOnboarded = true; // Admins and trainers don't need gym onboarding in this flow
     }
 
     // For admins/staff, handle specific permissions for the demo
@@ -99,13 +109,14 @@ function App() {
 
     const mockUser: User = {
       id: userId,
-      name: mobile === '9876543210' ? 'Super Admin' : mobile === '9876543211' ? 'Manager Sarah' : role === 'admin' ? 'Admin User' : role === 'trainer' ? 'Trainer User' : 'Sarah Johnson',
+      name: name || (mobile === '9876543210' ? 'Super Admin' : mobile === '9876543211' ? 'Manager Sarah' : defaultName || (role === 'admin' ? 'Admin User' : role === 'trainer' ? 'Trainer User' : 'Member User')),
       phone: mobile,
       role,
       status: 'active',
       createdAt: new Date(),
       lastLogin: new Date(),
       permissions,
+      isOnboarded: finalIsOnboarded,
     };
     setUser(mockUser);
     localStorage.setItem('user', JSON.stringify(mockUser));
@@ -125,6 +136,16 @@ function App() {
     setUser(null);
     localStorage.removeItem('user');
     navigate('/');
+  };
+
+  // Handle onboarding completion
+  const handleOnboardingComplete = (_onboardingData: any) => {
+    if (!user) return;
+    const updatedUser = { ...user, isOnboarded: true };
+    setUser(updatedUser);
+    localStorage.setItem('user', JSON.stringify(updatedUser));
+    // In a real app, we would also save the onboardingData to the database
+    navigate('/member/dashboard');
   };
 
   // Get current page from location for sidebar highlighting
@@ -220,18 +241,26 @@ function App() {
       return <Navigate to="/login" replace />;
     }
 
+    // Force onboarding if not completed
+    if (!user.isOnboarded && location.pathname !== '/member/onboarding') {
+      return <Navigate to="/member/onboarding" replace />;
+    }
+
     const memberHasPersonalTraining = hasPersonalTraining(user.id);
 
     return (
       <div className="min-h-screen bg-background flex">
-        <MemberSidebar
-          currentPage={getCurrentPage()}
-          onLogout={handleLogout}
-          hasPersonalTraining={memberHasPersonalTraining}
-        />
-        <div className="flex-1 lg:ml-64">
+        {!user.isOnboarded ? null : (
+          <MemberSidebar
+            currentPage={getCurrentPage()}
+            onLogout={handleLogout}
+            hasPersonalTraining={memberHasPersonalTraining}
+          />
+        )}
+        <div className={cn("flex-1", user.isOnboarded && "lg:ml-64")}>
           <main className="min-h-screen pt-0">
             <Routes>
+              <Route path="onboarding" element={<MemberOnboarding onComplete={handleOnboardingComplete} user={user} />} />
               <Route path="dashboard" element={<MemberDashboard />} />
               <Route path="membership" element={<MemberMembership />} />
               <Route
