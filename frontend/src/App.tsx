@@ -9,6 +9,9 @@ import { BMISection } from '@/components/public/BMISection';
 import { PricingSection } from '@/components/public/PricingSection';
 import { TestimonialsSection } from '@/components/public/TestimonialsSection';
 import { ContactSection } from '@/components/public/ContactSection';
+import { FAQ } from '@/components/public/FAQ';
+import { PrivacyPolicy } from '@/components/public/PrivacyPolicy';
+import { TermsOfService } from '@/components/public/TermsOfService';
 import { Footer } from '@/components/public/Footer';
 import { LoginForm } from '@/components/auth/LoginForm';
 import { ForgotPasswordForm } from '@/components/auth/ForgotPasswordForm';
@@ -183,6 +186,9 @@ function App() {
           <Route path="/programs" element={<ProgramsSection />} />
           <Route path="/pricing" element={<PricingSection />} />
           <Route path="/contact" element={<ContactSection />} />
+          <Route path="/faq" element={<FAQ />} />
+          <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+          <Route path="/terms-of-service" element={<TermsOfService />} />
         </Routes>
       </main>
       <Footer />

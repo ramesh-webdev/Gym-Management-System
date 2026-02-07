@@ -12,7 +12,6 @@ export function Footer() {
     { label: 'About Us', href: '/about' },
     { label: 'Programs', href: '/programs' },
     { label: 'Pricing', href: '/pricing' },
-    { label: 'Trainers', href: '/trainers' },
     { label: 'Contact', href: '/contact' },
   ];
 
@@ -20,15 +19,15 @@ export function Footer() {
     { label: 'Bodybuilding', href: '/programs' },
     { label: 'CrossFit', href: '/programs' },
     { label: 'Cardio', href: '/programs' },
-    { label: 'Yoga', href: '/programs' },
+    { label: 'Strength Training', href: '/programs' },
     { label: 'Personal Training', href: '/programs' },
   ];
 
   const support = [
     { label: 'Help Center', href: '/contact' },
-    { label: 'FAQs', href: '/contact' },
-    { label: 'Privacy Policy', href: '/' },
-    { label: 'Terms of Service', href: '/' },
+    { label: 'FAQs', href: '/faq' },
+    { label: 'Privacy Policy', href: '/privacy-policy' },
+    { label: 'Terms of Service', href: '/terms-of-service' },
   ];
 
   const socialLinks = [
