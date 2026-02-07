@@ -125,8 +125,8 @@ export function ProgramsSection() {
               {/* Content */}
               <div className="relative h-full flex flex-col justify-end p-6">
                 {/* Icon */}
-                <div className="w-12 h-12 rounded-xl bg-ko-500/20 backdrop-blur-sm flex items-center justify-center mb-4 group-hover:bg-gradient-to-br group-hover:from-ko-500 group-hover:to-ko-600 transition-colors">
-                  <program.icon className="w-6 h-6 bg-gradient-to-r from-ko-500 to-ko-600 bg-clip-text text-transparent group-hover:text-primary-foreground transition-colors" />
+                <div className="w-12 h-12 rounded-xl bg-ko-500/10 backdrop-blur-sm flex items-center justify-center mb-4 group-hover:bg-gradient-to-br group-hover:from-ko-500 group-hover:to-ko-600 transition-all duration-300">
+                  <program.icon className="w-6 h-6 text-ko-500 group-hover:text-primary-foreground transition-colors" />
                 </div>
 
                 {/* Title */}
@@ -157,8 +157,8 @@ export function ProgramsSection() {
               {/* Border Glow */}
               <div
                 className={`absolute inset-0 rounded-2xl border-2 transition-all duration-500 ${hoveredCard === index
-                    ? 'border-ko-500 shadow-glow'
-                    : 'border-white/10'
+                  ? 'border-ko-500 shadow-glow'
+                  : 'border-white/10'
                   }`}
               />
             </div>
