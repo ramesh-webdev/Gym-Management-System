@@ -4,7 +4,8 @@ import { Check, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import { mockMembershipPlans } from '@/data/mockData';
+import { getMembershipPlans } from '@/api/membership-plans';
+import type { MembershipPlan } from '@/types';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -12,6 +13,15 @@ export function PricingSection() {
   const navigate = useNavigate();
   const sectionRef = useRef<HTMLDivElement>(null);
   const [hoveredPlan, setHoveredPlan] = useState<string | null>(null);
+  const [plans, setPlans] = useState<MembershipPlan[]>([]);
+  const [plansLoading, setPlansLoading] = useState(true);
+
+  useEffect(() => {
+    getMembershipPlans()
+      .then(setPlans)
+      .catch(() => setPlans([]))
+      .finally(() => setPlansLoading(false));
+  }, []);
 
   useEffect(() => {
     const ctx = gsap.context(() => {
@@ -68,7 +78,10 @@ export function PricingSection() {
           className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto"
           style={{ perspective: '1000px' }}
         >
-          {mockMembershipPlans.map((plan) => (
+          {plansLoading ? (
+            <p className="col-span-full text-center text-muted-foreground py-8">Loading plans...</p>
+          ) : (
+          plans.map((plan) => (
             <div
               key={plan.id}
               className={`pricing-card relative rounded-2xl transition-all duration-500 ${plan.isPopular
@@ -143,7 +156,8 @@ export function PricingSection() {
                 <div className="absolute inset-0 rounded-2xl bg-ko-500/20 blur-xl -z-10 animate-float" />
               )}
             </div>
-          ))}
+          ))
+          )}
         </div>
 
       </div>

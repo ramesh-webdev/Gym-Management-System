@@ -8,7 +8,10 @@ export interface User {
   status: 'active' | 'inactive' | 'suspended';
   createdAt: Date;
   lastLogin?: Date;
-  permissions?: string[]; // Optional permissions for restricted admins
+  /** True = full access (super-admin). False/undefined = access limited by permissions (admin created by super-admin). */
+  isSuperAdmin?: boolean;
+  /** Menu/feature IDs this admin can access. Only used when isSuperAdmin is false. */
+  permissions?: string[];
   isOnboarded?: boolean; // Track if the user has completed onboarding
 }
 
@@ -65,6 +68,7 @@ export interface Product {
   price: number;
   category: 'supplements' | 'gear' | 'clothing' | 'other';
   image: string;
+  cloudinaryId?: string;
   stock: number;
   status: 'active' | 'inactive';
 }
