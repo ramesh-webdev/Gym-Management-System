@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Plus, Edit, Trash2, Check, Star, MoreHorizontal } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -16,31 +16,62 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { mockMembershipPlans } from '@/data/mockData';
+import {
+  getMembershipPlans,
+  createMembershipPlan,
+  updateMembershipPlan,
+  deleteMembershipPlan,
+} from '@/api/membership-plans';
 import type { MembershipPlan } from '@/types';
+import { Checkbox } from '@/components/ui/checkbox';
+import { toast } from 'sonner';
 
 export function MembershipPlans() {
-  const [plans, setPlans] = useState<MembershipPlan[]>(mockMembershipPlans);
+  const [plans, setPlans] = useState<MembershipPlan[]>([]);
+  const [loading, setLoading] = useState(true);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [currentPlan, setCurrentPlan] = useState<Partial<MembershipPlan>>({});
+  const [saving, setSaving] = useState(false);
 
-  const handleAddPlan = (e: React.FormEvent) => {
+  const loadPlans = () => {
+    setLoading(true);
+    getMembershipPlans()
+      .then(setPlans)
+      .catch(() => {
+        toast.error('Failed to load plans');
+        setPlans([]);
+      })
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    loadPlans();
+  }, []);
+
+  const handleAddPlan = async (e: React.FormEvent) => {
     e.preventDefault();
-    const formData = new FormData(e.target as HTMLFormElement);
-    const newPlan: MembershipPlan = {
-      id: Date.now().toString(),
-      name: formData.get('name') as string,
-      description: formData.get('description') as string,
-      price: Number(formData.get('price')),
-      duration: Number(formData.get('duration')),
-      features: (formData.get('features') as string).split(',').map(f => f.trim()).filter(Boolean),
-      isActive: true, // Default to active
-      isPopular: false,
-    };
-
-    setPlans([...plans, newPlan]);
-    setIsAddDialogOpen(false);
+    const form = e.target as HTMLFormElement;
+    const formData = new FormData(form);
+    const name = formData.get('name') as string;
+    const description = formData.get('description') as string;
+    const price = Number(formData.get('price'));
+    const duration = Number(formData.get('duration'));
+    const featuresStr = (formData.get('features') as string) || '';
+    const features = featuresStr.split(',').map((f) => f.trim()).filter(Boolean);
+    const isActive = formData.get('isActive') === 'on';
+    setSaving(true);
+    try {
+      await createMembershipPlan({ name, description, price, duration, features, isActive, isPopular: false });
+      toast.success('Plan created');
+      setIsAddDialogOpen(false);
+      form.reset();
+      loadPlans();
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Failed to create plan');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleEditClick = (plan: MembershipPlan) => {
@@ -48,28 +79,39 @@ export function MembershipPlans() {
     setIsEditDialogOpen(true);
   };
 
-  const handleUpdatePlan = (e: React.FormEvent) => {
+  const handleUpdatePlan = async (e: React.FormEvent) => {
     e.preventDefault();
-    const formData = new FormData(e.target as HTMLFormElement);
-
-    setPlans(plans.map(p =>
-      p.id === currentPlan.id
-        ? {
-          ...p,
-          name: formData.get('name') as string,
-          description: formData.get('description') as string,
-          price: Number(formData.get('price')),
-          duration: Number(formData.get('duration')),
-          features: (formData.get('features') as string).split(',').map(f => f.trim()).filter(Boolean),
-        }
-        : p
-    ));
-    setIsEditDialogOpen(false);
+    if (!currentPlan.id) return;
+    const form = e.target as HTMLFormElement;
+    const formData = new FormData(form);
+    const name = formData.get('name') as string;
+    const description = formData.get('description') as string;
+    const price = Number(formData.get('price'));
+    const duration = Number(formData.get('duration'));
+    const featuresStr = (formData.get('features') as string) || '';
+    const features = featuresStr.split(',').map((f) => f.trim()).filter(Boolean);
+    const isActive = formData.get('isActive') === 'on';
+    setSaving(true);
+    try {
+      await updateMembershipPlan(currentPlan.id, { name, description, price, duration, features, isActive });
+      toast.success('Plan updated');
+      setIsEditDialogOpen(false);
+      loadPlans();
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Failed to update plan');
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const handleDeletePlan = (id: string) => {
-    if (confirm('Are you sure you want to delete this plan?')) {
-      setPlans(plans.filter(p => p.id !== id));
+  const handleDeletePlan = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this plan?')) return;
+    try {
+      await deleteMembershipPlan(id);
+      toast.success('Plan deleted');
+      loadPlans();
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Failed to delete plan');
     }
   };
 
@@ -81,6 +123,14 @@ export function MembershipPlans() {
     return `/${duration}mo`;
   };
 
+  if (loading) {
+    return (
+      <div className="p-6 flex items-center justify-center min-h-[200px]">
+        <p className="text-muted-foreground">Loading plans...</p>
+      </div>
+    );
+  }
+
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
@@ -90,7 +140,6 @@ export function MembershipPlans() {
           <p className="text-muted-foreground">Manage gym membership plans and pricing</p>
         </div>
 
-        {/* Add Plan Dialog */}
         <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
           <DialogTrigger asChild>
             <Button className="bg-lime-500 text-primary-foreground hover:bg-lime-400">
@@ -125,14 +174,22 @@ export function MembershipPlans() {
                 <label className="text-sm text-muted-foreground mb-2 block">Features (comma separated)</label>
                 <Input name="features" required className="bg-muted/50 border-border text-foreground" placeholder="Gym access, Classes, ..." />
               </div>
-              <Button type="submit" className="w-full bg-lime-500 text-primary-foreground hover:bg-lime-400">
-                Create Plan
+              <div className="flex items-center space-x-2">
+                <Checkbox id="isActive" name="isActive" defaultChecked />
+                <label
+                  htmlFor="isActive"
+                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-foreground"
+                >
+                  Active
+                </label>
+              </div>
+              <Button type="submit" disabled={saving} className="w-full bg-lime-500 text-primary-foreground hover:bg-lime-400">
+                {saving ? 'Creating...' : 'Create Plan'}
               </Button>
             </form>
           </DialogContent>
         </Dialog>
 
-        {/* Edit Plan Dialog */}
         <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
           <DialogContent className="bg-card border-border text-foreground max-w-lg">
             <DialogHeader>
@@ -161,8 +218,17 @@ export function MembershipPlans() {
                 <label className="text-sm text-muted-foreground mb-2 block">Features (comma separated)</label>
                 <Input name="features" defaultValue={currentPlan.features?.join(', ')} required className="bg-muted/50 border-border text-foreground" />
               </div>
-              <Button type="submit" className="w-full bg-lime-500 text-primary-foreground hover:bg-lime-400">
-                Update Plan
+              <div className="flex items-center space-x-2">
+                <Checkbox id="edit-isActive" name="isActive" defaultChecked={currentPlan.isActive} />
+                <label
+                  htmlFor="edit-isActive"
+                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-foreground"
+                >
+                  Active
+                </label>
+              </div>
+              <Button type="submit" disabled={saving} className="w-full bg-lime-500 text-primary-foreground hover:bg-lime-400">
+                {saving ? 'Updating...' : 'Update Plan'}
               </Button>
             </form>
           </DialogContent>
@@ -179,7 +245,6 @@ export function MembershipPlans() {
               : 'bg-card/50 border-border hover:border-border'
               }`}
           >
-            {/* Popular Badge */}
             {plan.isPopular && (
               <div className="absolute -top-3 left-6">
                 <Badge className="bg-lime-500 text-primary-foreground">
@@ -189,7 +254,6 @@ export function MembershipPlans() {
               </div>
             )}
 
-            {/* Actions */}
             <div className="absolute top-4 right-4">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -216,13 +280,11 @@ export function MembershipPlans() {
               </DropdownMenu>
             </div>
 
-            {/* Plan Header */}
             <div className="mb-6">
               <h3 className="font-display text-2xl font-bold text-foreground mb-2">{plan.name}</h3>
               <p className="text-muted-foreground text-sm min-h-[40px]">{plan.description}</p>
             </div>
 
-            {/* Price */}
             <div className="flex items-baseline gap-1 mb-6">
               <span className="font-display text-5xl font-bold text-lime-500">
                 ₹{plan.price}
@@ -230,9 +292,8 @@ export function MembershipPlans() {
               <span className="text-muted-foreground">{getDurationLabel(plan.duration)}</span>
             </div>
 
-            {/* Features */}
             <ul className="space-y-3 mb-6">
-              {plan.features.map((feature, index) => (
+              {(plan.features || []).map((feature, index) => (
                 <li key={index} className="flex items-start gap-3">
                   <div className="w-5 h-5 rounded-full bg-lime-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
                     <Check className="w-3 h-3 text-lime-500" />
@@ -242,7 +303,6 @@ export function MembershipPlans() {
               ))}
             </ul>
 
-            {/* Status */}
             <div className="pt-4 border-t border-border">
               <Badge
                 className={
@@ -257,6 +317,10 @@ export function MembershipPlans() {
           </div>
         ))}
       </div>
+
+      {plans.length === 0 && (
+        <p className="text-center text-muted-foreground py-12">No plans yet. Add one to get started.</p>
+      )}
     </div>
   );
 }

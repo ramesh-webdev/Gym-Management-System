@@ -24,6 +24,8 @@ import { ThemeToggle } from '@/components/ui/ThemeToggle';
 interface AdminSidebarProps {
   currentPage: string;
   onLogout: () => void;
+  /** When true, show all menus. When false, filter by userPermissions. */
+  isSuperAdmin?: boolean;
   userPermissions?: string[];
 }
 
@@ -43,16 +45,16 @@ const menuItems = [
 
 export { menuItems };
 
-export function AdminSidebar({ currentPage, onLogout, userPermissions }: AdminSidebarProps) {
+export function AdminSidebar({ currentPage, onLogout, isSuperAdmin, userPermissions }: AdminSidebarProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
-  console.log(currentPage);
 
-  const filteredMenuItems = menuItems.filter(item =>
-    !userPermissions || userPermissions.includes(item.id)
-  );
+  // Super-admin sees all menus. Other admins see only items in their permissions list.
+  const filteredMenuItems = isSuperAdmin
+    ? menuItems
+    : menuItems.filter((item) => (userPermissions && userPermissions.length > 0 ? userPermissions.includes(item.id) : true));
 
   return (
     <>

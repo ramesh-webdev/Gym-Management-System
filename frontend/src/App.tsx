@@ -40,94 +40,43 @@ import { MemberOnboarding } from './components/member/MemberOnboarding';
 import { ScrollToTop } from '@/components/ui/ScrollToTop';
 import { cn } from '@/lib/utils';
 import { hasPersonalTraining } from '@/utils/memberUtils';
+import { getStoredUser, logout as apiLogout } from '@/api/auth';
 import type { User } from '@/types';
-
-/** Read and parse stored user so it's available on first render (avoids redirect to login on refresh). */
-function getStoredUser(): User | null {
-  try {
-    const saved = localStorage.getItem('user');
-    if (!saved) return null;
-    const parsed = JSON.parse(saved) as User;
-    parsed.createdAt = new Date(parsed.createdAt);
-    if (parsed.lastLogin) parsed.lastLogin = new Date(parsed.lastLogin);
-    return parsed;
-  } catch {
-    localStorage.removeItem('user');
-    return null;
-  }
-}
 
 function App() {
   const [user, setUser] = useState<User | null>(() => getStoredUser());
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Keep state in sync with localStorage (e.g. login from another tab)
+  // Sync from localStorage on mount only (avoids setState loop). Cross-tab sync via storage event below.
   useEffect(() => {
     const stored = getStoredUser();
-    if (stored?.id !== user?.id) setUser(stored);
-  }, [user?.id]);
+    if (stored) setUser(stored);
+  }, []);
+
+  // When another tab logs in/out, sync user state (no dependency on user to avoid loop)
+  useEffect(() => {
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === 'user' || e.key === 'accessToken') {
+        const stored = getStoredUser();
+        setUser(stored);
+      }
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, []);
 
   // Scroll to top on route change
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [location.pathname]);
 
-  // Handle login
-  const handleLogin = (mobile: string, _password: string, role: 'admin' | 'member' | 'trainer', name?: string, isOnboarded?: boolean) => {
-    // For members, use member ID based on phone number to match mock data
-    let userId = '1';
-    let defaultName = '';
-    let finalIsOnboarded = isOnboarded;
-
-    if (role === 'member') {
-      // Map phone numbers to member IDs for testing
-      if (mobile === '9876543212') { userId = 'm1'; defaultName = 'Sarah Johnson'; }
-      else if (mobile === '9876543213') { userId = 'm2'; defaultName = 'Michael Chen'; }
-      else if (mobile === '9876543214') { userId = 'm3'; defaultName = 'Emily Davis'; }
-      else if (mobile === '9876543215') { userId = 'm4'; defaultName = 'James Wilson'; }
-      else if (mobile === '9876543216') { userId = 'm5'; defaultName = 'Amanda Brown'; }
-      else {
-        userId = `m-${Date.now()}`;
-        defaultName = name || 'New Member';
-        if (finalIsOnboarded === undefined) finalIsOnboarded = false;
-      }
-
-      if (finalIsOnboarded === undefined) finalIsOnboarded = true; // Existing mock members are already onboarded
-    } else {
-      finalIsOnboarded = true; // Admins and trainers don't need gym onboarding in this flow
-    }
-
-    // For admins/staff, handle specific permissions for the demo
-    let permissions: string[] | undefined = undefined;
-    if (role === 'admin') {
-      if (mobile === '9876543210') {
-        permissions = menuItems.map(i => i.id); // All
-      } else if (mobile === '9876543211') {
-        permissions = ['admin-dashboard', 'admin-members']; // Restricted
-      } else {
-        permissions = menuItems.map(i => i.id); // Default to all for other admins
-      }
-    }
-
-    const mockUser: User = {
-      id: userId,
-      name: name || (mobile === '9876543210' ? 'Super Admin' : mobile === '9876543211' ? 'Manager Sarah' : defaultName || (role === 'admin' ? 'Admin User' : role === 'trainer' ? 'Trainer User' : 'Member User')),
-      phone: mobile,
-      role,
-      status: 'active',
-      createdAt: new Date(),
-      lastLogin: new Date(),
-      permissions,
-      isOnboarded: finalIsOnboarded,
-    };
-    setUser(mockUser);
-    localStorage.setItem('user', JSON.stringify(mockUser));
-
-    // Navigate based on role
-    if (role === 'admin') {
+  // Handle login: user and token are already stored by api.auth.login(); we just set state and navigate.
+  const handleLogin = (loggedInUser: User) => {
+    setUser(loggedInUser);
+    if (loggedInUser.role === 'admin') {
       navigate('/admin/dashboard');
-    } else if (role === 'member') {
+    } else if (loggedInUser.role === 'member') {
       navigate('/member/dashboard');
     } else {
       navigate('/trainer/dashboard');
@@ -137,7 +86,7 @@ function App() {
   // Handle logout
   const handleLogout = () => {
     setUser(null);
-    localStorage.removeItem('user');
+    apiLogout();
     navigate('/');
   };
 
@@ -201,13 +150,15 @@ function App() {
       return <Navigate to="/login" replace />;
     }
 
-    // Check permissions for restricted admins
+    // Super-admin has full access. Other admins are restricted by permissions array.
+    const isSuperAdmin = user.isSuperAdmin === true;
+    const permissions = user.permissions;
+    const isRestrictedAdmin = !isSuperAdmin && Array.isArray(permissions) && permissions.length > 0;
     const currentPath = location.pathname;
     const currentMenuItem = menuItems.find(item => item.path === currentPath);
 
-    if (currentMenuItem && user.permissions && !user.permissions.includes(currentMenuItem.id)) {
-      // Redirect to the first allowed menu item or dashboard if current page is restricted
-      const firstAllowedItem = menuItems.find(item => user.permissions?.includes(item.id));
+    if (isRestrictedAdmin && currentMenuItem && !permissions.includes(currentMenuItem.id)) {
+      const firstAllowedItem = menuItems.find(item => permissions.includes(item.id));
       return <Navigate to={firstAllowedItem?.path || '/admin/dashboard'} replace />;
     }
 
@@ -216,6 +167,7 @@ function App() {
         <AdminSidebar
           currentPage={getCurrentPage()}
           onLogout={handleLogout}
+          isSuperAdmin={isSuperAdmin}
           userPermissions={user.permissions}
         />
         <div className="flex-1 lg:ml-64">

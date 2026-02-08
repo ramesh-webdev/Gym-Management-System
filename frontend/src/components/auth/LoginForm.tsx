@@ -4,9 +4,11 @@ import { Eye, EyeOff, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
+import { login as apiLogin } from '@/api/auth';
+import type { User } from '@/types';
 
 interface LoginFormProps {
-  onLogin: (mobile: string, password: string, role: 'admin' | 'member' | 'trainer', name?: string, isOnboarded?: boolean) => void;
+  onLogin: (user: User) => void;
 }
 
 export function LoginForm({ onLogin }: LoginFormProps) {
@@ -25,26 +27,23 @@ export function LoginForm({ onLogin }: LoginFormProps) {
     setError('');
     setIsLoading(true);
 
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1500));
-
-    if (isSignup) {
-      // Mock signup logic
-      // In a real app, this would be an API call
-      // For demo, we just log them in
-      onLogin(mobile, password, 'member', name, false);
-    } else {
-      // Demo login logic
-      if (mobile.endsWith('0')) { // Admin: 9876543210
-        onLogin(mobile, password, 'admin');
-      } else if (mobile.endsWith('1')) { // Trainer: 9876543221
-        onLogin(mobile, password, 'trainer');
-      } else {
-        onLogin(mobile, password, 'member');
+    try {
+      if (isSignup) {
+        // Signup not implemented on backend yet; show message
+        setError('Sign up is not available yet. Use an existing account to sign in.');
+        setIsLoading(false);
+        return;
       }
+      // Infer role for API validation (backend returns user with actual role)
+      const role = mobile.endsWith('0') ? 'admin' as const : mobile.endsWith('1') ? 'trainer' as const : 'member' as const;
+      const user = await apiLogin(mobile, password, role);
+      onLogin(user);
+    } catch (err: unknown) {
+      const message = err && typeof err === 'object' && 'message' in err ? String((err as { message: string }).message) : 'Login failed';
+      setError(message);
+    } finally {
+      setIsLoading(false);
     }
-
-    setIsLoading(false);
   };
 
   return (
@@ -211,14 +210,14 @@ export function LoginForm({ onLogin }: LoginFormProps) {
             <div className="flex flex-wrap gap-2 justify-center">
               <button
                 type="button"
-                onClick={() => { setMobile('9876543210'); setPassword('admin123'); }}
+                onClick={() => { setMobile('9876543210'); setPassword('password123'); }}
                 className="px-3 py-1.5 rounded-full bg-muted text-muted-foreground text-xs hover:bg-ko-500/20 hover:bg-gradient-to-r hover:from-ko-500 hover:to-ko-600 hover:bg-clip-text hover:text-transparent transition-colors"
               >
                 Super Admin
               </button>
               <button
                 type="button"
-                onClick={() => { setMobile('9876543212'); setPassword('member123'); }}
+                onClick={() => { setMobile('9876543212'); setPassword('password123'); }}
                 className="px-3 py-1.5 rounded-full bg-muted text-muted-foreground text-xs hover:bg-ko-500/20 hover:bg-gradient-to-r hover:from-ko-500 hover:to-ko-600 hover:bg-clip-text hover:text-transparent transition-colors"
               >
                 Member

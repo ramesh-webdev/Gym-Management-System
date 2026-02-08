@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Search, ShoppingBag, Filter } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,13 +10,21 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { mockProducts } from '@/data/mockData';
+import { getProducts } from '@/api/products';
 import type { Product } from '@/types';
 
 export function Shop() {
-    const [products] = useState<Product[]>(mockProducts);
+    const [products, setProducts] = useState<Product[]>([]);
+    const [productsLoading, setProductsLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [categoryFilter, setCategoryFilter] = useState('all');
+
+    useEffect(() => {
+        getProducts()
+            .then(setProducts)
+            .catch(() => setProducts([]))
+            .finally(() => setProductsLoading(false));
+    }, []);
 
     const filteredProducts = products.filter(product => {
         const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -71,7 +79,10 @@ export function Shop() {
 
             {/* Product Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                {filteredProducts.map((product) => (
+                {productsLoading ? (
+                    <p className="col-span-full text-center text-muted-foreground py-8">Loading products...</p>
+                ) : (
+                filteredProducts.map((product) => (
                     <div
                         key={product.id}
                         className="group relative bg-card/50 border border-border rounded-xl overflow-hidden hover:border-ko-500/30 transition-all flex flex-col"
@@ -113,9 +124,10 @@ export function Shop() {
                             </div>
                         </div>
                     </div>
-                ))}
+                ))
+                )}
 
-                {filteredProducts.length === 0 && (
+                {!productsLoading && filteredProducts.length === 0 && (
                     <div className="col-span-full py-12 text-center text-muted-foreground">
                         No products found matching your criteria.
                     </div>
