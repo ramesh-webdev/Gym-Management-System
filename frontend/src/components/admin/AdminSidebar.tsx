@@ -45,7 +45,7 @@ const menuItems = [
 
 export { menuItems };
 
-export function AdminSidebar({ currentPage, onLogout, isSuperAdmin, userPermissions }: AdminSidebarProps) {
+export function AdminSidebar({ onLogout, isSuperAdmin, userPermissions }: AdminSidebarProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const [isCollapsed, setIsCollapsed] = useState(false);
