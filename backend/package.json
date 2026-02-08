@@ -4,8 +4,8 @@
   "description": "Kayal GMS API - Express + MongoDB + Mongoose",
   "main": "src/index.js",
   "scripts": {
-    "start": "nodemon src/index.js",
-    "dev": "node --watch src/index.js",
+    "start": "node src/index.js",
+    "dev": "nodemon src/index.js",
     "seed": "node scripts/seed.js"
   },
   "author": "",
