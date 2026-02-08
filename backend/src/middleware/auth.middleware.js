@@ -73,4 +73,17 @@ function requireRole(...roles) {
   };
 }
 
-module.exports = { authMiddleware, optionalAuth, requireRole };
+/**
+ * Require super-admin (admin with full access). Used for staff management.
+ */
+function requireSuperAdmin(req, res, next) {
+  if (!req.user) {
+    return res.status(401).json({ message: 'Authentication required' });
+  }
+  if (req.user.role !== 'admin' || !req.user.isSuperAdmin) {
+    return res.status(403).json({ message: 'Super-admin access required' });
+  }
+  next();
+}
+
+module.exports = { authMiddleware, optionalAuth, requireRole, requireSuperAdmin };

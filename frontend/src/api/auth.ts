@@ -38,21 +38,14 @@ function parseStoredUser(raw: string | null): User | null {
 }
 
 /**
- * Login with phone and password. Optionally pass role (admin/member/trainer).
+ * Login with phone and password. Server returns the user with their actual role.
  * On success: stores user + token in localStorage and returns user.
  */
-export async function login(
-  phone: string,
-  password: string,
-  role?: 'admin' | 'member' | 'trainer'
-): Promise<User> {
-  const body: { phone: string; password: string; role?: 'admin' | 'member' | 'trainer' } = {
+export async function login(phone: string, password: string): Promise<User> {
+  const res = await api.post<{ user: User; accessToken: string }>('/auth/login', {
     phone: phone.trim(),
     password,
-  };
-  if (role) body.role = role;
-
-  const res = await api.post<{ user: User; accessToken: string }>('/auth/login', body);
+  });
   localStorage.setItem(TOKEN_KEY, res.accessToken);
   localStorage.setItem(USER_KEY, JSON.stringify(res.user));
   return parseStoredUser(JSON.stringify(res.user)) ?? res.user;

@@ -185,7 +185,7 @@ function App() {
               <Route path="notifications" element={<NotificationsManagement />} />
               <Route path="diet-plans" element={<DietPlanManagement />} />
               <Route path="recipes" element={<RecipeManagement />} />
-              <Route path="settings" element={<SettingsManagement />} />
+              <Route path="settings" element={<SettingsManagement isSuperAdmin={isSuperAdmin} />} />
               <Route path="*" element={<Navigate to="/admin/dashboard" replace />} />
             </Routes>
           </main>

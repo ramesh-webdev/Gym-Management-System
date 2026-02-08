@@ -3,13 +3,10 @@ const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const config = require('../config/env');
 
-async function login(phone, password, role) {
+async function login(phone, password) {
   const user = await User.findOne({ phone: phone.trim() }).lean();
   if (!user) {
     return { success: false, message: 'Invalid phone or password' };
-  }
-  if (role && user.role !== role) {
-    return { success: false, message: 'Invalid role for this account' };
   }
   const match = await bcrypt.compare(password, user.passwordHash);
   if (!match) {

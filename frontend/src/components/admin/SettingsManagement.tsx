@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Building2,
   Users,
@@ -29,18 +29,258 @@ import {
 import { Checkbox } from '@/components/ui/checkbox';
 import { menuItems } from './AdminSidebar';
 import { toast } from 'sonner';
+import { getStaff, createStaff, updateStaff } from '@/api/staff';
+import type { User } from '@/types';
 
-export function SettingsManagement() {
+function permissionLabels(permissionIds: string[] | undefined): string {
+  if (!permissionIds || permissionIds.length === 0) return 'No access';
+  return menuItems.filter((m) => permissionIds.includes(m.id)).map((m) => m.label).join(', ');
+}
+
+function AddStaffForm({
+  showPassword,
+  setShowPassword,
+  onSuccess,
+  saving,
+  setSaving,
+}: {
+  showPassword: boolean;
+  setShowPassword: (v: boolean) => void;
+  onSuccess: () => void;
+  saving: boolean;
+  setSaving: (v: boolean) => void;
+}) {
+  const [addPermissions, setAddPermissions] = useState<string[]>([]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const form = e.target as HTMLFormElement;
+    const name = (form.querySelector('[name="add-name"]') as HTMLInputElement)?.value?.trim();
+    const phone = (form.querySelector('[name="add-phone"]') as HTMLInputElement)?.value?.trim();
+    const password = (form.querySelector('[name="add-password"]') as HTMLInputElement)?.value;
+    if (!name || !phone || !password) {
+      toast.error('Name, phone and password are required');
+      return;
+    }
+    if (password.length < 6) {
+      toast.error('Password must be at least 6 characters');
+      return;
+    }
+    setSaving(true);
+    try {
+      await createStaff({ name, phone, password, permissions: addPermissions });
+      toast.success('Staff user created');
+      onSuccess();
+      form.reset();
+      setAddPermissions([]);
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Failed to create staff');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <DialogContent className="sm:max-w-[500px] bg-card border-border text-foreground">
+      <DialogHeader>
+        <DialogTitle>Add New Staff User</DialogTitle>
+        <DialogDescription>Create a new admin user and select their allowed pages.</DialogDescription>
+      </DialogHeader>
+      <form onSubmit={handleSubmit} className="grid gap-4 py-4">
+        <div className="grid gap-2">
+          <label className="text-sm font-medium">Full Name</label>
+          <Input name="add-name" placeholder="John Doe" className="bg-muted border-border" required />
+        </div>
+        <div className="grid gap-2">
+          <label className="text-sm font-medium">Phone Number</label>
+          <Input name="add-phone" placeholder="9876543210" className="bg-muted border-border" required />
+        </div>
+        <div className="grid gap-2">
+          <label className="text-sm font-medium">Password</label>
+          <div className="relative">
+            <Input
+              name="add-password"
+              type={showPassword ? 'text' : 'password'}
+              placeholder="••••••••"
+              className="bg-muted border-border pr-10"
+              minLength={6}
+              required
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+            >
+              {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+            </button>
+          </div>
+        </div>
+        <div className="grid gap-2">
+          <label className="text-sm font-medium">Pages Access</label>
+          <div className="grid grid-cols-2 gap-3 p-3 rounded-lg border border-border bg-muted/50 max-h-[200px] overflow-y-auto">
+            {menuItems.map((item) => (
+              <div key={item.id} className="flex items-center space-x-2">
+                <Checkbox
+                  checked={addPermissions.includes(item.id)}
+                  onCheckedChange={(checked) =>
+                    setAddPermissions((prev) =>
+                      checked ? [...prev, item.id] : prev.filter((id) => id !== item.id)
+                    )
+                  }
+                  className="border-border data-[state=checked]:bg-ko-500"
+                />
+                <label className="text-sm cursor-pointer truncate">{item.label}</label>
+              </div>
+            ))}
+          </div>
+        </div>
+        <DialogFooter>
+          <Button type="submit" disabled={saving} className="w-full bg-gradient-to-r from-ko-500 to-ko-600 text-primary-foreground">
+            {saving ? 'Creating...' : 'Create User'}
+          </Button>
+        </DialogFooter>
+      </form>
+    </DialogContent>
+  );
+}
+
+function EditStaffDialog({
+  staff,
+  onClose,
+  onSuccess,
+  saving,
+  setSaving,
+}: {
+  staff: User | null;
+  onClose: () => void;
+  onSuccess: () => void;
+  saving: boolean;
+  setSaving: (v: boolean) => void;
+}) {
+  const [editPermissions, setEditPermissions] = useState<string[]>([]);
+  const open = !!staff;
+
+  useEffect(() => {
+    if (staff) setEditPermissions(staff.permissions ?? []);
+  }, [staff]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!staff) return;
+    const form = e.target as HTMLFormElement;
+    const name = (form.querySelector('[name="edit-name"]') as HTMLInputElement)?.value?.trim();
+    const phone = (form.querySelector('[name="edit-phone"]') as HTMLInputElement)?.value?.trim();
+    const status = (form.querySelector('[name="edit-status"]') as HTMLSelectElement)?.value as User['status'];
+    const newPassword = (form.querySelector('[name="edit-password"]') as HTMLInputElement)?.value;
+    setSaving(true);
+    try {
+      await updateStaff(staff.id, {
+        name: name || staff.name,
+        phone: phone || staff.phone,
+        status: status || staff.status,
+        permissions: editPermissions,
+        ...(newPassword && newPassword.length >= 6 ? { newPassword } : {}),
+      });
+      toast.success('Staff updated');
+      onSuccess();
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Failed to update staff');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="sm:max-w-[500px] bg-card border-border text-foreground">
+        <DialogHeader>
+          <DialogTitle>Edit Staff: {staff?.name}</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="grid gap-4 py-4">
+          <div className="grid gap-2">
+            <label className="text-sm font-medium">Full Name</label>
+            <Input name="edit-name" defaultValue={staff?.name} className="bg-muted border-border" required />
+          </div>
+          <div className="grid gap-2">
+            <label className="text-sm font-medium">Phone Number</label>
+            <Input name="edit-phone" defaultValue={staff?.phone} className="bg-muted border-border" required />
+          </div>
+          <div className="grid gap-2">
+            <label className="text-sm font-medium">Status</label>
+            <select
+              name="edit-status"
+              defaultValue={staff?.status}
+              className="flex h-10 w-full rounded-md border border-border bg-muted px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ko-500"
+            >
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+              <option value="suspended">Suspended</option>
+            </select>
+          </div>
+          <div className="grid gap-2">
+            <label className="text-sm font-medium">Update Password (Optional)</label>
+            <Input name="edit-password" type="password" placeholder="••••••••" className="bg-muted border-border" minLength={6} />
+          </div>
+          <div className="grid gap-2">
+            <label className="text-sm font-medium">Pages Access</label>
+            <div className="grid grid-cols-2 gap-3 p-3 rounded-lg border border-border bg-muted/50 max-h-[200px] overflow-y-auto">
+              {menuItems.map((item) => (
+                <div key={item.id} className="flex items-center space-x-2">
+                  <Checkbox
+                    checked={editPermissions.includes(item.id)}
+                    onCheckedChange={(checked) =>
+                      setEditPermissions((prev) =>
+                        checked ? [...prev, item.id] : prev.filter((id) => id !== item.id)
+                      )
+                    }
+                    className="border-border data-[state=checked]:bg-ko-500"
+                  />
+                  <label className="text-sm cursor-pointer truncate">{item.label}</label>
+                </div>
+              ))}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button type="submit" disabled={saving} className="w-full bg-gradient-to-r from-ko-500 to-ko-600 text-primary-foreground">
+              {saving ? 'Saving...' : 'Save Changes'}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+export interface SettingsManagementProps {
+  isSuperAdmin?: boolean;
+}
+
+export function SettingsManagement({ isSuperAdmin }: SettingsManagementProps) {
   const [activeTab, setActiveTab] = useState('gym');
   const [isSaving, setIsSaving] = useState(false);
-
   const [showPassword, setShowPassword] = useState(false);
 
-  // Mock staff data
-  const staffUsers =[
-    { id: '1', name: 'Super Admin', phone: '9876543210', role: 'Super Admin', status: 'active', permissions: ['All Access'] },
-    { id: '2', name: 'Manager Sarah', phone: '9876543211', role: 'Staff Admin', status: 'active', permissions: ['Dashboard', 'Members'] },
-  ];
+  const [staffUsers, setStaffUsers] = useState<User[]>([]);
+  const [staffLoading, setStaffLoading] = useState(false);
+  const [staffSaving, setStaffSaving] = useState(false);
+  const [isAddStaffOpen, setIsAddStaffOpen] = useState(false);
+  const [editStaff, setEditStaff] = useState<User | null>(null);
+
+  const loadStaff = () => {
+    if (!isSuperAdmin) return;
+    setStaffLoading(true);
+    getStaff()
+      .then(setStaffUsers)
+      .catch(() => {
+        toast.error('Failed to load staff');
+        setStaffUsers([]);
+      })
+      .finally(() => setStaffLoading(false));
+  };
+
+  useEffect(() => {
+    if (isSuperAdmin && activeTab === 'staff') loadStaff();
+  }, [isSuperAdmin, activeTab]);
 
   const handleSave = async () => {
     setIsSaving(true);
@@ -212,191 +452,93 @@ export function SettingsManagement() {
               </Button>
             </div>
           </div>
-
-          <div className="p-6 rounded-xl bg-card/50 border border-border">
-            <h3 className="font-display text-xl font-bold text-foreground mb-6">Two-Factor Authentication</h3>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-foreground font-medium">Enable 2FA</p>
-                <p className="text-muted-foreground text-sm">Add an extra layer of security to your account</p>
-              </div>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input type="checkbox" className="sr-only peer" />
-                <div className="w-11 h-6 bg-muted peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-background after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-background after:border-border after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gradient-to-r peer-checked:from-ko-500 peer-checked:to-ko-600"></div>
-              </label>
-            </div>
-          </div>
         </TabsContent>
 
         {/* Staff Access Tab */}
         <TabsContent value="staff" className="space-y-6">
           <div className="p-6 rounded-xl bg-card/50 border border-border">
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <h3 className="font-display text-xl font-bold text-foreground">Staff & Admin Management</h3>
-                <p className="text-muted-foreground text-sm">Create and manage admin users with restricted access</p>
-              </div>
-              <Dialog>
-                <DialogTrigger asChild>
-                  <Button className="bg-gradient-to-r from-ko-500 to-ko-600 text-primary-foreground hover:from-ko-600 hover:to-ko-700">
-                    <Plus className="w-4 h-4 mr-2" />
-                    Add Staff
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="sm:max-w-[500px] bg-card border-border">
-                  <DialogHeader>
-                    <DialogTitle>Add New Staff User</DialogTitle>
-                    <DialogDescription>
-                      Create a new admin user and select their allowed pages.
-                    </DialogDescription>
-                  </DialogHeader>
-                  <div className="grid gap-4 py-4">
-                    <div className="grid gap-2">
-                      <label className="text-sm font-medium">Full Name</label>
-                      <Input placeholder="John Doe" className="bg-muted border-border" />
-                    </div>
-                    <div className="grid gap-2">
-                      <label className="text-sm font-medium">Phone Number</label>
-                      <Input placeholder="9876543210" className="bg-muted border-border" />
-                    </div>
-                    <div className="grid gap-2">
-                      <label className="text-sm font-medium">Password</label>
-                      <div className="relative">
-                        <Input
-                          type={showPassword ? "text" : "password"}
-                          placeholder="••••••••"
-                          className="bg-muted border-border pr-10"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowPassword(!showPassword)}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                        >
-                          {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                        </button>
-                      </div>
-                    </div>
-                    <div className="grid gap-2">
-                      <label className="text-sm font-medium">Pages Access</label>
-                      <div className="grid grid-cols-2 gap-3 p-3 rounded-lg border border-border bg-muted/50 max-h-[200px] overflow-y-auto">
-                        {menuItems.map((item) => (
-                          <div key={item.id} className="flex items-center space-x-2">
-                            <Checkbox id={item.id} className="border-border data-[state=checked]:bg-ko-500" />
-                            <label htmlFor={item.id} className="text-sm cursor-pointer truncate">
-                              {item.label}
-                            </label>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
+            {!isSuperAdmin ? (
+              <p className="text-muted-foreground">Only super-admins can manage staff access.</p>
+            ) : (
+              <>
+                <div className="flex items-center justify-between mb-6">
+                  <div>
+                    <h3 className="font-display text-xl font-bold text-foreground">Staff & Admin Management</h3>
+                    <p className="text-muted-foreground text-sm">Create and manage admin users with restricted access</p>
                   </div>
-                  <DialogFooter>
-                    <Button
-                      className="w-full bg-gradient-to-r from-ko-500 to-ko-600 text-primary-foreground"
-                      onClick={() => toast.success('Staff user created successfully (Demo)')}
-                    >
-                      Create User
-                    </Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
-            </div>
-
-            <div className="space-y-4">
-              {staffUsers.map((staff) => (
-                <div key={staff.id} className="flex items-center justify-between p-4 rounded-lg bg-muted/50 border border-border">
-                  <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-full bg-ko-500/10 flex items-center justify-center font-bold text-ko-500">
-                      {staff.name[0]}
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <p className="text-foreground font-medium">{staff.name}</p>
-                        {staff.phone === '9876543210' && (
-                          <Lock className="w-3 h-3 text-muted-foreground" />
-                        )}
-                      </div>
-                      <p className="text-muted-foreground text-xs">{staff.phone} • {staff.role}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-6">
-                    <div className="text-right hidden sm:block">
-                      <Badge variant="outline" className="text-[10px] mb-1">
-                        {staff.phone === '9876543210' ? 'All Access' : staff.permissions.join(', ')}
-                      </Badge>
-                      <div className="flex items-center justify-end gap-2">
-                        <div className={`w-2 h-2 rounded-full ${staff.status === 'active' ? 'bg-ko-500' : 'bg-red-500'}`} />
-                        <span className="text-xs text-muted-foreground capitalize">{staff.status}</span>
-                      </div>
-                    </div>
-
-                    {staff.phone !== '9876543210' ? (
-                      <Dialog>
-                        <DialogTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-ko-500">
-                            <Edit2 className="w-4 h-4" />
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent className="sm:max-w-[500px] bg-card border-border">
-                          <DialogHeader>
-                            <DialogTitle>Edit Staff: {staff.name}</DialogTitle>
-                          </DialogHeader>
-                          <div className="grid gap-4 py-4">
-                            <div className="grid gap-2">
-                              <label className="text-sm font-medium">Full Name</label>
-                              <Input defaultValue={staff.name} className="bg-muted border-border" />
-                            </div>
-                            <div className="grid gap-2">
-                              <label className="text-sm font-medium">Phone Number</label>
-                              <Input defaultValue={staff.phone} className="bg-muted border-border" />
-                            </div>
-                            <div className="grid gap-2">
-                              <label className="text-sm font-medium">Status</label>
-                              <select
-                                defaultValue={staff.status}
-                                className="flex h-10 w-full rounded-md border border-border bg-muted px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ko-500"
-                              >
-                                <option value="active">Active</option>
-                                <option value="inactive">Inactive</option>
-                              </select>
-                            </div>
-                            <div className="grid gap-2">
-                              <label className="text-sm font-medium">Update Password (Optional)</label>
-                              <Input type="password" placeholder="••••••••" className="bg-muted border-border" />
-                            </div>
-                            <div className="grid gap-2">
-                              <label className="text-sm font-medium">Pages Access</label>
-                              <div className="grid grid-cols-2 gap-3 p-3 rounded-lg border border-border bg-muted/50 max-h-[200px] overflow-y-auto">
-                                {menuItems.map((item) => (
-                                  <div key={item.id} className="flex items-center space-x-2">
-                                    <Checkbox
-                                      id={`edit-${staff.id}-${item.id}`}
-                                      defaultChecked={staff.permissions.includes(item.label)}
-                                      className="border-border data-[state=checked]:bg-ko-500"
-                                    />
-                                    <label htmlFor={`edit-${staff.id}-${item.id}`} className="text-sm cursor-pointer truncate">
-                                      {item.label}
-                                    </label>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          </div>
-                          <DialogFooter>
-                            <Button className="w-full bg-gradient-to-r from-ko-500 to-ko-600 text-primary-foreground">
-                              Save Changes
-                            </Button>
-                          </DialogFooter>
-                        </DialogContent>
-                      </Dialog>
-                    ) : (
-                      <div className="w-8 h-8" /> // Spacer for super admin
-                    )}
-                  </div>
+                  <Dialog open={isAddStaffOpen} onOpenChange={setIsAddStaffOpen}>
+                    <DialogTrigger asChild>
+                      <Button className="bg-gradient-to-r from-ko-500 to-ko-600 text-primary-foreground hover:from-ko-600 hover:to-ko-700">
+                        <Plus className="w-4 h-4 mr-2" />
+                        Add Staff
+                      </Button>
+                    </DialogTrigger>
+                    <AddStaffForm
+                      showPassword={showPassword}
+                      setShowPassword={setShowPassword}
+                      onSuccess={() => { setIsAddStaffOpen(false); loadStaff(); }}
+                      saving={staffSaving}
+                      setSaving={setStaffSaving}
+                    />
+                  </Dialog>
                 </div>
-              ))}
-            </div>
+
+                {staffLoading ? (
+                  <p className="text-muted-foreground py-8">Loading staff...</p>
+                ) : (
+                  <div className="space-y-4">
+                    {staffUsers.map((staff) => (
+                      <div key={staff.id} className="flex items-center justify-between p-4 rounded-lg bg-muted/50 border border-border">
+                        <div className="flex items-center gap-4">
+                          <div className="w-10 h-10 rounded-full bg-ko-500/10 flex items-center justify-center font-bold text-ko-500">
+                            {staff.name[0]}
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <p className="text-foreground font-medium">{staff.name}</p>
+                              {staff.isSuperAdmin && <Lock className="w-3 h-3 text-muted-foreground" />}
+                            </div>
+                            <p className="text-muted-foreground text-xs">{staff.phone} • {staff.isSuperAdmin ? 'Super Admin' : 'Staff Admin'}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-6">
+                          <div className="text-right hidden sm:block">
+                            <Badge variant="outline" className="text-[10px] mb-1">
+                              {staff.isSuperAdmin ? 'All Access' : permissionLabels(staff.permissions)}
+                            </Badge>
+                            <div className="flex items-center justify-end gap-2">
+                              <div className={`w-2 h-2 rounded-full ${staff.status === 'active' ? 'bg-ko-500' : 'bg-red-500'}`} />
+                              <span className="text-xs text-muted-foreground capitalize">{staff.status}</span>
+                            </div>
+                          </div>
+                          {!staff.isSuperAdmin ? (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-muted-foreground hover:text-ko-500"
+                              onClick={() => setEditStaff(staff)}
+                            >
+                              <Edit2 className="w-4 h-4" />
+                            </Button>
+                          ) : (
+                            <div className="w-8 h-8" />
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
           </div>
+
+          <EditStaffDialog
+            staff={editStaff}
+            onClose={() => setEditStaff(null)}
+            onSuccess={() => { setEditStaff(null); loadStaff(); }}
+            saving={staffSaving}
+            setSaving={setStaffSaving}
+          />
         </TabsContent>
       </Tabs>
     </div>

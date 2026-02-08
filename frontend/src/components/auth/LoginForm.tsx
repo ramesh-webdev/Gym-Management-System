@@ -34,9 +34,7 @@ export function LoginForm({ onLogin }: LoginFormProps) {
         setIsLoading(false);
         return;
       }
-      // Infer role for API validation (backend returns user with actual role)
-      const role = mobile.endsWith('0') ? 'admin' as const : mobile.endsWith('1') ? 'trainer' as const : 'member' as const;
-      const user = await apiLogin(mobile, password, role);
+      const user = await apiLogin(mobile, password);
       onLogin(user);
     } catch (err: unknown) {
       const message = err && typeof err === 'object' && 'message' in err ? String((err as { message: string }).message) : 'Login failed';
@@ -201,29 +199,6 @@ export function LoginForm({ onLogin }: LoginFormProps) {
               {isSignup ? 'Sign In' : 'Sign Up'}
             </button>
           </p>
-
-          {/* Demo Credentials */}
-          <div className="mt-8 pt-6 border-t border-border">
-            <p className="text-xs text-muted-foreground text-center mb-3">
-              Demo Credentials (click to auto-fill)
-            </p>
-            <div className="flex flex-wrap gap-2 justify-center">
-              <button
-                type="button"
-                onClick={() => { setMobile('9876543210'); setPassword('password123'); }}
-                className="px-3 py-1.5 rounded-full bg-muted text-muted-foreground text-xs hover:bg-ko-500/20 hover:bg-gradient-to-r hover:from-ko-500 hover:to-ko-600 hover:bg-clip-text hover:text-transparent transition-colors"
-              >
-                Super Admin
-              </button>
-              <button
-                type="button"
-                onClick={() => { setMobile('9876543212'); setPassword('password123'); }}
-                className="px-3 py-1.5 rounded-full bg-muted text-muted-foreground text-xs hover:bg-ko-500/20 hover:bg-gradient-to-r hover:from-ko-500 hover:to-ko-600 hover:bg-clip-text hover:text-transparent transition-colors"
-              >
-                Member
-              </button>
-            </div>
-          </div>
         </div>
       </div>
     </div>

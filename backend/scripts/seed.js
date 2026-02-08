@@ -57,6 +57,18 @@ async function seed() {
     isOnboarded: true,
   });
 
+  // Staff admin (limited permissions; for Settings > Staff Access demo)
+  await User.create({
+    name: 'Manager Sarah',
+    phone: '9876543211',
+    passwordHash: hash,
+    role: 'admin',
+    status: 'active',
+    isSuperAdmin: false,
+    permissions: ['admin-dashboard', 'admin-members', 'admin-plans'],
+    isOnboarded: true,
+  });
+
   // Members
   const member1 = await User.create({
     name: 'Sarah Johnson',
