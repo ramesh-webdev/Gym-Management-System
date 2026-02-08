@@ -113,7 +113,7 @@ export function ProductManagement() {
         stock,
         status: "active",
       });
-      toast.success("Product created");
+      toast.success("Product created successfully!");
       setIsAddDialogOpen(false);
       setNewProductCategory("supplements");
       setSelectedFile(null);
@@ -121,7 +121,7 @@ export function ProductManagement() {
       loadProducts();
     } catch (err: unknown) {
       toast.error(
-        err instanceof Error ? err.message : "Failed to create product",
+        err instanceof Error ? err.message : "Could not create product. Please try again.",
       );
     } finally {
       setSaving(false);
@@ -168,13 +168,13 @@ export function ProductManagement() {
         stock,
         status: editStatus,
       });
-      toast.success("Product updated");
+      toast.success("Product updated successfully!");
       setIsEditDialogOpen(false);
       setSelectedFile(null);
       loadProducts();
     } catch (err: unknown) {
       toast.error(
-        err instanceof Error ? err.message : "Failed to update product",
+        err instanceof Error ? err.message : "Could not update product. Please try again.",
       );
     } finally {
       setSaving(false);
@@ -186,11 +186,11 @@ export function ProductManagement() {
     if (!confirm("Are you sure you want to delete this product?")) return;
     try {
       await deleteProduct(id);
-      toast.success("Product deleted");
+      toast.success("Product deleted successfully.");
       loadProducts();
     } catch (err: unknown) {
       toast.error(
-        err instanceof Error ? err.message : "Failed to delete product",
+        err instanceof Error ? err.message : "Could not delete product.",
       );
     }
   };

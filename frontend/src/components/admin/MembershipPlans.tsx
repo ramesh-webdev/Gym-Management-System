@@ -63,12 +63,12 @@ export function MembershipPlans() {
     setSaving(true);
     try {
       await createMembershipPlan({ name, description, price, duration, features, isActive, isPopular: false });
-      toast.success('Plan created');
+      toast.success('Membership plan created successfully!');
       setIsAddDialogOpen(false);
       form.reset();
       loadPlans();
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : 'Failed to create plan');
+      toast.error(err instanceof Error ? err.message : 'Could not create membership plan. Please try again.');
     } finally {
       setSaving(false);
     }
@@ -94,11 +94,11 @@ export function MembershipPlans() {
     setSaving(true);
     try {
       await updateMembershipPlan(currentPlan.id, { name, description, price, duration, features, isActive });
-      toast.success('Plan updated');
+      toast.success('Membership plan updated successfully!');
       setIsEditDialogOpen(false);
       loadPlans();
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : 'Failed to update plan');
+      toast.error(err instanceof Error ? err.message : 'Could not update membership plan. Please try again.');
     } finally {
       setSaving(false);
     }
@@ -108,10 +108,10 @@ export function MembershipPlans() {
     if (!confirm('Are you sure you want to delete this plan?')) return;
     try {
       await deleteMembershipPlan(id);
-      toast.success('Plan deleted');
+      toast.success('Membership plan deleted successfully.');
       loadPlans();
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : 'Failed to delete plan');
+      toast.error(err instanceof Error ? err.message : 'Could not delete membership plan.');
     }
   };
 

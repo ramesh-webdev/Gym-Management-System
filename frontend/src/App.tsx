@@ -38,6 +38,7 @@ import { MemberPayments } from '@/components/member/MemberPayments';
 import { MemberSettings } from '@/components/member/MemberSettings';
 import { MemberOnboarding } from './components/member/MemberOnboarding';
 import { ScrollToTop } from '@/components/ui/ScrollToTop';
+import { Toaster } from '@/components/ui/sonner';
 import { cn } from '@/lib/utils';
 import { hasPersonalTraining } from '@/utils/memberUtils';
 import { getStoredUser, logout as apiLogout } from '@/api/auth';
@@ -260,6 +261,7 @@ function App() {
         <Route path="/*" element={<PublicLayout />} />
       </Routes>
       <ScrollToTop />
+      <Toaster />
     </ThemeProvider>
   );
 }
