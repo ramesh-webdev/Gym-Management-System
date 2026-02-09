@@ -12,6 +12,9 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
+import { updateMe } from '@/api/auth';
+import { toast } from 'sonner';
+import type { MemberOnboardingData } from '@/types';
 
 interface MemberOnboardingProps {
     onComplete: (data: any) => void;
@@ -20,6 +23,7 @@ interface MemberOnboardingProps {
 
 export function MemberOnboarding({ onComplete, user }: MemberOnboardingProps) {
     const [step, setStep] = useState(1);
+    const [saving, setSaving] = useState(false);
     const [formData, setFormData] = useState({
         age: '',
         gender: '',
@@ -54,9 +58,124 @@ export function MemberOnboarding({ onComplete, user }: MemberOnboardingProps) {
     const nextStep = () => setStep(prev => prev + 1);
     const prevStep = () => setStep(prev => prev - 1);
 
-    const handleSubmit = (e: FormEvent) => {
+    const validateStep = (currentStep: number) => {
+        if (currentStep === 1) {
+            if (!formData.age || !formData.gender || !formData.weight || !formData.height) {
+                toast.error("Please fill in all fields (Age, Gender, Weight, Height)");
+                return false;
+            }
+            // Validate numeric values
+            const age = Number(formData.age);
+            const weight = Number(formData.weight);
+            const height = Number(formData.height);
+            if (isNaN(age) || age <= 0 || age > 150) {
+                toast.error("Please enter a valid age (1-150)");
+                return false;
+            }
+            if (isNaN(weight) || weight <= 0 || weight > 500) {
+                toast.error("Please enter a valid weight (1-500 kg)");
+                return false;
+            }
+            if (isNaN(height) || height <= 0 || height > 300) {
+                toast.error("Please enter a valid height (1-300 cm)");
+                return false;
+            }
+        }
+        if (currentStep === 2) {
+            if (formData.fitnessGoals.length === 0) {
+                toast.error("Please select at least one fitness goal");
+                return false;
+            }
+        }
+        if (currentStep === 3) {
+            if (!formData.emergencyName || !formData.emergencyPhone) {
+                toast.error("Please fill in all emergency contact fields");
+                return false;
+            }
+            if (formData.emergencyPhone.length !== 10) {
+                toast.error("Please enter a valid 10-digit phone number");
+                return false;
+            }
+        }
+        return true;
+    };
+
+    const validateAllSteps = () => {
+        // Validate step 1
+        if (!formData.age || !formData.gender || !formData.weight || !formData.height) {
+            toast.error("Please complete Step 1: Personal Profile (Age, Gender, Weight, Height)");
+            return false;
+        }
+        const age = Number(formData.age);
+        const weight = Number(formData.weight);
+        const height = Number(formData.height);
+        if (isNaN(age) || age <= 0 || age > 150) {
+            toast.error("Please enter a valid age (1-150)");
+            return false;
+        }
+        if (isNaN(weight) || weight <= 0 || weight > 500) {
+            toast.error("Please enter a valid weight (1-500 kg)");
+            return false;
+        }
+        if (isNaN(height) || height <= 0 || height > 300) {
+            toast.error("Please enter a valid height (1-300 cm)");
+            return false;
+        }
+        // Validate step 2
+        if (formData.fitnessGoals.length === 0) {
+            toast.error("Please complete Step 2: Select at least one fitness goal");
+            return false;
+        }
+        // Validate step 3
+        if (!formData.emergencyName || !formData.emergencyPhone) {
+            toast.error("Please complete Step 3: Emergency Contact (Name and Phone)");
+            return false;
+        }
+        if (formData.emergencyPhone.length !== 10) {
+            toast.error("Please enter a valid 10-digit emergency contact phone number");
+            return false;
+        }
+        return true;
+    };
+
+    const handleNext = () => {
+        if (validateStep(step)) {
+            nextStep();
+        }
+    };
+
+    const handleSubmit = async (e: FormEvent) => {
         e.preventDefault();
-        onComplete(formData);
+        
+        // Validate all steps before submission
+        if (!validateAllSteps()) {
+            return;
+        }
+
+        setSaving(true);
+        try {
+            const onboardingData: MemberOnboardingData = {
+                age: Number(formData.age),
+                gender: formData.gender as 'male' | 'female' | 'other',
+                weight: Number(formData.weight),
+                height: Number(formData.height),
+                fitnessGoals: formData.fitnessGoals,
+                medicalConditions: formData.medicalConditions || undefined,
+                emergencyContact: {
+                    name: formData.emergencyName,
+                    phone: formData.emergencyPhone,
+                },
+            };
+            await updateMe({
+                onboardingData,
+                isOnboarded: true,
+            });
+            toast.success('Onboarding completed successfully!');
+            onComplete(onboardingData);
+        } catch (err: unknown) {
+            toast.error(err instanceof Error ? err.message : 'Failed to save onboarding data');
+            setSaving(false);
+        }
     };
 
     return (
@@ -117,6 +236,8 @@ export function MemberOnboarding({ onComplete, user }: MemberOnboardingProps) {
                                                 value={formData.age}
                                                 onChange={(e) => setFormData({ ...formData, age: e.target.value })}
                                                 required
+                                                min="1"
+                                                max="150"
                                             />
                                         </div>
                                     </div>
@@ -148,6 +269,9 @@ export function MemberOnboarding({ onComplete, user }: MemberOnboardingProps) {
                                                 value={formData.weight}
                                                 onChange={(e) => setFormData({ ...formData, weight: e.target.value })}
                                                 required
+                                                min="1"
+                                                max="500"
+                                                step="0.1"
                                             />
                                         </div>
                                     </div>
@@ -162,12 +286,19 @@ export function MemberOnboarding({ onComplete, user }: MemberOnboardingProps) {
                                                 value={formData.height}
                                                 onChange={(e) => setFormData({ ...formData, height: e.target.value })}
                                                 required
+                                                min="1"
+                                                max="300"
+                                                step="0.1"
                                             />
                                         </div>
                                     </div>
                                 </div>
 
-                                <Button onClick={nextStep} className="w-full bg-gradient-to-r from-ko-500 to-ko-600 text-primary-foreground">
+                                <Button 
+                                    type="button"
+                                    onClick={handleNext} 
+                                    className="w-full bg-gradient-to-r from-ko-500 to-ko-600 text-primary-foreground"
+                                >
                                     Next Step
                                     <ArrowRight className="w-4 h-4 ml-2" />
                                 </Button>
@@ -218,8 +349,19 @@ export function MemberOnboarding({ onComplete, user }: MemberOnboardingProps) {
                                 </div>
 
                                 <div className="flex gap-4">
-                                    <Button variant="ghost" onClick={prevStep} className="flex-1">Back</Button>
-                                    <Button onClick={nextStep} className="flex-[2] bg-gradient-to-r from-ko-500 to-ko-600 text-primary-foreground">
+                                    <Button 
+                                        type="button"
+                                        variant="ghost" 
+                                        onClick={prevStep} 
+                                        className="flex-1"
+                                    >
+                                        Back
+                                    </Button>
+                                    <Button 
+                                        type="button"
+                                        onClick={handleNext} 
+                                        className="flex-[2] bg-gradient-to-r from-ko-500 to-ko-600 text-primary-foreground"
+                                    >
                                         Next Step
                                         <ArrowRight className="w-4 h-4 ml-2" />
                                     </Button>
@@ -270,10 +412,22 @@ export function MemberOnboarding({ onComplete, user }: MemberOnboardingProps) {
                                 </div>
 
                                 <div className="flex gap-4">
-                                    <Button variant="ghost" onClick={prevStep} className="flex-1">Back</Button>
-                                    <Button type="submit" className="flex-[2] bg-gradient-to-r from-ko-500 to-ko-600 text-primary-foreground">
-                                        Complete Onboarding
-                                        <CheckCircle2 className="w-4 h-4 ml-2" />
+                                    <Button 
+                                        type="button"
+                                        variant="ghost" 
+                                        onClick={prevStep} 
+                                        className="flex-1" 
+                                        disabled={saving}
+                                    >
+                                        Back
+                                    </Button>
+                                    <Button 
+                                        type="submit" 
+                                        className="flex-[2] bg-gradient-to-r from-ko-500 to-ko-600 text-primary-foreground" 
+                                        disabled={saving}
+                                    >
+                                        {saving ? 'Saving...' : 'Complete Onboarding'}
+                                        {!saving && <CheckCircle2 className="w-4 h-4 ml-2" />}
                                     </Button>
                                 </div>
                             </div>

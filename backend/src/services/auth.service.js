@@ -1,6 +1,7 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const { getNextValue } = require('../models/Counter');
 const config = require('../config/env');
 
 async function login(phone, password) {
@@ -25,4 +26,36 @@ async function login(phone, password) {
   return { success: true, user: response, accessToken };
 }
 
-module.exports = { login };
+/**
+ * Register a new member (self-signup).
+ * Returns user + token (same as login).
+ */
+async function register(name, phone, password) {
+  const trimmedPhone = phone.trim();
+  const existing = await User.findOne({ phone: trimmedPhone }).lean();
+  if (existing) {
+    return { success: false, message: 'A user with this phone number already exists' };
+  }
+  if (!password || password.length < 6) {
+    return { success: false, message: 'Password must be at least 6 characters' };
+  }
+  const passwordHash = await bcrypt.hash(password, 10);
+  const memberId = await getNextValue('memberId');
+  const membershipId = `mem-${String(memberId).padStart(3, '0')}`;
+  const user = await User.create({
+    name: name.trim(),
+    phone: trimmedPhone,
+    passwordHash,
+    role: 'member',
+    status: 'active',
+    membershipId,
+    isOnboarded: false,
+    joinDate: new Date(),
+  });
+  const u = user.toJSON();
+  const payload = { userId: u.id };
+  const accessToken = jwt.sign(payload, config.jwtSecret, { expiresIn: '7d' });
+  return { success: true, user: u, accessToken };
+}
+
+module.exports = { login, register };

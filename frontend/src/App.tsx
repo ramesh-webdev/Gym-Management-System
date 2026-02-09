@@ -40,8 +40,7 @@ import { MemberOnboarding } from './components/member/MemberOnboarding';
 import { ScrollToTop } from '@/components/ui/ScrollToTop';
 import { Toaster } from '@/components/ui/sonner';
 import { cn } from '@/lib/utils';
-import { hasPersonalTraining } from '@/utils/memberUtils';
-import { getStoredUser, logout as apiLogout } from '@/api/auth';
+import { getStoredUser, logout as apiLogout, fetchMe } from '@/api/auth';
 import type { User } from '@/types';
 
 function App() {
@@ -92,13 +91,20 @@ function App() {
   };
 
   // Handle onboarding completion
-  const handleOnboardingComplete = (_onboardingData: any) => {
+  const handleOnboardingComplete = async (_onboardingData: any) => {
     if (!user) return;
-    const updatedUser = { ...user, isOnboarded: true };
-    setUser(updatedUser);
-    localStorage.setItem('user', JSON.stringify(updatedUser));
-    // In a real app, we would also save the onboardingData to the database
-    navigate('/member/dashboard');
+    try {
+      // Refetch user from API to get updated data (onboardingData, isOnboarded)
+      const updatedUser = await fetchMe();
+      setUser(updatedUser);
+      navigate('/member/dashboard');
+    } catch (err) {
+      // If refetch fails, still update local state and navigate
+      const updatedUser = { ...user, isOnboarded: true };
+      setUser(updatedUser);
+      localStorage.setItem('user', JSON.stringify(updatedUser));
+      navigate('/member/dashboard');
+    }
   };
 
   // Get current page from location for sidebar highlighting
@@ -205,7 +211,8 @@ function App() {
       return <Navigate to="/member/onboarding" replace />;
     }
 
-    const memberHasPersonalTraining = hasPersonalTraining(user.id);
+    // Use hasPersonalTraining from user object (from API)
+    const memberHasPersonalTraining = user.hasPersonalTraining === true;
 
     return (
       <div className="min-h-screen bg-background flex">

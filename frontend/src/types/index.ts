@@ -13,6 +13,8 @@ export interface User {
   /** Menu/feature IDs this admin can access. Only used when isSuperAdmin is false. */
   permissions?: string[];
   isOnboarded?: boolean; // Track if the user has completed onboarding
+  /** Member-specific: whether they have personal training (enables diet plan access). */
+  hasPersonalTraining?: boolean;
 }
 
 export interface MemberOnboardingData {
@@ -30,6 +32,7 @@ export interface MemberOnboardingData {
 
 export interface Member extends User {
   membershipId: string;
+  membershipPlan?: string | MembershipPlan | null;
   membershipType: string;
   membershipExpiry: Date;
   joinDate: Date;

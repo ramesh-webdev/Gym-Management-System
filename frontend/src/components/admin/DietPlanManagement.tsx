@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Plus,
   Edit,
@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Dialog,
   DialogContent,
@@ -25,30 +26,62 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { mockMembers } from '@/data/mockData';
-import { getAllDietPlans, saveDietPlan, deleteDietPlan as removeDietPlan } from '@/utils/dietPlanUtils';
-import type { DietPlan, Meal } from '@/types';
+import { toast } from 'sonner';
+import { getDietPlans, createDietPlan, updateDietPlan, deleteDietPlan } from '@/api/diet-plans';
+import { getMembers } from '@/api/members';
+import type { DietPlan, Meal, Member } from '@/types';
 
 export function DietPlanManagement() {
-  const [dietPlans, setDietPlans] = useState<DietPlan[]>(getAllDietPlans());
+  const [dietPlans, setDietPlans] = useState<DietPlan[]>([]);
+  const [members, setMembers] = useState<Member[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [currentPlan, setCurrentPlan] = useState<Partial<DietPlan>>({});
+  const [copyFromExisting, setCopyFromExisting] = useState(false);
+  const [selectedPlanToCopy, setSelectedPlanToCopy] = useState<string>('');
+  const [formRef, setFormRef] = useState<HTMLFormElement | null>(null);
+
+  const loadDietPlans = () => {
+    setLoading(true);
+    getDietPlans()
+      .then(setDietPlans)
+      .catch(() => {
+        toast.error('Failed to load diet plans');
+        setDietPlans([]);
+      })
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    loadDietPlans();
+    getMembers()
+      .then((allMembers) => {
+        // Filter members with personal training
+        setMembers(allMembers.filter((m) => m.hasPersonalTraining));
+      })
+      .catch(() => {
+        toast.error('Failed to load members');
+        setMembers([]);
+      });
+  }, []);
 
   const filteredPlans = dietPlans.filter((plan) => {
-    const member = mockMembers.find((m) => m.id === plan.memberId);
+    const member = members.find((m) => m.id === plan.memberId);
+    const memberName = (plan as any).memberName || member?.name || '';
     const matchesSearch =
       plan.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      member?.name.toLowerCase().includes(searchQuery.toLowerCase());
+      memberName.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesSearch;
   });
 
-  const handleAddPlan = (e: React.FormEvent) => {
+  const handleAddPlan = async (e: React.FormEvent) => {
     e.preventDefault();
     const formData = new FormData(e.target as HTMLFormElement);
     
-    const meals: Meal[] = [];
+    const meals: Array<{ type: Meal['type']; foods: string[]; calories: number; time: string }> = [];
     ['breakfast', 'lunch', 'dinner', 'snack'].forEach((type) => {
       const foods = formData.get(`${type}_foods`) as string;
       const calories = formData.get(`${type}_calories`) as string;
@@ -56,7 +89,6 @@ export function DietPlanManagement() {
       
       if (foods && calories && time) {
         meals.push({
-          id: `meal_${Date.now()}_${type}`,
           type: type as Meal['type'],
           foods: foods.split(',').map((f) => f.trim()).filter(Boolean),
           calories: Number(calories),
@@ -65,24 +97,30 @@ export function DietPlanManagement() {
       }
     });
 
-    const newPlan: DietPlan = {
-      id: `dp${Date.now()}`,
-      memberId: formData.get('memberId') as string,
-      nutritionistId: 't4', // Default nutritionist
-      name: formData.get('name') as string,
-      dailyCalories: Number(formData.get('dailyCalories')),
-      macros: {
-        protein: Number(formData.get('protein')),
-        carbs: Number(formData.get('carbs')),
-        fats: Number(formData.get('fats')),
-      },
-      meals: meals,
-    };
-
-    saveDietPlan(newPlan);
-    setDietPlans(getAllDietPlans());
-    setIsAddDialogOpen(false);
-    (e.target as HTMLFormElement).reset();
+    setSaving(true);
+    try {
+      await createDietPlan({
+        memberId: formData.get('memberId') as string,
+        name: formData.get('name') as string,
+        dailyCalories: Number(formData.get('dailyCalories')),
+        macros: {
+          protein: Number(formData.get('protein')),
+          carbs: Number(formData.get('carbs')),
+          fats: Number(formData.get('fats')),
+        },
+        meals,
+      });
+      toast.success('Diet plan created successfully');
+      setIsAddDialogOpen(false);
+      setCopyFromExisting(false);
+      setSelectedPlanToCopy('');
+      (e.target as HTMLFormElement).reset();
+      loadDietPlans();
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Failed to create diet plan');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleEditClick = (plan: DietPlan) => {
@@ -90,11 +128,12 @@ export function DietPlanManagement() {
     setIsEditDialogOpen(true);
   };
 
-  const handleUpdatePlan = (e: React.FormEvent) => {
+  const handleUpdatePlan = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!currentPlan.id) return;
     const formData = new FormData(e.target as HTMLFormElement);
 
-    const meals: Meal[] = [];
+    const meals: Array<{ type: Meal['type']; foods: string[]; calories: number; time: string }> = [];
     ['breakfast', 'lunch', 'dinner', 'snack'].forEach((type) => {
       const foods = formData.get(`${type}_foods`) as string;
       const calories = formData.get(`${type}_calories`) as string;
@@ -102,7 +141,6 @@ export function DietPlanManagement() {
       
       if (foods && calories && time) {
         meals.push({
-          id: currentPlan.meals?.find(m => m.type === type)?.id || `meal_${Date.now()}_${type}`,
           type: type as Meal['type'],
           foods: foods.split(',').map((f) => f.trim()).filter(Boolean),
           calories: Number(calories),
@@ -111,36 +149,85 @@ export function DietPlanManagement() {
       }
     });
 
-    const updatedPlan: DietPlan = {
-      ...currentPlan as DietPlan,
-      name: formData.get('name') as string,
-      memberId: formData.get('memberId') as string,
-      dailyCalories: Number(formData.get('dailyCalories')),
-      macros: {
-        protein: Number(formData.get('protein')),
-        carbs: Number(formData.get('carbs')),
-        fats: Number(formData.get('fats')),
-      },
-      meals: meals,
-    };
-    
-    saveDietPlan(updatedPlan);
-    setDietPlans(getAllDietPlans());
-    setIsEditDialogOpen(false);
-  };
-
-  const handleDeletePlan = (id: string) => {
-    if (confirm('Are you sure you want to delete this diet plan?')) {
-      removeDietPlan(id);
-      setDietPlans(getAllDietPlans());
+    setSaving(true);
+    try {
+      await updateDietPlan(currentPlan.id, {
+        name: formData.get('name') as string,
+        memberId: formData.get('memberId') as string,
+        dailyCalories: Number(formData.get('dailyCalories')),
+        macros: {
+          protein: Number(formData.get('protein')),
+          carbs: Number(formData.get('carbs')),
+          fats: Number(formData.get('fats')),
+        },
+        meals,
+      });
+      toast.success('Diet plan updated successfully');
+      setIsEditDialogOpen(false);
+      loadDietPlans();
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Failed to update diet plan');
+    } finally {
+      setSaving(false);
     }
   };
 
-  const getMemberName = (memberId: string) => {
-    return mockMembers.find((m) => m.id === memberId)?.name || 'Unknown';
+  const handleDeletePlan = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this diet plan?')) return;
+    try {
+      await deleteDietPlan(id);
+      toast.success('Diet plan deleted successfully');
+      loadDietPlans();
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Failed to delete diet plan');
+    }
   };
 
-  const membersWithPT = mockMembers.filter((m) => m.hasPersonalTraining);
+  const getMemberName = (plan: DietPlan) => {
+    return (plan as any).memberName || members.find((m) => m.id === plan.memberId)?.name || 'Unknown';
+  };
+
+  const handleCopyPlanChange = (planId: string) => {
+    setSelectedPlanToCopy(planId);
+    if (planId && formRef) {
+      const planToCopy = dietPlans.find((p) => p.id === planId);
+      if (planToCopy) {
+        // Populate form fields
+        const nameInput = formRef.querySelector('[name="name"]') as HTMLInputElement;
+        const caloriesInput = formRef.querySelector('[name="dailyCalories"]') as HTMLInputElement;
+        const proteinInput = formRef.querySelector('[name="protein"]') as HTMLInputElement;
+        const carbsInput = formRef.querySelector('[name="carbs"]') as HTMLInputElement;
+        const fatsInput = formRef.querySelector('[name="fats"]') as HTMLInputElement;
+
+        if (nameInput) nameInput.value = planToCopy.name;
+        if (caloriesInput) caloriesInput.value = String(planToCopy.dailyCalories);
+        if (proteinInput) proteinInput.value = String(planToCopy.macros.protein);
+        if (carbsInput) carbsInput.value = String(planToCopy.macros.carbs);
+        if (fatsInput) fatsInput.value = String(planToCopy.macros.fats);
+
+        // Populate meal fields
+        planToCopy.meals.forEach((meal) => {
+          const foodsInput = formRef.querySelector(`[name="${meal.type}_foods"]`) as HTMLInputElement;
+          const caloriesMealInput = formRef.querySelector(`[name="${meal.type}_calories"]`) as HTMLInputElement;
+          const timeInput = formRef.querySelector(`[name="${meal.type}_time"]`) as HTMLInputElement;
+
+          if (foodsInput) foodsInput.value = meal.foods.join(', ');
+          if (caloriesMealInput) caloriesMealInput.value = String(meal.calories);
+          if (timeInput) timeInput.value = meal.time;
+        });
+      }
+    }
+  };
+
+  const handleCopyToggle = (checked: boolean) => {
+    setCopyFromExisting(checked);
+    if (!checked) {
+      setSelectedPlanToCopy('');
+      if (formRef) {
+        formRef.reset();
+      }
+    }
+  };
 
   return (
     <div className="p-6 space-y-6">
@@ -152,7 +239,17 @@ export function DietPlanManagement() {
         </div>
 
         {/* Add Plan Dialog */}
-        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+        <Dialog
+          open={isAddDialogOpen}
+          onOpenChange={(open) => {
+            setIsAddDialogOpen(open);
+            if (!open) {
+              // Reset copy state when dialog closes
+              setCopyFromExisting(false);
+              setSelectedPlanToCopy('');
+            }
+          }}
+        >
           <DialogTrigger asChild>
             <Button className="bg-gradient-to-r from-ko-500 to-ko-600 text-primary-foreground hover:from-ko-600 hover:to-ko-700">
               <Plus className="w-4 h-4 mr-2" />
@@ -163,7 +260,49 @@ export function DietPlanManagement() {
             <DialogHeader>
               <DialogTitle className="font-display text-2xl">Create New Diet Plan</DialogTitle>
             </DialogHeader>
-            <form onSubmit={handleAddPlan} className="space-y-4 pt-4">
+            <form
+              ref={(el) => {
+                if (el) setFormRef(el);
+              }}
+              onSubmit={handleAddPlan}
+              className="space-y-4 pt-4"
+            >
+              {/* Copy from existing plan option */}
+              <div className="p-4 rounded-lg bg-muted/30 border border-border">
+                <div className="flex items-center space-x-3">
+                  <Checkbox
+                    id="copy-from-existing"
+                    checked={copyFromExisting}
+                    onCheckedChange={handleCopyToggle}
+                    className="border-border data-[state=checked]:bg-ko-500"
+                  />
+                  <label htmlFor="copy-from-existing" className="text-sm font-medium text-foreground cursor-pointer">
+                    Copy from existing plan
+                  </label>
+                </div>
+                {copyFromExisting && (
+                  <div className="mt-3">
+                    <label className="text-sm text-muted-foreground mb-2 block">Select plan to copy</label>
+                    <select
+                      value={selectedPlanToCopy}
+                      onChange={(e) => handleCopyPlanChange(e.target.value)}
+                      className="w-full h-10 px-3 rounded-md bg-muted/50 border border-border text-foreground"
+                    >
+                      <option value="">Select a plan...</option>
+                      {dietPlans.map((plan) => (
+                        <option key={plan.id} value={plan.id}>
+                          {plan.name} - {getMemberName(plan)}
+                        </option>
+                      ))}
+                    </select>
+                    {selectedPlanToCopy && (
+                      <p className="text-xs text-muted-foreground mt-2">
+                        Plan data loaded. You can edit any fields before creating.
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="text-sm text-muted-foreground mb-2 block">Plan Name</label>
@@ -182,7 +321,7 @@ export function DietPlanManagement() {
                     className="w-full h-10 px-3 rounded-md bg-muted/50 border border-border text-foreground"
                   >
                     <option value="">Select member...</option>
-                    {membersWithPT.map((member) => (
+                    {members.map((member) => (
                       <option key={member.id} value={member.id}>
                         {member.name}
                       </option>
@@ -277,9 +416,10 @@ export function DietPlanManagement() {
 
               <Button
                 type="submit"
+                disabled={saving || (copyFromExisting && !selectedPlanToCopy)}
                 className="w-full bg-gradient-to-r from-ko-500 to-ko-600 text-primary-foreground hover:from-ko-600 hover:to-ko-700"
               >
-                Create Diet Plan
+                {saving ? 'Creating...' : 'Create Diet Plan'}
               </Button>
             </form>
           </DialogContent>
@@ -299,8 +439,15 @@ export function DietPlanManagement() {
       </div>
 
       {/* Diet Plans Grid */}
-      <div className="grid md:grid-cols-2 gap-6">
-        {filteredPlans.map((plan) => {
+      {loading ? (
+        <div className="p-12 text-center text-muted-foreground">Loading diet plans...</div>
+      ) : filteredPlans.length === 0 ? (
+        <div className="p-12 text-center text-muted-foreground">
+          {dietPlans.length === 0 ? 'No diet plans yet. Create one to get started.' : 'No diet plans match your search.'}
+        </div>
+      ) : (
+        <div className="grid md:grid-cols-2 gap-6">
+          {filteredPlans.map((plan) => {
           return (
             <div
               key={plan.id}
@@ -311,7 +458,7 @@ export function DietPlanManagement() {
                 <div className="flex-1">
                   <h3 className="font-display text-xl font-bold text-foreground mb-1">{plan.name}</h3>
                   <p className="text-muted-foreground text-sm">
-                    Assigned to: <span className="text-foreground font-medium">{getMemberName(plan.memberId)}</span>
+                    Assigned to: <span className="text-foreground font-medium">{getMemberName(plan)}</span>
                   </p>
                 </div>
                 <DropdownMenu>
@@ -389,7 +536,8 @@ export function DietPlanManagement() {
             </div>
           );
         })}
-      </div>
+        </div>
+      )}
 
       {/* Edit Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
@@ -417,7 +565,7 @@ export function DietPlanManagement() {
                     defaultValue={currentPlan.memberId}
                     className="w-full h-10 px-3 rounded-md bg-muted/50 border border-border text-foreground"
                   >
-                    {membersWithPT.map((member) => (
+                    {members.map((member) => (
                       <option key={member.id} value={member.id}>
                         {member.name}
                       </option>
@@ -518,9 +666,10 @@ export function DietPlanManagement() {
 
               <Button
                 type="submit"
+                disabled={saving}
                 className="w-full bg-gradient-to-r from-ko-500 to-ko-600 text-primary-foreground hover:from-ko-600 hover:to-ko-700"
               >
-                Update Diet Plan
+                {saving ? 'Updating...' : 'Update Diet Plan'}
               </Button>
             </form>
           )}
