@@ -2,8 +2,9 @@ const DietPlan = require('../models/DietPlan');
 const User = require('../models/User');
 
 /**
- * List all diet plans. Admin only.
+ * List all diet plans. Admin/Trainer only.
  * Optionally filter by memberId query param.
+ * Trainers only see plans for their assigned clients.
  */
 async function list(req, res, next) {
   try {
@@ -11,6 +12,14 @@ async function list(req, res, next) {
     const filter = {};
     if (memberId) {
       filter.member = memberId;
+    }
+    // If trainer, only show plans for their assigned clients
+    if (req.user.role === 'trainer') {
+      const trainer = await User.findById(req.user.id).select('clients').lean();
+      if (!trainer || !trainer.clients || trainer.clients.length === 0) {
+        return res.json([]);
+      }
+      filter.member = { $in: trainer.clients };
     }
     const plans = await DietPlan.find(filter)
       .populate('member', 'name phone')
@@ -44,7 +53,8 @@ async function list(req, res, next) {
 }
 
 /**
- * Get one diet plan by id. Admin only.
+ * Get one diet plan by id. Admin/Trainer only.
+ * Trainers can only view plans for their assigned clients.
  */
 async function getById(req, res, next) {
   try {
@@ -54,6 +64,14 @@ async function getById(req, res, next) {
       .lean();
     if (!plan) {
       return res.status(404).json({ message: 'Diet plan not found' });
+    }
+    // If trainer, verify plan is for their assigned client
+    if (req.user.role === 'trainer') {
+      const trainer = await User.findById(req.user.id).select('clients').lean();
+      const memberId = plan.member?._id?.toString() || plan.member?.toString() || '';
+      if (!trainer || !trainer.clients || !trainer.clients.some((id) => id.toString() === memberId)) {
+        return res.status(403).json({ message: 'Access denied to this diet plan' });
+      }
     }
     const { _id, member, nutritionist, ...rest } = plan;
     const out = {
@@ -115,8 +133,9 @@ async function getMyPlan(req, res, next) {
 }
 
 /**
- * Create diet plan. Admin only.
+ * Create diet plan. Admin/Trainer only.
  * Body: memberId, name, dailyCalories, macros: {protein, carbs, fats}, meals: [{type, foods[], calories, time}].
+ * Trainers can only create plans for their assigned clients.
  */
 async function create(req, res, next) {
   try {
@@ -128,7 +147,19 @@ async function create(req, res, next) {
     if (!member) {
       return res.status(400).json({ message: 'Member not found' });
     }
-    // Use current user as nutritionist (admin creating the plan)
+    // If trainer, verify member is assigned to them
+    if (req.user.role === 'trainer') {
+      const trainer = await User.findById(req.user.id).select('clients').lean();
+      if (!trainer || !trainer.clients || !trainer.clients.some((id) => id.toString() === memberId)) {
+        return res.status(403).json({ message: 'You can only create diet plans for your assigned clients' });
+      }
+    }
+    // Check for unique plan name
+    const existingPlan = await DietPlan.findOne({ name: name.trim() });
+    if (existingPlan) {
+      return res.status(400).json({ message: 'A diet plan with this name already exists' });
+    }
+    // Use current user as nutritionist (admin/trainer creating the plan)
     const nutritionistId = req.user.id;
     const plan = await DietPlan.create({
       member: memberId,
@@ -155,33 +186,43 @@ async function create(req, res, next) {
 }
 
 /**
- * Update diet plan. Admin only.
+ * Update diet plan. Admin/Trainer only.
+ * Trainers can only update plans for their assigned clients.
  */
 async function update(req, res, next) {
   try {
-    const plan = await DietPlan.findById(req.params.id);
+    const plan = await DietPlan.findById(req.params.id).populate('member').lean();
     if (!plan) {
       return res.status(404).json({ message: 'Diet plan not found' });
     }
+    // If trainer, verify plan is for their assigned client
+    if (req.user.role === 'trainer') {
+      const trainer = await User.findById(req.user.id).select('clients').lean();
+      const memberId = plan.member?._id?.toString() || plan.member?.toString() || '';
+      if (!trainer || !trainer.clients || !trainer.clients.some((id) => id.toString() === memberId)) {
+        return res.status(403).json({ message: 'You can only update diet plans for your assigned clients' });
+      }
+    }
+    const planDoc = await DietPlan.findById(req.params.id);
     const { name, dailyCalories, macros, meals, memberId } = req.body;
-    if (name !== undefined && name.trim() !== plan.name) {
+    if (name !== undefined && name.trim() !== planDoc.name) {
       // Check if another plan with this name already exists
-      const existingPlan = await DietPlan.findOne({ name: name.trim(), _id: { $ne: plan._id } });
+      const existingPlan = await DietPlan.findOne({ name: name.trim(), _id: { $ne: planDoc._id } });
       if (existingPlan) {
         return res.status(400).json({ message: 'A diet plan with this name already exists' });
       }
-      plan.name = name.trim();
+      planDoc.name = name.trim();
     }
-    if (dailyCalories !== undefined) plan.dailyCalories = Number(dailyCalories);
+    if (dailyCalories !== undefined) planDoc.dailyCalories = Number(dailyCalories);
     if (macros !== undefined) {
-      plan.macros = {
-        protein: macros.protein ? Number(macros.protein) : plan.macros.protein,
-        carbs: macros.carbs ? Number(macros.carbs) : plan.macros.carbs,
-        fats: macros.fats ? Number(macros.fats) : plan.macros.fats,
+      planDoc.macros = {
+        protein: macros.protein ? Number(macros.protein) : planDoc.macros.protein,
+        carbs: macros.carbs ? Number(macros.carbs) : planDoc.macros.carbs,
+        fats: macros.fats ? Number(macros.fats) : planDoc.macros.fats,
       };
     }
     if (meals !== undefined && Array.isArray(meals)) {
-      plan.meals = meals.map((m) => ({
+      planDoc.meals = meals.map((m) => ({
         type: m.type,
         foods: Array.isArray(m.foods) ? m.foods : [],
         calories: Number(m.calories) || 0,
@@ -193,24 +234,41 @@ async function update(req, res, next) {
       if (!member) {
         return res.status(400).json({ message: 'Member not found' });
       }
-      plan.member = memberId;
+      // If trainer, verify new member is assigned to them
+      if (req.user.role === 'trainer') {
+        const trainer = await User.findById(req.user.id).select('clients').lean();
+        if (!trainer || !trainer.clients || !trainer.clients.some((id) => id.toString() === memberId)) {
+          return res.status(403).json({ message: 'You can only assign diet plans to your assigned clients' });
+        }
+      }
+      planDoc.member = memberId;
     }
-    await plan.save();
-    res.json(plan.toJSON());
+    await planDoc.save();
+    res.json(planDoc.toJSON());
   } catch (err) {
     next(err);
   }
 }
 
 /**
- * Delete diet plan. Admin only.
+ * Delete diet plan. Admin/Trainer only.
+ * Trainers can only delete plans for their assigned clients.
  */
 async function remove(req, res, next) {
   try {
-    const plan = await DietPlan.findByIdAndDelete(req.params.id);
+    const plan = await DietPlan.findById(req.params.id).populate('member').lean();
     if (!plan) {
       return res.status(404).json({ message: 'Diet plan not found' });
     }
+    // If trainer, verify plan is for their assigned client
+    if (req.user.role === 'trainer') {
+      const trainer = await User.findById(req.user.id).select('clients').lean();
+      const memberId = plan.member?._id?.toString() || plan.member?.toString() || '';
+      if (!trainer || !trainer.clients || !trainer.clients.some((id) => id.toString() === memberId)) {
+        return res.status(403).json({ message: 'You can only delete diet plans for your assigned clients' });
+      }
+    }
+    await DietPlan.findByIdAndDelete(req.params.id);
     res.status(204).send();
   } catch (err) {
     next(err);

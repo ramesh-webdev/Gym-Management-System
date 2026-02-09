@@ -32,6 +32,7 @@ const userSchema = new mongoose.Schema({
   membershipExpiry: Date,
   joinDate: Date,
   hasPersonalTraining: { type: Boolean, default: false },
+  assignedTrainer: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   onboardingData: onboardingDataSchema,
   // Trainer-specific (when role === 'trainer')
   specialization: [String],

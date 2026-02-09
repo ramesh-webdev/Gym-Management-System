@@ -5,6 +5,8 @@ const membersRoutes = require('./members.routes');
 const membershipPlansRoutes = require('./membership-plans.routes');
 const productsRoutes = require('./products.routes');
 const dietPlansRoutes = require('./diet-plans.routes');
+const recipesRoutes = require('./recipes.routes');
+const trainersRoutes = require('./trainers.routes');
 
 const router = express.Router();
 
@@ -14,6 +16,8 @@ router.use('/members', membersRoutes);
 router.use('/membership-plans', membershipPlansRoutes);
 router.use('/products', productsRoutes);
 router.use('/diet-plans', dietPlansRoutes);
+router.use('/recipes', recipesRoutes);
+router.use('/trainers', trainersRoutes);
 
 router.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });

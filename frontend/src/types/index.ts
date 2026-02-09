@@ -38,6 +38,7 @@ export interface Member extends User {
   joinDate: Date;
   payments: Payment[];
   hasPersonalTraining: boolean;
+  assignedTrainer?: { id: string; name: string; phone: string } | null;
   dietPlan?: DietPlan;
   onboardingData?: MemberOnboardingData;
 }
@@ -48,7 +49,8 @@ export interface Trainer extends User {
   bio: string;
   rating: number;
   clients: string[];
-  schedule: ScheduleSlot[];
+  clientsCount?: number;
+  schedule?: ScheduleSlot[];
 }
 
 // Membership Types
@@ -147,7 +149,8 @@ export interface Recipe {
   instructions: string[];
   tags: string[];
   createdBy: string; // admin/trainer ID
-  createdAt: Date;
+  createdByName?: string; // populated from backend
+  createdAt: Date | string; // ISO string from API
   isActive: boolean;
 }
 

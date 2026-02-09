@@ -31,7 +31,7 @@ import { toast } from 'sonner';
 import { getRecipes, createRecipe, updateRecipe, deleteRecipe } from '@/api/recipes';
 import type { Recipe } from '@/types';
 
-export function RecipeManagement() {
+export function TrainerRecipes() {
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -48,6 +48,7 @@ export function RecipeManagement() {
   const loadRecipes = async () => {
     try {
       setLoading(true);
+      // Trainers see all recipes (active and inactive)
       const data = await getRecipes();
       setRecipes(data);
     } catch (error: any) {
@@ -210,7 +211,7 @@ export function RecipeManagement() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="font-display text-3xl font-bold text-foreground">Recipes</h1>
-          <p className="text-muted-foreground">Create and manage healthy recipes for all members</p>
+          <p className="text-muted-foreground">Create and manage healthy recipes</p>
         </div>
 
         {/* Add Recipe Dialog */}

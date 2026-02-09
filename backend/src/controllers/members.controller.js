@@ -10,24 +10,35 @@ async function list(req, res, next) {
   try {
     const users = await User.find({ role: 'member' })
       .populate('membershipPlan', 'name price duration')
+      .populate('assignedTrainer', 'name phone')
       .sort({ createdAt: -1 })
       .lean();
     const list = users.map((u) => {
-      const { _id, passwordHash, ...rest } = u;
-      const item = { ...rest, id: _id.toString() };
+      const { _id, passwordHash, membershipPlan, assignedTrainer, ...rest } = u;
+      const item = {
+        ...rest,
+        id: _id.toString(),
+        membershipPlan: membershipPlan
+          ? {
+              id: membershipPlan._id.toString(),
+              name: membershipPlan.name,
+              price: membershipPlan.price,
+              duration: membershipPlan.duration,
+            }
+          : null,
+        assignedTrainer: assignedTrainer
+          ? {
+              id: assignedTrainer._id.toString(),
+              name: assignedTrainer.name,
+              phone: assignedTrainer.phone,
+            }
+          : null,
+      };
       if (item.createdAt) item.createdAt = item.createdAt.toISOString();
       if (item.updatedAt) item.updatedAt = item.updatedAt.toISOString();
       if (item.lastLogin) item.lastLogin = item.lastLogin.toISOString();
       if (item.membershipExpiry) item.membershipExpiry = item.membershipExpiry.toISOString();
       if (item.joinDate) item.joinDate = item.joinDate.toISOString();
-      if (item.membershipPlan && item.membershipPlan._id) {
-        item.membershipPlan = {
-          id: item.membershipPlan._id.toString(),
-          name: item.membershipPlan.name,
-          price: item.membershipPlan.price,
-          duration: item.membershipPlan.duration,
-        };
-      }
       return item;
     });
     res.json(list);
@@ -43,25 +54,36 @@ async function getById(req, res, next) {
   try {
     const user = await User.findOne({ _id: req.params.id, role: 'member' })
       .populate('membershipPlan', 'name price duration')
+      .populate('assignedTrainer', 'name phone')
       .lean();
     if (!user) {
       return res.status(404).json({ message: 'Member not found' });
     }
-    const { passwordHash, _id, ...rest } = user;
-    const out = { ...rest, id: _id.toString() };
+    const { passwordHash, _id, membershipPlan, assignedTrainer, ...rest } = user;
+    const out = {
+      ...rest,
+      id: _id.toString(),
+      membershipPlan: membershipPlan
+        ? {
+            id: membershipPlan._id.toString(),
+            name: membershipPlan.name,
+            price: membershipPlan.price,
+            duration: membershipPlan.duration,
+          }
+        : null,
+      assignedTrainer: assignedTrainer
+        ? {
+            id: assignedTrainer._id.toString(),
+            name: assignedTrainer.name,
+            phone: assignedTrainer.phone,
+          }
+        : null,
+    };
     if (out.createdAt) out.createdAt = out.createdAt.toISOString();
     if (out.updatedAt) out.updatedAt = out.updatedAt.toISOString();
     if (out.lastLogin) out.lastLogin = out.lastLogin.toISOString();
     if (out.membershipExpiry) out.membershipExpiry = out.membershipExpiry.toISOString();
     if (out.joinDate) out.joinDate = out.joinDate.toISOString();
-    if (out.membershipPlan && out.membershipPlan._id) {
-      out.membershipPlan = {
-        id: out.membershipPlan._id.toString(),
-        name: out.membershipPlan.name,
-        price: out.membershipPlan.price,
-        duration: out.membershipPlan.duration,
-      };
-    }
     res.json(out);
   } catch (err) {
     next(err);
@@ -70,11 +92,11 @@ async function getById(req, res, next) {
 
 /**
  * Create member. Admin only.
- * Body: name, phone, password, membershipPlanId (optional), hasPersonalTraining (optional).
+ * Body: name, phone, password, membershipPlanId (optional), hasPersonalTraining (optional), assignedTrainerId (optional).
  */
 async function create(req, res, next) {
   try {
-    const { name, phone, password, membershipPlanId, hasPersonalTraining } = req.body;
+    const { name, phone, password, membershipPlanId, hasPersonalTraining, assignedTrainerId } = req.body;
     if (!name || !phone || !password) {
       return res.status(400).json({ message: 'Name, phone and password are required' });
     }
@@ -103,6 +125,14 @@ async function create(req, res, next) {
       expiryDate.setMonth(expiryDate.getMonth() + plan.duration);
       membershipExpiry = expiryDate;
     }
+    let assignedTrainer = null;
+    if (assignedTrainerId) {
+      const trainer = await User.findOne({ _id: assignedTrainerId, role: 'trainer', status: 'active' });
+      if (!trainer) {
+        return res.status(400).json({ message: 'Trainer not found or inactive' });
+      }
+      assignedTrainer = trainer._id;
+    }
     const user = await User.create({
       name: name.trim(),
       phone: phone.trim(),
@@ -115,9 +145,47 @@ async function create(req, res, next) {
       membershipExpiry,
       joinDate: now,
       hasPersonalTraining: hasPersonalTraining === true,
+      assignedTrainer,
       isOnboarded: false,
     });
-    res.status(201).json(user.toJSON());
+    // Update trainer's clients array with the new member
+    if (assignedTrainer) {
+      const trainer = await User.findById(assignedTrainer);
+      if (trainer) {
+        trainer.clients = trainer.clients || [];
+        if (!trainer.clients.some((id) => id.toString() === user._id.toString())) {
+          trainer.clients.push(user._id);
+          await trainer.save();
+        }
+      }
+    }
+    const created = await User.findById(user._id)
+      .populate('membershipPlan', 'name price duration')
+      .populate('assignedTrainer', 'name phone')
+      .lean();
+    const { _id, membershipPlan: mp, assignedTrainer: at, passwordHash: ph, ...rest } = created;
+    const out = {
+      ...rest,
+      id: _id.toString(),
+      membershipPlan: mp
+        ? {
+            id: mp._id.toString(),
+            name: mp.name,
+            price: mp.price,
+            duration: mp.duration,
+          }
+        : null,
+      assignedTrainer: at
+        ? {
+            id: at._id.toString(),
+            name: at.name,
+            phone: at.phone,
+          }
+        : null,
+    };
+    if (out.membershipExpiry) out.membershipExpiry = out.membershipExpiry.toISOString();
+    if (out.joinDate) out.joinDate = out.joinDate.toISOString();
+    res.status(201).json(out);
   } catch (err) {
     next(err);
   }
@@ -125,7 +193,7 @@ async function create(req, res, next) {
 
 /**
  * Update member. Admin only.
- * Body: name?, phone?, status?, membershipPlanId?, hasPersonalTraining?, membershipExpiry?.
+ * Body: name?, phone?, status?, membershipPlanId?, hasPersonalTraining?, assignedTrainerId?, membershipExpiry?.
  */
 async function update(req, res, next) {
   try {
@@ -133,7 +201,7 @@ async function update(req, res, next) {
     if (!user) {
       return res.status(404).json({ message: 'Member not found' });
     }
-    const { name, phone, status, membershipPlanId, hasPersonalTraining, membershipExpiry } = req.body;
+    const { name, phone, status, membershipPlanId, hasPersonalTraining, assignedTrainerId, membershipExpiry } = req.body;
     if (name !== undefined) user.name = name.trim();
     if (phone !== undefined && phone.trim() !== user.phone) {
       const existing = await User.findOne({ phone: phone.trim() });
@@ -171,8 +239,71 @@ async function update(req, res, next) {
     if (hasPersonalTraining !== undefined) {
       user.hasPersonalTraining = hasPersonalTraining === true;
     }
+    // Handle trainer assignment
+    if (assignedTrainerId !== undefined) {
+      const oldTrainerId = user.assignedTrainer?.toString();
+      if (assignedTrainerId) {
+        // Verify trainer exists and is active
+        const trainer = await User.findOne({ _id: assignedTrainerId, role: 'trainer', status: 'active' });
+        if (!trainer) {
+          return res.status(400).json({ message: 'Trainer not found or inactive' });
+        }
+        user.assignedTrainer = trainer._id;
+        // Add member to trainer's clients if not already there
+        if (!trainer.clients || !trainer.clients.some((id) => id.toString() === user._id.toString())) {
+          trainer.clients = trainer.clients || [];
+          trainer.clients.push(user._id);
+          await trainer.save();
+        }
+        // Remove from old trainer's clients if different
+        if (oldTrainerId && oldTrainerId !== assignedTrainerId) {
+          const oldTrainer = await User.findById(oldTrainerId);
+          if (oldTrainer && oldTrainer.clients) {
+            oldTrainer.clients = oldTrainer.clients.filter((id) => id.toString() !== user._id.toString());
+            await oldTrainer.save();
+          }
+        }
+      } else {
+        // Remove trainer assignment
+        user.assignedTrainer = null;
+        // Remove from old trainer's clients
+        if (oldTrainerId) {
+          const oldTrainer = await User.findById(oldTrainerId);
+          if (oldTrainer && oldTrainer.clients) {
+            oldTrainer.clients = oldTrainer.clients.filter((id) => id.toString() !== user._id.toString());
+            await oldTrainer.save();
+          }
+        }
+      }
+    }
     await user.save();
-    res.json(user.toJSON());
+    const updated = await User.findById(user._id)
+      .populate('membershipPlan', 'name price duration')
+      .populate('assignedTrainer', 'name phone')
+      .lean();
+    const { _id, membershipPlan, assignedTrainer, passwordHash, ...rest } = updated;
+    const out = {
+      ...rest,
+      id: _id.toString(),
+      membershipPlan: membershipPlan
+        ? {
+            id: membershipPlan._id.toString(),
+            name: membershipPlan.name,
+            price: membershipPlan.price,
+            duration: membershipPlan.duration,
+          }
+        : null,
+      assignedTrainer: assignedTrainer
+        ? {
+            id: assignedTrainer._id.toString(),
+            name: assignedTrainer.name,
+            phone: assignedTrainer.phone,
+          }
+        : null,
+    };
+    if (out.membershipExpiry) out.membershipExpiry = out.membershipExpiry.toISOString();
+    if (out.joinDate) out.joinDate = out.joinDate.toISOString();
+    res.json(out);
   } catch (err) {
     next(err);
   }

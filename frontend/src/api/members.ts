@@ -15,6 +15,7 @@ export interface CreateMemberBody {
   password: string;
   membershipPlanId?: string;
   hasPersonalTraining?: boolean;
+  assignedTrainerId?: string;
 }
 
 export function createMember(body: CreateMemberBody): Promise<Member> {
@@ -27,6 +28,7 @@ export interface UpdateMemberBody {
   status?: Member['status'];
   membershipPlanId?: string | null;
   hasPersonalTraining?: boolean;
+  assignedTrainerId?: string | null;
   membershipExpiry?: string; // ISO date string
 }
 

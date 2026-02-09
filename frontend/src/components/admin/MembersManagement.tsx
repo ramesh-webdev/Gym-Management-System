@@ -41,11 +41,13 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { getMembers, createMember, updateMember, deleteMember } from '@/api/members';
 import { getMembershipPlans } from '@/api/membership-plans';
+import { getTrainers, type TrainerListItem } from '@/api/trainers';
 import type { Member, MembershipPlan } from '@/types';
 
 export function MembersManagement() {
   const [members, setMembers] = useState<Member[]>([]);
   const [plans, setPlans] = useState<MembershipPlan[]>([]);
+  const [trainers, setTrainers] = useState<TrainerListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -60,6 +62,7 @@ export function MembersManagement() {
     password: '',
     membershipPlan: '',
     hasPersonalTraining: false,
+    assignedTrainerId: '',
   });
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingMember, setEditingMember] = useState<any | null>(null);
@@ -72,6 +75,7 @@ export function MembersManagement() {
       lastName: lastNameParts.join(' '),
       mobile: member.phone,
       membershipPlanId: typeof member.membershipPlan === 'object' ? (member.membershipPlan as any)?.id : member.membershipPlan || '',
+      assignedTrainerId: member.assignedTrainer?.id || '',
     });
     setIsEditDialogOpen(true);
   };
@@ -108,6 +112,12 @@ export function MembersManagement() {
       .catch(() => {
         toast.error('Failed to load membership plans');
         setPlans([]);
+      });
+    getTrainers()
+      .then(setTrainers)
+      .catch(() => {
+        toast.error('Failed to load trainers');
+        setTrainers([]);
       });
   }, []);
 
@@ -221,7 +231,7 @@ export function MembersManagement() {
                   type="checkbox"
                   id="hasPT"
                   checked={newMemberData.hasPersonalTraining}
-                  onChange={(e) => setNewMemberData({ ...newMemberData, hasPersonalTraining: e.target.checked })}
+                  onChange={(e) => setNewMemberData({ ...newMemberData, hasPersonalTraining: e.target.checked, assignedTrainerId: e.target.checked ? newMemberData.assignedTrainerId : '' })}
                   className="w-4 h-4 rounded border-border accent-ko-500"
                 />
                 <label htmlFor="hasPT" className="text-sm text-foreground cursor-pointer flex items-center gap-2">
@@ -229,6 +239,23 @@ export function MembersManagement() {
                   Has Personal Training
                 </label>
               </div>
+              {newMemberData.hasPersonalTraining && (
+                <div>
+                  <label className="text-sm text-muted-foreground mb-2 block">Assign Trainer</label>
+                  <select
+                    className="w-full h-10 px-3 rounded-md bg-muted/50 border border-border text-foreground"
+                    value={newMemberData.assignedTrainerId}
+                    onChange={(e) => setNewMemberData({ ...newMemberData, assignedTrainerId: e.target.value })}
+                  >
+                    <option value="">Select a trainer (optional)</option>
+                    {trainers.map((trainer) => (
+                      <option key={trainer.id} value={trainer.id}>
+                        {trainer.name} {trainer.specialization.length > 0 ? `- ${trainer.specialization[0]}` : ''}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
               <Button
                 className="w-full bg-gradient-to-r from-ko-500 to-ko-600 text-primary-foreground hover:from-ko-600 hover:to-ko-700"
                 disabled={saving}
@@ -249,6 +276,7 @@ export function MembersManagement() {
                       password: newMemberData.password,
                       membershipPlanId: newMemberData.membershipPlan || undefined,
                       hasPersonalTraining: newMemberData.hasPersonalTraining,
+                      assignedTrainerId: newMemberData.hasPersonalTraining && newMemberData.assignedTrainerId ? newMemberData.assignedTrainerId : undefined,
                     });
                     toast.success('Member created successfully');
                     setIsAddDialogOpen(false);
@@ -259,6 +287,7 @@ export function MembersManagement() {
                       password: '',
                       membershipPlan: '',
                       hasPersonalTraining: false,
+                      assignedTrainerId: '',
                     });
                     loadMembers();
                   } catch (err: unknown) {
@@ -341,7 +370,7 @@ export function MembersManagement() {
                     type="checkbox"
                     id="edit-hasPT"
                     checked={editingMember.hasPersonalTraining}
-                    onChange={(e) => setEditingMember({ ...editingMember, hasPersonalTraining: e.target.checked })}
+                    onChange={(e) => setEditingMember({ ...editingMember, hasPersonalTraining: e.target.checked, assignedTrainerId: e.target.checked ? editingMember.assignedTrainerId : '' })}
                     className="w-4 h-4 rounded border-border accent-ko-500"
                   />
                   <label htmlFor="edit-hasPT" className="text-sm text-foreground cursor-pointer flex items-center gap-2">
@@ -349,6 +378,23 @@ export function MembersManagement() {
                     Has Personal Training
                   </label>
                 </div>
+                {editingMember.hasPersonalTraining && (
+                  <div>
+                    <label className="text-sm text-muted-foreground mb-2 block">Assign Trainer</label>
+                    <select
+                      className="w-full h-10 px-3 rounded-md bg-muted/50 border border-border text-foreground"
+                      value={editingMember.assignedTrainerId || ''}
+                      onChange={(e) => setEditingMember({ ...editingMember, assignedTrainerId: e.target.value })}
+                    >
+                      <option value="">No trainer assigned</option>
+                      {trainers.map((trainer) => (
+                        <option key={trainer.id} value={trainer.id}>
+                          {trainer.name} {trainer.specialization.length > 0 ? `- ${trainer.specialization[0]}` : ''}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
                 <Button
                   className="w-full bg-gradient-to-r from-ko-500 to-ko-600 text-primary-foreground hover:from-ko-600 hover:to-ko-700"
                   disabled={saving}
@@ -366,6 +412,7 @@ export function MembersManagement() {
                         status: editingMember.status,
                         membershipPlanId: editingMember.membershipPlanId || null,
                         hasPersonalTraining: editingMember.hasPersonalTraining,
+                        assignedTrainerId: editingMember.hasPersonalTraining && editingMember.assignedTrainerId ? editingMember.assignedTrainerId : null,
                       });
                       toast.success('Member updated successfully');
                       setIsEditDialogOpen(false);

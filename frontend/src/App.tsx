@@ -9,7 +9,6 @@ import { BMISection } from '@/components/public/BMISection';
 import { PricingSection } from '@/components/public/PricingSection';
 import { TestimonialsSection } from '@/components/public/TestimonialsSection';
 import { ContactSection } from '@/components/public/ContactSection';
-import { FAQ } from '@/components/public/FAQ';
 import { PrivacyPolicy } from '@/components/public/PrivacyPolicy';
 import { TermsOfService } from '@/components/public/TermsOfService';
 import { Footer } from '@/components/public/Footer';
@@ -37,6 +36,11 @@ import { Recipes } from '@/components/member/Recipes';
 import { MemberPayments } from '@/components/member/MemberPayments';
 import { MemberSettings } from '@/components/member/MemberSettings';
 import { MemberOnboarding } from './components/member/MemberOnboarding';
+import { TrainerSidebar } from '@/components/trainer/TrainerSidebar';
+import { TrainerDashboard } from '@/components/trainer/TrainerDashboard';
+import { TrainerDietPlans } from '@/components/trainer/TrainerDietPlans';
+import { TrainerRecipes } from '@/components/trainer/TrainerRecipes';
+import { TrainerSettings } from '@/components/trainer/TrainerSettings';
 import { ScrollToTop } from '@/components/ui/ScrollToTop';
 import { Toaster } from '@/components/ui/sonner';
 import { cn } from '@/lib/utils';
@@ -114,6 +118,8 @@ function App() {
       return path.replace('/admin/', 'admin-');
     } else if (path.startsWith('/member/')) {
       return path.replace('/member/', 'member-');
+    } else if (path.startsWith('/trainer/')) {
+      return path.replace('/trainer/', 'trainer-');
     }
     return path.replace('/', '') || 'home';
   };
@@ -142,7 +148,6 @@ function App() {
           <Route path="/programs" element={<ProgramsSection />} />
           <Route path="/pricing" element={<PricingSection />} />
           <Route path="/contact" element={<ContactSection />} />
-          <Route path="/faq" element={<FAQ />} />
           <Route path="/privacy-policy" element={<PrivacyPolicy />} />
           <Route path="/terms-of-service" element={<TermsOfService />} />
         </Routes>
@@ -251,6 +256,33 @@ function App() {
     );
   };
 
+  // Trainer Dashboard Layout
+  const TrainerLayout = () => {
+    if (!user || user.role !== 'trainer') {
+      return <Navigate to="/login" replace />;
+    }
+
+    return (
+      <div className="min-h-screen bg-background flex">
+        <TrainerSidebar
+          currentPage={getCurrentPage()}
+          onLogout={handleLogout}
+        />
+        <div className="flex-1 lg:ml-64">
+          <main className="min-h-screen pt-0">
+            <Routes>
+              <Route path="dashboard" element={<TrainerDashboard />} />
+              <Route path="diet-plans" element={<TrainerDietPlans />} />
+              <Route path="recipes" element={<TrainerRecipes />} />
+              <Route path="settings" element={<TrainerSettings />} />
+              <Route path="*" element={<Navigate to="/trainer/dashboard" replace />} />
+            </Routes>
+          </main>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <ThemeProvider>
       <Routes>
@@ -263,6 +295,9 @@ function App() {
 
         {/* Member Routes */}
         <Route path="/member/*" element={<MemberLayout />} />
+
+        {/* Trainer Routes */}
+        <Route path="/trainer/*" element={<TrainerLayout />} />
 
         {/* Public Routes - must be last */}
         <Route path="/*" element={<PublicLayout />} />

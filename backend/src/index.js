@@ -19,7 +19,6 @@ app.use((err, req, res, next) => {
 
 async function start() {
   try {
-    console.log(config.mongodbUri);
     await mongoose.connect(config.mongodbUri);
     console.log('MongoDB connected');
     app.listen(config.port, () => {
