@@ -13,11 +13,10 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { changePassword, updateMe, fetchMe } from '@/api/auth';
 import { useNavigate } from 'react-router-dom';
-import type { User, MemberOnboardingData } from '@/types';
+import type { MemberOnboardingData } from '@/types';
 
 export function MemberSettings() {
   const navigate = useNavigate();
-  const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [passwordSaving, setPasswordSaving] = useState(false);
   const [profileSaving, setProfileSaving] = useState(false);
@@ -55,7 +54,6 @@ export function MemberSettings() {
     setLoading(true);
     try {
       const userData = await fetchMe();
-      setUser(userData);
       if ((userData as any).onboardingData) {
         const od = (userData as any).onboardingData as MemberOnboardingData;
         setProfileData({
