@@ -28,6 +28,7 @@ import { SettingsManagement } from '@/components/admin/SettingsManagement';
 import { DietPlanManagement } from '@/components/admin/DietPlanManagement';
 import { RecipeManagement } from '@/components/admin/RecipeManagement';
 import { MemberSidebar } from '@/components/member/MemberSidebar';
+import { MemberHeader } from '@/components/member/MemberHeader';
 import { MemberDashboard } from '@/components/member/MemberDashboard';
 import { MemberMembership } from '@/components/member/MemberMembership';
 import { MemberDiet } from '@/components/member/MemberDiet';
@@ -37,10 +38,12 @@ import { MemberPayments } from '@/components/member/MemberPayments';
 import { MemberSettings } from '@/components/member/MemberSettings';
 import { MemberOnboarding } from './components/member/MemberOnboarding';
 import { TrainerSidebar } from '@/components/trainer/TrainerSidebar';
+import { TrainerHeader } from '@/components/trainer/TrainerHeader';
 import { TrainerDashboard } from '@/components/trainer/TrainerDashboard';
 import { TrainerDietPlans } from '@/components/trainer/TrainerDietPlans';
 import { TrainerRecipes } from '@/components/trainer/TrainerRecipes';
 import { TrainerSettings } from '@/components/trainer/TrainerSettings';
+import { NotificationsPage } from '@/components/shared/NotificationsPage';
 import { ScrollToTop } from '@/components/ui/ScrollToTop';
 import { Toaster } from '@/components/ui/sonner';
 import { cn } from '@/lib/utils';
@@ -229,10 +232,17 @@ function App() {
           />
         )}
         <div className={cn("flex-1", user.isOnboarded && "lg:ml-64")}>
-          <main className="min-h-screen pt-0">
+            {user.isOnboarded && (
+              <MemberHeader
+                userName={user.name}
+                notificationsPath="/member/notifications"
+              />
+            )}
+            <main className="min-h-screen pt-0">
             <Routes>
               <Route path="onboarding" element={<MemberOnboarding onComplete={handleOnboardingComplete} user={user} />} />
               <Route path="dashboard" element={<MemberDashboard />} />
+              <Route path="notifications" element={<NotificationsPage backPath="/member/dashboard" backLabel="Dashboard" />} />
               <Route path="membership" element={<MemberMembership />} />
               <Route
                 path="diet"
@@ -269,9 +279,14 @@ function App() {
           onLogout={handleLogout}
         />
         <div className="flex-1 lg:ml-64">
+          <TrainerHeader
+            userName={user?.name}
+            notificationsPath="/trainer/notifications"
+          />
           <main className="min-h-screen pt-0">
             <Routes>
               <Route path="dashboard" element={<TrainerDashboard />} />
+              <Route path="notifications" element={<NotificationsPage backPath="/trainer/dashboard" backLabel="Dashboard" />} />
               <Route path="diet-plans" element={<TrainerDietPlans />} />
               <Route path="recipes" element={<TrainerRecipes />} />
               <Route path="settings" element={<TrainerSettings />} />

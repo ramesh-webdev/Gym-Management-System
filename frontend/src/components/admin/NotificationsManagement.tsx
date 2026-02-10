@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   Bell,
   Check,
@@ -26,14 +26,47 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { mockNotifications } from '@/data/mockData';
+import {
+  listNotifications,
+  markNotificationRead,
+  markAllNotificationsRead,
+  deleteNotification as deleteNotificationApi,
+  createNotification as createNotificationApi,
+} from '@/api/notifications';
+import { getStoredUser } from '@/api/auth';
 import type { Notification } from '@/types';
 
+const NOTIFICATION_KINDS = [
+  { value: '', label: 'All kinds' },
+  { value: 'general', label: 'General' },
+  { value: 'membership', label: 'Membership' },
+  { value: 'diet_plan', label: 'Diet Plan' },
+  { value: 'assignment', label: 'Assignment' },
+  { value: 'payment', label: 'Payment' },
+  { value: 'announcement', label: 'Announcement' },
+] as const;
+
+const NOTIFICATION_TYPES = [
+  { value: '', label: 'All types' },
+  { value: 'info', label: 'Info' },
+  { value: 'success', label: 'Success' },
+  { value: 'warning', label: 'Warning' },
+  { value: 'error', label: 'Error' },
+  { value: 'payment', label: 'Payment' },
+] as const;
+
 export function NotificationsManagement() {
-  const [notifications, setNotifications] = useState(mockNotifications);
+  const currentUser = getStoredUser();
+  const currentUserId = currentUser?.id ?? '';
+
+  const [notifications, setNotifications] = useState<Notification[]>([]);
   const [filter, setFilter] = useState<'all' | 'unread' | 'read'>('all');
+  const [filterKind, setFilterKind] = useState<string>('');
+  const [filterType, setFilterType] = useState<string>('');
   const [isComposeOpen, setIsComposeOpen] = useState(false);
-  
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
   // Form state
   const [notificationType, setNotificationType] = useState<string>('info');
   const [recipients, setRecipients] = useState<string>('all');
@@ -41,56 +74,94 @@ export function NotificationsManagement() {
   const [message, setMessage] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const fetchNotifications = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await listNotifications({
+        filter,
+        limit: 100,
+        scope: 'all',
+        kind: filterKind || undefined,
+        type: filterType || undefined,
+      });
+      setNotifications(data);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to load notifications');
+      setNotifications([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [filter, filterKind, filterType]);
+
+  useEffect(() => {
+    fetchNotifications();
+  }, [fetchNotifications]);
+
   const filteredNotifications = notifications.filter((n) => {
     if (filter === 'unread') return !n.isRead;
     if (filter === 'read') return n.isRead;
     return true;
   });
 
-  const markAsRead = (id: string) => {
-    setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, isRead: true } : n))
-    );
+  const isOwnNotification = (n: Notification) => n.userId === currentUserId;
+
+  const markAsRead = async (id: string) => {
+    try {
+      await markNotificationRead(id);
+      setNotifications((prev) =>
+        prev.map((n) => (n.id === id ? { ...n, isRead: true } : n))
+      );
+    } catch {
+      // keep UI unchanged on error
+    }
   };
 
-  const deleteNotification = (id: string) => {
-    setNotifications((prev) => prev.filter((n) => n.id !== id));
+  const deleteNotification = async (id: string) => {
+    try {
+      await deleteNotificationApi(id);
+      setNotifications((prev) => prev.filter((n) => n.id !== id));
+    } catch {
+      // keep UI unchanged on error
+    }
   };
 
-  const markAllAsRead = () => {
-    setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+  const markAllAsRead = async () => {
+    try {
+      await markAllNotificationsRead(); // only marks current user's
+      setNotifications((prev) =>
+        prev.map((n) => (n.userId === currentUserId ? { ...n, isRead: true } : n))
+      );
+    } catch {
+      // keep UI unchanged on error
+    }
   };
 
   const handleSendNotification = async () => {
-    if (!title.trim() || !message.trim()) {
-      return;
-    }
+    if (!title.trim() || !message.trim()) return;
 
     setIsSubmitting(true);
-    
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-
-    // Create new notification
-    const newNotification: Notification = {
-      id: `notif-${Date.now()}`,
-      userId: 'all',
-      title: title.trim(),
-      message: message.trim(),
-      type: notificationType as 'info' | 'success' | 'warning' | 'error',
-      isRead: false,
-      createdAt: new Date(),
-    };
-
-    setNotifications((prev) => [newNotification, ...prev]);
-    
-    // Reset form
-    setTitle('');
-    setMessage('');
-    setNotificationType('info');
-    setRecipients('all');
-    setIsComposeOpen(false);
-    setIsSubmitting(false);
+    setError(null);
+    try {
+      const body = {
+        title: title.trim(),
+        message: message.trim(),
+        type: notificationType as 'info' | 'success' | 'warning' | 'error' | 'payment',
+        kind: 'announcement',
+        recipients: recipients as 'all' | 'members' | 'trainers' | 'admins',
+      };
+      await createNotificationApi(body);
+      await fetchNotifications();
+      setTitle('');
+      setMessage('');
+      setNotificationType('info');
+      setRecipients('all');
+      setIsComposeOpen(false);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to send notification');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const getIcon = (type: string) => {
@@ -109,6 +180,10 @@ export function NotificationsManagement() {
   };
 
   const unreadCount = notifications.filter((n) => !n.isRead).length;
+  const today = new Date().toDateString();
+  const sentToday = notifications.filter(
+    (n) => n.createdAt && new Date(n.createdAt).toDateString() === today
+  ).length;
 
   return (
     <div className="p-6 space-y-6">
@@ -122,6 +197,7 @@ export function NotificationsManagement() {
           <Button
             variant="outline"
             onClick={markAllAsRead}
+            disabled={unreadCount === 0}
             className="border-border text-foreground hover:bg-muted/50"
           >
             <Check className="w-4 h-4 mr-2" />
@@ -142,7 +218,9 @@ export function NotificationsManagement() {
                 </DialogTitle>
               </DialogHeader>
               <div className="space-y-5 pt-4">
-                {/* Notification Type */}
+                {error && (
+                  <p className="text-sm text-red-500 bg-red-500/10 px-3 py-2 rounded-lg">{error}</p>
+                )}
                 <div>
                   <label className="text-sm font-medium text-foreground mb-2 block">
                     Notification Type
@@ -161,7 +239,6 @@ export function NotificationsManagement() {
                   </Select>
                 </div>
 
-                {/* Recipients */}
                 <div>
                   <label className="text-sm font-medium text-foreground mb-2 block">
                     Recipients
@@ -171,16 +248,14 @@ export function NotificationsManagement() {
                       <SelectValue placeholder="Select recipients" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">All Members</SelectItem>
-                      <SelectItem value="active">Active Members</SelectItem>
-                      <SelectItem value="expired">Expired Members</SelectItem>
-                      <SelectItem value="specific">Specific Member</SelectItem>
+                      <SelectItem value="all">All Users</SelectItem>
+                      <SelectItem value="members">All Members</SelectItem>
                       <SelectItem value="trainers">All Trainers</SelectItem>
+                      <SelectItem value="admins">Admins</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
-                {/* Title */}
                 <div>
                   <label className="text-sm font-medium text-foreground mb-2 block">
                     Title
@@ -193,7 +268,6 @@ export function NotificationsManagement() {
                   />
                 </div>
 
-                {/* Message */}
                 <div>
                   <label className="text-sm font-medium text-foreground mb-2 block">
                     Message
@@ -207,7 +281,6 @@ export function NotificationsManagement() {
                   />
                 </div>
 
-                {/* Send Button */}
                 <Button
                   onClick={handleSendNotification}
                   disabled={!title.trim() || !message.trim() || isSubmitting}
@@ -231,12 +304,16 @@ export function NotificationsManagement() {
         </div>
       </div>
 
+      {error && !isComposeOpen && (
+        <p className="text-sm text-red-500 bg-red-500/10 px-3 py-2 rounded-lg">{error}</p>
+      )}
+
       {/* Stats */}
       <div className="grid sm:grid-cols-3 gap-4">
         {[
           { label: 'Total Notifications', value: notifications.length, icon: Bell },
           { label: 'Unread', value: unreadCount, icon: Mail, highlight: true },
-          { label: 'Sent Today', value: '12', icon: Send },
+          { label: 'Sent Today', value: sentToday, icon: Send },
         ].map((stat, index) => (
           <div
             key={index}
@@ -257,8 +334,9 @@ export function NotificationsManagement() {
         ))}
       </div>
 
-      {/* Filter Tabs */}
-      <div className="flex gap-2">
+      {/* Filter: Read status */}
+      <div className="flex flex-wrap items-center gap-3">
+        <span className="text-sm font-medium text-muted-foreground">Status:</span>
         {(['all', 'unread', 'read'] as const).map((f) => (
           <button
             key={f}
@@ -279,63 +357,122 @@ export function NotificationsManagement() {
         ))}
       </div>
 
+      {/* Admin filters: Kind, Type */}
+      <div className="flex flex-wrap items-center gap-4 p-4 rounded-xl border bg-card/50 border-border">
+        <div className="flex items-center gap-2">
+          <label className="text-sm font-medium text-muted-foreground whitespace-nowrap">Kind</label>
+          <Select value={filterKind || 'all'} onValueChange={(v) => setFilterKind(v === 'all' ? '' : v)}>
+            <SelectTrigger className="w-[140px] h-9 bg-muted/50 border-border text-foreground">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All kinds</SelectItem>
+              {NOTIFICATION_KINDS.filter((k) => k.value).map((k) => (
+                <SelectItem key={k.value} value={k.value}>{k.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="flex items-center gap-2">
+          <label className="text-sm font-medium text-muted-foreground whitespace-nowrap">Type</label>
+          <Select value={filterType || 'all'} onValueChange={(v) => setFilterType(v === 'all' ? '' : v)}>
+            <SelectTrigger className="w-[120px] h-9 bg-muted/50 border-border text-foreground">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All types</SelectItem>
+              {NOTIFICATION_TYPES.filter((t) => t.value).map((t) => (
+                <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
       {/* Notifications List */}
       <div className="space-y-3">
-        {filteredNotifications.map((notification) => (
-          <div
-            key={notification.id}
-            className={`p-4 rounded-xl border transition-colors ${
-              notification.isRead
-                ? 'bg-card/30 border-border'
-                : 'bg-ko-500/5 border-ko-500/20'
-            }`}
-          >
-            <div className="flex items-start gap-4">
-              <div className="w-10 h-10 rounded-lg bg-muted/50 flex items-center justify-center flex-shrink-0">
-                {getIcon(notification.type)}
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <h4 className={`font-medium ${notification.isRead ? 'text-muted-foreground' : 'text-foreground'}`}>
-                      {notification.title}
-                    </h4>
-                    <p className="text-muted-foreground text-sm mt-1">{notification.message}</p>
-                    <p className="text-muted-foreground text-xs mt-2">
-                      {notification.createdAt.toLocaleString()}
-                    </p>
-                  </div>
-                  <div className="flex gap-2 flex-shrink-0">
-                    {!notification.isRead && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => markAsRead(notification.id)}
-                        className="text-muted-foreground hover:text-ko-500 hover:bg-ko-500/10"
-                      >
-                        <Check className="w-4 h-4" />
-                      </Button>
-                    )}
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => deleteNotification(notification.id)}
-                      className="text-muted-foreground hover:text-red-500 hover:bg-red-500/10"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
+        {loading ? (
+          <div className="text-center py-12 text-muted-foreground">Loading...</div>
+        ) : (
+          <>
+            {filteredNotifications.map((notification) => {
+              const own = isOwnNotification(notification);
+              const recipientLabel = notification.recipientName
+                ? `${notification.recipientName}${notification.recipientRole ? ` (${notification.recipientRole})` : ''}`
+                : '—';
+              return (
+                <div
+                  key={notification.id}
+                  className={`p-4 rounded-xl border transition-colors ${
+                    notification.isRead
+                      ? 'bg-card/30 border-border'
+                      : 'bg-ko-500/5 border-ko-500/20'
+                  }`}
+                >
+                  <div className="flex items-start gap-4">
+                    <div className="w-10 h-10 rounded-lg bg-muted/50 flex items-center justify-center flex-shrink-0">
+                      {getIcon(notification.type)}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between gap-4">
+                        <div>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <h4 className={`font-medium ${notification.isRead ? 'text-muted-foreground' : 'text-foreground'}`}>
+                              {notification.title}
+                            </h4>
+                            <span className="text-xs px-2 py-0.5 rounded-md bg-muted text-muted-foreground" title="Recipient">
+                              To: {recipientLabel}
+                            </span>
+                          </div>
+                          <p className="text-muted-foreground text-sm mt-1">{notification.message}</p>
+                          <p className="text-muted-foreground text-xs mt-2">
+                            {notification.createdAt
+                              ? new Date(notification.createdAt).toLocaleString()
+                              : ''}
+                          </p>
+                        </div>
+                        <div className="flex gap-2 flex-shrink-0">
+                          {own && !notification.isRead && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => markAsRead(notification.id)}
+                              className="text-muted-foreground hover:text-ko-500 hover:bg-ko-500/10"
+                              title="Mark as read"
+                            >
+                              <Check className="w-4 h-4" />
+                            </Button>
+                          )}
+                          {own ? (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => deleteNotification(notification.id)}
+                              className="text-muted-foreground hover:text-red-500 hover:bg-red-500/10"
+                              title="Delete"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          ) : (
+                            <span className="text-xs text-muted-foreground italic" title="You can only mark or delete your own notifications">
+                              —
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </div>
-          </div>
-        ))}
+              );
+            })}
 
-        {filteredNotifications.length === 0 && (
-          <div className="text-center py-12">
-            <Bell className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-            <p className="text-muted-foreground">No notifications found</p>
-          </div>
+            {filteredNotifications.length === 0 && (
+              <div className="text-center py-12">
+                <Bell className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                <p className="text-muted-foreground">No notifications found</p>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>

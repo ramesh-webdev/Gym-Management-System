@@ -155,14 +155,29 @@ export interface Recipe {
 }
 
 // Notification Types
+export type NotificationKind =
+  | 'general'
+  | 'membership'
+  | 'diet_plan'
+  | 'assignment'
+  | 'payment'
+  | 'announcement';
+
 export interface Notification {
   id: string;
   userId: string;
+  /** Set when listing with scope=all (admin); recipient's display name */
+  recipientName?: string | null;
+  /** Set when listing with scope=all (admin); recipient's role */
+  recipientRole?: string | null;
   title: string;
   message: string;
   type: 'info' | 'success' | 'warning' | 'error' | 'payment';
+  kind?: NotificationKind;
   isRead: boolean;
-  createdAt: Date;
+  link?: string | null;
+  metadata?: Record<string, unknown> | null;
+  createdAt: string; // ISO from API
 }
 
 // Dashboard Stats

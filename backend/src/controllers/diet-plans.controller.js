@@ -1,5 +1,6 @@
 const DietPlan = require('../models/DietPlan');
 const User = require('../models/User');
+const notificationService = require('../services/notification.service');
 
 /**
  * List all diet plans. Admin/Trainer only.
@@ -178,6 +179,14 @@ async function create(req, res, next) {
         time: m.time || '',
       })) : [],
     });
+    notificationService.notifyMember(memberId, {
+      title: 'Diet Plan Assigned',
+      message: `A new diet plan "${name.trim()}" has been created for you (${Number(dailyCalories)} cal/day).`,
+      type: 'success',
+      kind: 'diet_plan',
+      link: '/member/diet-plan',
+      metadata: { dietPlanId: plan._id.toString(), memberId },
+    }).catch((err) => console.error('Notification notifyMember:', err));
     const p = plan.toJSON();
     res.status(201).json(p);
   } catch (err) {
@@ -244,6 +253,17 @@ async function update(req, res, next) {
       planDoc.member = memberId;
     }
     await planDoc.save();
+    const memberIdForNotif = planDoc.member?.toString();
+    if (memberIdForNotif) {
+      notificationService.notifyMember(memberIdForNotif, {
+        title: 'Diet Plan Updated',
+        message: `Your diet plan "${planDoc.name}" has been updated.`,
+        type: 'info',
+        kind: 'diet_plan',
+        link: '/member/diet-plan',
+        metadata: { dietPlanId: planDoc._id.toString() },
+      }).catch((err) => console.error('Notification notifyMember:', err));
+    }
     res.json(planDoc.toJSON());
   } catch (err) {
     next(err);

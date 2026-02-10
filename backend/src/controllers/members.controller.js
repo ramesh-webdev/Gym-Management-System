@@ -2,6 +2,7 @@ const bcrypt = require('bcryptjs');
 const User = require('../models/User');
 const MembershipPlan = require('../models/MembershipPlan');
 const { getNextValue } = require('../models/Counter');
+const notificationService = require('../services/notification.service');
 
 /**
  * List all members. Admin only.
@@ -163,6 +164,34 @@ async function create(req, res, next) {
       .populate('membershipPlan', 'name price duration')
       .populate('assignedTrainer', 'name phone')
       .lean();
+    // Notify admins: new member
+    notificationService.notifyAdmins({
+      title: 'New Member Registration',
+      message: `${name.trim()} has joined${created.membershipPlan ? ` with ${created.membershipPlan.name}` : ''}.`,
+      type: 'info',
+      kind: 'membership',
+      link: `/admin/members/${user._id}`,
+      metadata: { memberId: user._id.toString() },
+    }).catch((err) => console.error('Notification notifyAdmins:', err));
+    // Notify member: trainer assigned
+    if (assignedTrainer) {
+      const trainer = await User.findById(assignedTrainer).select('name').lean();
+      notificationService.notifyMember(user._id.toString(), {
+        title: 'Trainer Assigned',
+        message: trainer ? `You have been assigned to ${trainer.name} as your personal trainer.` : 'A personal trainer has been assigned to you.',
+        type: 'success',
+        kind: 'assignment',
+        metadata: { trainerId: assignedTrainer.toString() },
+      }).catch((err) => console.error('Notification notifyMember:', err));
+      notificationService.notifyTrainer(assignedTrainer.toString(), {
+        title: 'New Client Assigned',
+        message: `${name.trim()} has been assigned to you.`,
+        type: 'info',
+        kind: 'assignment',
+        link: '/trainer/dashboard',
+        metadata: { memberId: user._id.toString() },
+      }).catch((err) => console.error('Notification notifyTrainer:', err));
+    }
     const { _id, membershipPlan: mp, assignedTrainer: at, passwordHash: ph, ...rest } = created;
     const out = {
       ...rest,
@@ -281,6 +310,44 @@ async function update(req, res, next) {
       .populate('membershipPlan', 'name price duration')
       .populate('assignedTrainer', 'name phone')
       .lean();
+    // Notify member and trainer when trainer assignment changed
+    if (assignedTrainerId !== undefined) {
+      const memberName = updated.name || user.name;
+      if (assignedTrainerId) {
+        const trainer = await User.findById(assignedTrainerId).select('name').lean();
+        notificationService.notifyMember(user._id.toString(), {
+          title: 'Trainer Assigned',
+          message: trainer ? `You have been assigned to ${trainer.name} as your personal trainer.` : 'A personal trainer has been assigned to you.',
+          type: 'success',
+          kind: 'assignment',
+          metadata: { trainerId: assignedTrainerId },
+        }).catch((err) => console.error('Notification notifyMember:', err));
+        notificationService.notifyTrainer(assignedTrainerId, {
+          title: 'New Client Assigned',
+          message: `${memberName} has been assigned to you.`,
+          type: 'info',
+          kind: 'assignment',
+          link: '/trainer/dashboard',
+          metadata: { memberId: user._id.toString() },
+        }).catch((err) => console.error('Notification notifyTrainer:', err));
+      }
+    }
+    // Notify member if membership expires in the next 7 days
+    if (updated.membershipExpiry) {
+      const expiry = new Date(updated.membershipExpiry);
+      const now = new Date();
+      const daysLeft = Math.ceil((expiry - now) / (1000 * 60 * 60 * 24));
+      if (daysLeft >= 0 && daysLeft <= 7) {
+        notificationService.notifyMember(user._id.toString(), {
+          title: 'Membership Expiring Soon',
+          message: `Your membership expires in ${daysLeft} day(s) (${expiry.toLocaleDateString()}). Renew to continue access.`,
+          type: 'warning',
+          kind: 'membership',
+          link: '/member/membership',
+          metadata: { memberId: user._id.toString(), expiry: expiry.toISOString() },
+        }).catch((err) => console.error('Notification membership expiry:', err));
+      }
+    }
     const { _id, membershipPlan, assignedTrainer, passwordHash, ...rest } = updated;
     const out = {
       ...rest,

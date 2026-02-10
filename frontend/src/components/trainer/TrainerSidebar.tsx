@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard,
+  Bell,
   Utensils,
   ChefHat,
   Shield,
@@ -21,6 +22,7 @@ interface TrainerSidebarProps {
 
 const menuItems = [
   { id: 'trainer-dashboard', label: 'Dashboard', icon: LayoutDashboard, path: '/trainer/dashboard' },
+  { id: 'trainer-notifications', label: 'Notifications', icon: Bell, path: '/trainer/notifications' },
   { id: 'trainer-diet-plans', label: 'Diet Plans', icon: Utensils, path: '/trainer/diet-plans' },
   { id: 'trainer-recipes', label: 'Recipes', icon: ChefHat, path: '/trainer/recipes' },
   { id: 'trainer-settings', label: 'Account Security', icon: Shield, path: '/trainer/settings' },

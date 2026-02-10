@@ -74,4 +74,24 @@ async function updateMe(req, res, next) {
   }
 }
 
-module.exports = { getMe, changePassword, updateMe };
+/**
+ * List all users (id, name, role) for admin only. Used e.g. for notification recipient filter.
+ */
+async function listForAdmin(req, res, next) {
+  try {
+    const users = await User.find({ status: 'active' })
+      .select('_id name role')
+      .sort({ role: 1, name: 1 })
+      .lean();
+    const list = users.map((u) => ({
+      id: u._id.toString(),
+      name: u.name,
+      role: u.role,
+    }));
+    res.json(list);
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = { getMe, changePassword, updateMe, listForAdmin };
