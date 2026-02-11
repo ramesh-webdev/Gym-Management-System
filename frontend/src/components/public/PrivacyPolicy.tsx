@@ -1,4 +1,5 @@
 import { Shield } from 'lucide-react';
+import { formatDate } from '@/utils/date';
 
 export function PrivacyPolicy() {
   return (
@@ -16,7 +17,7 @@ export function PrivacyPolicy() {
             Privacy Policy
           </h1>
           <p className="text-muted-foreground">
-            Last updated: {new Date().toLocaleDateString('en-US')}
+            Last updated: {formatDate(new Date())}
           </p>
         </div>
 

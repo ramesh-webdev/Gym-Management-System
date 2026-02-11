@@ -13,6 +13,8 @@ export interface User {
   /** Menu/feature IDs this admin can access. Only used when isSuperAdmin is false. */
   permissions?: string[];
   isOnboarded?: boolean; // Track if the user has completed onboarding
+  /** Member-specific: whether they have personal training (enables diet plan access). */
+  hasPersonalTraining?: boolean;
 }
 
 export interface MemberOnboardingData {
@@ -30,11 +32,13 @@ export interface MemberOnboardingData {
 
 export interface Member extends User {
   membershipId: string;
+  membershipPlan?: string | MembershipPlan | null;
   membershipType: string;
   membershipExpiry: Date;
   joinDate: Date;
   payments: Payment[];
   hasPersonalTraining: boolean;
+  assignedTrainer?: { id: string; name: string; phone: string } | null;
   dietPlan?: DietPlan;
   onboardingData?: MemberOnboardingData;
 }
@@ -45,7 +49,8 @@ export interface Trainer extends User {
   bio: string;
   rating: number;
   clients: string[];
-  schedule: ScheduleSlot[];
+  clientsCount?: number;
+  schedule?: ScheduleSlot[];
 }
 
 // Membership Types
@@ -54,10 +59,12 @@ export interface MembershipPlan {
   name: string;
   description: string;
   price: number;
-  duration: number; // in months
+  duration: number; // in months (0 or unused for add-on plans)
   features: string[];
   isPopular?: boolean;
   isActive: boolean;
+  /** Add-on plan (e.g. Personal Training) – not a monthly membership */
+  isAddOn?: boolean;
 }
 
 // Product Types
@@ -73,7 +80,7 @@ export interface Product {
   status: 'active' | 'inactive';
 }
 
-// Payment Types
+// Payment Types (API: date/dueDate/createdAt are ISO strings)
 export interface Payment {
   id: string;
   memberId: string;
@@ -81,9 +88,14 @@ export interface Payment {
   amount: number;
   type: 'membership' | 'personal_training' | 'product' | 'other';
   status: 'paid' | 'pending' | 'overdue' | 'cancelled';
-  date: Date;
-  dueDate?: Date;
+  date: string; // ISO from API
+  dueDate?: string | null;
   invoiceNumber: string;
+  createdAt?: string;
+  /** Populated by API for display: plan name (membership), product name (product), etc. */
+  planName?: string | null;
+  productName?: string | null;
+  addPersonalTraining?: boolean;
 }
 
 
@@ -144,19 +156,35 @@ export interface Recipe {
   instructions: string[];
   tags: string[];
   createdBy: string; // admin/trainer ID
-  createdAt: Date;
+  createdByName?: string; // populated from backend
+  createdAt: Date | string; // ISO string from API
   isActive: boolean;
 }
 
 // Notification Types
+export type NotificationKind =
+  | 'general'
+  | 'membership'
+  | 'diet_plan'
+  | 'assignment'
+  | 'payment'
+  | 'announcement';
+
 export interface Notification {
   id: string;
   userId: string;
+  /** Set when listing with scope=all (admin); recipient's display name */
+  recipientName?: string | null;
+  /** Set when listing with scope=all (admin); recipient's role */
+  recipientRole?: string | null;
   title: string;
   message: string;
   type: 'info' | 'success' | 'warning' | 'error' | 'payment';
+  kind?: NotificationKind;
   isRead: boolean;
-  createdAt: Date;
+  link?: string | null;
+  metadata?: Record<string, unknown> | null;
+  createdAt: string; // ISO from API
 }
 
 // Dashboard Stats
@@ -199,4 +227,6 @@ export interface GymSettings {
     instagram?: string;
     twitter?: string;
   };
+  /** Personal training add-on price (per member, not part of any plan) */
+  personalTrainingPrice?: number;
 }

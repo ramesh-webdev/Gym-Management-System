@@ -15,6 +15,8 @@ const gymSettingsSchema = new mongoose.Schema({
     instagram: String,
     twitter: String,
   },
+  // Personal training is an add-on per member (not part of any plan). Price for adding PT.
+  personalTrainingPrice: { type: Number, default: 500, min: 0 },
 }, {
   timestamps: true,
   toJSON: {

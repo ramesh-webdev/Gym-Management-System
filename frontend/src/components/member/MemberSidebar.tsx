@@ -4,6 +4,7 @@ import {
   LayoutDashboard,
   CreditCard,
   Shield,
+  Bell,
   ChevronLeft,
   ChevronRight,
   LogOut,
@@ -29,10 +30,11 @@ const baseMenuItems = [
   { id: 'member-recipes', label: 'Recipes', icon: ChefHat, path: '/member/recipes' },
   { id: 'member-shop', label: 'Shop', icon: ShoppingBag, path: '/member/shop' },
   { id: 'member-payments', label: 'Payments', icon: CreditCard, path: '/member/payments' },
+  { id: 'member-notifications', label: 'Notifications', icon: Bell, path: '/member/notifications' },
   { id: 'member-settings', label: 'Account Security', icon: Shield, path: '/member/settings' },
 ];
 
-export function MemberSidebar({ currentPage, onLogout, hasPersonalTraining }: MemberSidebarProps) {
+export function MemberSidebar({ onLogout, hasPersonalTraining }: MemberSidebarProps) {
   // Filter menu items based on personal training status
   const menuItems = baseMenuItems.filter(item =>
     !item.requiresPersonalTraining || hasPersonalTraining
@@ -41,7 +43,6 @@ export function MemberSidebar({ currentPage, onLogout, hasPersonalTraining }: Me
   const location = useLocation();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
-  console.log(currentPage);
 
 
   return (

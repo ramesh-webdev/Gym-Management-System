@@ -14,10 +14,12 @@ export interface CreateMembershipPlanBody {
   name: string;
   description?: string;
   price: number;
-  duration: number;
+  duration?: number; // required for monthly plans; 0 or omit for add-on plans
   features?: string[] | string;
   isPopular?: boolean;
   isActive?: boolean;
+  /** Add-on plan (e.g. Personal Training) – not a monthly membership */
+  isAddOn?: boolean;
 }
 
 export function createMembershipPlan(body: CreateMembershipPlanBody): Promise<MembershipPlan> {

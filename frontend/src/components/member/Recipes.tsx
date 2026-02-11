@@ -17,32 +17,34 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { getActiveRecipes } from '@/utils/recipeUtils';
+import { getRecipes } from '@/api/recipes';
 import type { Recipe } from '@/types';
 
 export function Recipes() {
-  const [recipes, setRecipes] = useState<Recipe[]>(getActiveRecipes());
+  const [recipes, setRecipes] = useState<Recipe[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
-  // Refresh recipes when storage changes
   useEffect(() => {
-    const handleRecipeUpdate = () => {
-      setRecipes(getActiveRecipes());
-    };
-
-    window.addEventListener('recipesUpdated', handleRecipeUpdate);
-    window.addEventListener('storage', handleRecipeUpdate);
-    window.addEventListener('focus', handleRecipeUpdate);
-
-    return () => {
-      window.removeEventListener('recipesUpdated', handleRecipeUpdate);
-      window.removeEventListener('storage', handleRecipeUpdate);
-      window.removeEventListener('focus', handleRecipeUpdate);
-    };
+    loadRecipes();
   }, []);
+
+  const loadRecipes = async () => {
+    try {
+      setLoading(true);
+      // Get only active recipes (public view)
+      const data = await getRecipes(undefined, true);
+      setRecipes(data);
+    } catch (error: any) {
+      console.error('Failed to load recipes:', error);
+      // Don't show toast for members, just log
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const filteredRecipes = recipes.filter((recipe) => {
     const matchesSearch =
@@ -130,7 +132,12 @@ export function Recipes() {
       </div>
 
       {/* Recipes Grid */}
-      {filteredRecipes.length === 0 ? (
+      {loading ? (
+        <div className="text-center py-12">
+          <Utensils className="w-16 h-16 mx-auto text-muted-foreground mb-4 animate-pulse" />
+          <p className="text-muted-foreground">Loading recipes...</p>
+        </div>
+      ) : filteredRecipes.length === 0 ? (
         <div className="text-center py-12">
           <Utensils className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
           <p className="text-muted-foreground">No recipes found. Try adjusting your search or filters.</p>

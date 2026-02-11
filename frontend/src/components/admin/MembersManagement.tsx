@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Search,
   Plus,
@@ -12,6 +12,7 @@ import {
   Activity,
   Ruler,
   User as UserIcon,
+  Trash2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -38,9 +39,20 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import { mockMembers, mockMembershipPlans } from '@/data/mockData';
+import { getMembers, createMember, updateMember, deleteMember } from '@/api/members';
+import { getMembershipPlans } from '@/api/membership-plans';
+import { getTrainers, type TrainerListItem } from '@/api/trainers';
+import type { Member, MembershipPlan } from '@/types';
+import { formatDate } from '@/utils/date';
+import { useConfirmDialog } from '@/context/ConfirmDialogContext';
 
 export function MembersManagement() {
+  const confirmDialog = useConfirmDialog();
+  const [members, setMembers] = useState<Member[]>([]);
+  const [plans, setPlans] = useState<MembershipPlan[]>([]);
+  const [trainers, setTrainers] = useState<TrainerListItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [planFilter, setPlanFilter] = useState<string>('all');
@@ -53,17 +65,20 @@ export function MembersManagement() {
     password: '',
     membershipPlan: '',
     hasPersonalTraining: false,
+    assignedTrainerId: '',
   });
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [editingMember, setEditingMember] = useState<any>(null);
+  const [editingMember, setEditingMember] = useState<any | null>(null);
 
-  const handleEdit = (member: any) => {
+  const handleEdit = (member: Member) => {
     const [firstName, ...lastNameParts] = member.name.split(' ');
     setEditingMember({
       ...member,
       firstName,
       lastName: lastNameParts.join(' '),
       mobile: member.phone,
+      membershipPlanId: typeof member.membershipPlan === 'object' ? (member.membershipPlan as any)?.id : member.membershipPlan || '',
+      assignedTrainerId: member.assignedTrainer?.id || '',
     });
     setIsEditDialogOpen(true);
   };
@@ -71,12 +86,56 @@ export function MembersManagement() {
   const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
   const [selectedMemberForDetails, setSelectedMemberForDetails] = useState<any>(null);
 
-  const handleViewDetails = (member: any) => {
+  const handleDelete = async (memberId: string) => {
+    const confirmed = await confirmDialog({
+      title: 'Delete member',
+      description: 'Are you sure you want to delete this member?',
+      confirmLabel: 'Delete',
+      variant: 'destructive',
+    });
+    if (!confirmed) return;
+    try {
+      await deleteMember(memberId);
+      toast.success('Member deleted successfully');
+      loadMembers();
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Failed to delete member');
+    }
+  };
+
+  const loadMembers = () => {
+    setLoading(true);
+    getMembers()
+      .then(setMembers)
+      .catch(() => {
+        toast.error('Failed to load members');
+        setMembers([]);
+      })
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    loadMembers();
+    getMembershipPlans()
+      .then(setPlans)
+      .catch(() => {
+        toast.error('Failed to load membership plans');
+        setPlans([]);
+      });
+    getTrainers()
+      .then(setTrainers)
+      .catch(() => {
+        toast.error('Failed to load trainers');
+        setTrainers([]);
+      });
+  }, []);
+
+  const handleViewDetails = (member: Member) => {
     setSelectedMemberForDetails(member);
     setIsDetailsDialogOpen(true);
   };
 
-  const filteredMembers = mockMembers.filter((member) => {
+  const filteredMembers = members.filter((member) => {
     const matchesSearch =
       member.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       member.phone.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -119,11 +178,11 @@ export function MembersManagement() {
               Add Member
             </Button>
           </DialogTrigger>
-          <DialogContent className="bg-card border-border text-foreground max-w-lg">
-            <DialogHeader>
+          <DialogContent className="bg-card border-border text-foreground max-w-lg max-h-[90vh] flex flex-col p-4 sm:p-6">
+            <DialogHeader className="shrink-0">
               <DialogTitle className="font-display text-2xl">Add New Member</DialogTitle>
             </DialogHeader>
-            <div className="space-y-4 pt-4">
+            <div className="space-y-4 pt-4 overflow-y-auto flex-1 min-h-0 pr-1">
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="text-sm text-muted-foreground mb-2 block">First Name</label>
@@ -151,6 +210,8 @@ export function MembersManagement() {
                   placeholder="9876543210"
                   value={newMemberData.mobile}
                   onChange={(e) => setNewMemberData({ ...newMemberData, mobile: e.target.value })}
+                  pattern="[0-9]{10}"
+                  maxLength={10}
                 />
               </div>
               <div>
@@ -170,9 +231,9 @@ export function MembersManagement() {
                   value={newMemberData.membershipPlan}
                   onChange={(e) => setNewMemberData({ ...newMemberData, membershipPlan: e.target.value })}
                 >
-                  <option value="">Select a plan</option>
-                  {mockMembershipPlans.map((plan) => (
-                    <option key={plan.id} value={plan.id}>{plan.name} - ₹{plan.price}/mo</option>
+                  <option value="">Select a plan (optional)</option>
+                  {plans.filter(p => p.isActive && !p.isAddOn).map((plan) => (
+                    <option key={plan.id} value={plan.id}>{plan.name} - ₹{plan.price}/{plan.duration === 1 ? 'mo' : `${plan.duration}mo`}</option>
                   ))}
                 </select>
               </div>
@@ -181,7 +242,7 @@ export function MembersManagement() {
                   type="checkbox"
                   id="hasPT"
                   checked={newMemberData.hasPersonalTraining}
-                  onChange={(e) => setNewMemberData({ ...newMemberData, hasPersonalTraining: e.target.checked })}
+                  onChange={(e) => setNewMemberData({ ...newMemberData, hasPersonalTraining: e.target.checked, assignedTrainerId: e.target.checked ? newMemberData.assignedTrainerId : '' })}
                   className="w-4 h-4 rounded border-border accent-ko-500"
                 />
                 <label htmlFor="hasPT" className="text-sm text-foreground cursor-pointer flex items-center gap-2">
@@ -189,22 +250,65 @@ export function MembersManagement() {
                   Has Personal Training
                 </label>
               </div>
+              {newMemberData.hasPersonalTraining && (
+                <div>
+                  <label className="text-sm text-muted-foreground mb-2 block">Assign Trainer</label>
+                  <select
+                    className="w-full h-10 px-3 rounded-md bg-muted/50 border border-border text-foreground"
+                    value={newMemberData.assignedTrainerId}
+                    onChange={(e) => setNewMemberData({ ...newMemberData, assignedTrainerId: e.target.value })}
+                  >
+                    <option value="">Select a trainer (optional)</option>
+                    {trainers.map((trainer) => (
+                      <option key={trainer.id} value={trainer.id}>
+                        {trainer.name} {trainer.specialization.length > 0 ? `- ${trainer.specialization[0]}` : ''}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
               <Button
                 className="w-full bg-gradient-to-r from-ko-500 to-ko-600 text-primary-foreground hover:from-ko-600 hover:to-ko-700"
-                onClick={() => {
-                  // In a real app, this would call an API
-                  setIsAddDialogOpen(false);
-                  setNewMemberData({
-                    firstName: '',
-                    lastName: '',
-                    mobile: '',
-                    password: '',
-                    membershipPlan: '',
-                    hasPersonalTraining: false,
-                  });
+                disabled={saving}
+                onClick={async () => {
+                  if (!newMemberData.firstName || !newMemberData.lastName || !newMemberData.mobile || !newMemberData.password) {
+                    toast.error('Please fill all required fields');
+                    return;
+                  }
+                  if (newMemberData.password.length < 6) {
+                    toast.error('Password must be at least 6 characters');
+                    return;
+                  }
+                  setSaving(true);
+                  try {
+                    await createMember({
+                      name: `${newMemberData.firstName} ${newMemberData.lastName}`,
+                      phone: newMemberData.mobile,
+                      password: newMemberData.password,
+                      membershipPlanId: newMemberData.membershipPlan || undefined,
+                      hasPersonalTraining: newMemberData.hasPersonalTraining,
+                      assignedTrainerId: newMemberData.hasPersonalTraining && newMemberData.assignedTrainerId ? newMemberData.assignedTrainerId : undefined,
+                    });
+                    toast.success('Member created successfully');
+                    setIsAddDialogOpen(false);
+                    setNewMemberData({
+                      firstName: '',
+                      lastName: '',
+                      mobile: '',
+                      password: '',
+                      membershipPlan: '',
+                      hasPersonalTraining: false,
+                      assignedTrainerId: '',
+                    });
+                    loadMembers();
+                  } catch (err: unknown) {
+                    toast.error(err instanceof Error ? err.message : 'Failed to create member');
+                  } finally {
+                    setSaving(false);
+                  }
                 }}
               >
-                Create Member
+                {saving ? 'Creating...' : 'Create Member'}
               </Button>
             </div>
           </DialogContent>
@@ -212,12 +316,12 @@ export function MembersManagement() {
 
         {/* Edit Member Dialog */}
         <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-          <DialogContent className="bg-card border-border text-foreground max-w-lg">
-            <DialogHeader>
+          <DialogContent className="bg-card border-border text-foreground max-w-lg max-h-[90vh] flex flex-col p-4 sm:p-6">
+            <DialogHeader className="shrink-0">
               <DialogTitle className="font-display text-2xl">Edit Member</DialogTitle>
             </DialogHeader>
             {editingMember && (
-              <div className="space-y-4 pt-4">
+              <div className="space-y-4 pt-4 overflow-y-auto flex-1 min-h-0 pr-1">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="text-sm text-muted-foreground mb-2 block">First Name</label>
@@ -248,15 +352,27 @@ export function MembersManagement() {
                   />
                 </div>
                 <div>
+                  <label className="text-sm text-muted-foreground mb-2 block">Status</label>
+                  <select
+                    className="w-full h-10 px-3 rounded-md bg-muted/50 border border-border text-foreground"
+                    value={editingMember.status}
+                    onChange={(e) => setEditingMember({ ...editingMember, status: e.target.value as Member['status'] })}
+                  >
+                    <option value="active">Active</option>
+                    <option value="inactive">Inactive</option>
+                    <option value="suspended">Suspended</option>
+                  </select>
+                </div>
+                <div>
                   <label className="text-sm text-muted-foreground mb-2 block">Membership Plan</label>
                   <select
                     className="w-full h-10 px-3 rounded-md bg-muted/50 border border-border text-foreground"
-                    value={editingMember.membershipType}
-                    onChange={(e) => setEditingMember({ ...editingMember, membershipType: e.target.value })}
+                    value={editingMember.membershipPlanId || ''}
+                    onChange={(e) => setEditingMember({ ...editingMember, membershipPlanId: e.target.value })}
                   >
-                    <option value="">Select a plan</option>
-                    {mockMembershipPlans.map((plan) => (
-                      <option key={plan.id} value={plan.name}>{plan.name} - ₹{plan.price}/mo</option>
+                    <option value="">No plan</option>
+                    {plans.filter(p => p.isActive && !p.isAddOn).map((plan) => (
+                      <option key={plan.id} value={plan.id}>{plan.name} - ₹{plan.price}/{plan.duration === 1 ? 'mo' : `${plan.duration}mo`}</option>
                     ))}
                   </select>
                 </div>
@@ -265,7 +381,7 @@ export function MembersManagement() {
                     type="checkbox"
                     id="edit-hasPT"
                     checked={editingMember.hasPersonalTraining}
-                    onChange={(e) => setEditingMember({ ...editingMember, hasPersonalTraining: e.target.checked })}
+                    onChange={(e) => setEditingMember({ ...editingMember, hasPersonalTraining: e.target.checked, assignedTrainerId: e.target.checked ? editingMember.assignedTrainerId : '' })}
                     className="w-4 h-4 rounded border-border accent-ko-500"
                   />
                   <label htmlFor="edit-hasPT" className="text-sm text-foreground cursor-pointer flex items-center gap-2">
@@ -273,14 +389,53 @@ export function MembersManagement() {
                     Has Personal Training
                   </label>
                 </div>
+                {editingMember.hasPersonalTraining && (
+                  <div>
+                    <label className="text-sm text-muted-foreground mb-2 block">Assign Trainer</label>
+                    <select
+                      className="w-full h-10 px-3 rounded-md bg-muted/50 border border-border text-foreground"
+                      value={editingMember.assignedTrainerId || ''}
+                      onChange={(e) => setEditingMember({ ...editingMember, assignedTrainerId: e.target.value })}
+                    >
+                      <option value="">No trainer assigned</option>
+                      {trainers.map((trainer) => (
+                        <option key={trainer.id} value={trainer.id}>
+                          {trainer.name} {trainer.specialization.length > 0 ? `- ${trainer.specialization[0]}` : ''}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
                 <Button
                   className="w-full bg-gradient-to-r from-ko-500 to-ko-600 text-primary-foreground hover:from-ko-600 hover:to-ko-700"
-                  onClick={() => {
-                    toast.success('Member updated successfully (Demo)');
-                    setIsEditDialogOpen(false);
+                  disabled={saving}
+                  onClick={async () => {
+                    if (!editingMember) return;
+                    if (!editingMember.firstName || !editingMember.lastName || !editingMember.mobile) {
+                      toast.error('Please fill all required fields');
+                      return;
+                    }
+                    setSaving(true);
+                    try {
+                      await updateMember(editingMember.id, {
+                        name: `${editingMember.firstName} ${editingMember.lastName}`,
+                        phone: editingMember.mobile,
+                        status: editingMember.status,
+                        membershipPlanId: editingMember.membershipPlanId || null,
+                        hasPersonalTraining: editingMember.hasPersonalTraining,
+                        assignedTrainerId: editingMember.hasPersonalTraining && editingMember.assignedTrainerId ? editingMember.assignedTrainerId : null,
+                      });
+                      toast.success('Member updated successfully');
+                      setIsEditDialogOpen(false);
+                      loadMembers();
+                    } catch (err: unknown) {
+                      toast.error(err instanceof Error ? err.message : 'Failed to update member');
+                    } finally {
+                      setSaving(false);
+                    }
                   }}
                 >
-                  Save Changes
+                  {saving ? 'Saving...' : 'Save Changes'}
                 </Button>
               </div>
             )}
@@ -289,12 +444,12 @@ export function MembersManagement() {
 
         {/* Member Details / Metrics Dialog */}
         <Dialog open={isDetailsDialogOpen} onOpenChange={setIsDetailsDialogOpen}>
-          <DialogContent className="bg-card border-border text-foreground max-w-lg">
-            <DialogHeader>
+          <DialogContent className="bg-card border-border text-foreground max-w-lg max-h-[90vh] flex flex-col p-4 sm:p-6">
+            <DialogHeader className="shrink-0">
               <DialogTitle className="font-display text-2xl">Member Metrics</DialogTitle>
             </DialogHeader>
             {selectedMemberForDetails && (
-              <div className="space-y-6 pt-4">
+              <div className="space-y-6 pt-4 overflow-y-auto flex-1 min-h-0 pr-1">
                 <div className="flex items-center gap-4 p-4 rounded-xl bg-muted/30 border border-border">
                   <div className="w-12 h-12 rounded-full bg-ko-500/10 flex items-center justify-center text-ko-500 font-bold text-xl">
                     {selectedMemberForDetails.name.charAt(0)}
@@ -405,107 +560,122 @@ export function MembersManagement() {
       </div>
 
       {/* Members Table */}
-      <div className="rounded-xl bg-card/50 border border-border overflow-hidden">
-        <Table>
-          <TableHeader>
-            <TableRow className="border-border hover:bg-transparent">
-              <TableHead className="text-muted-foreground">Member</TableHead>
-              <TableHead className="text-muted-foreground">Membership ID</TableHead>
-              <TableHead className="text-muted-foreground">Plan</TableHead>
-              <TableHead className="text-muted-foreground">PT Status</TableHead>
-              <TableHead className="text-muted-foreground">Status</TableHead>
-              <TableHead className="text-muted-foreground">Expiry Date</TableHead>
-              <TableHead className="text-muted-foreground text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredMembers.map((member) => (
-              <TableRow key={member.id} className="border-border hover:bg-muted/50">
-                <TableCell>
-                  <div className="flex items-center gap-3">
-                    <img
-                      src={member.avatar}
-                      alt={member.name}
-                      className="w-10 h-10 rounded-full"
-                    />
-                    <div>
-                      <p className="text-foreground font-medium">{member.name}</p>
-                      <p className="text-muted-foreground text-sm">{member.phone}</p>
-                    </div>
-                  </div>
-                </TableCell>
-                <TableCell className="text-muted-foreground">{member.membershipId}</TableCell>
-                <TableCell>
-                  <span className={`px-2 py-1 rounded-full text-xs ${member.membershipType === 'Elite'
-                    ? 'bg-purple-500/20 text-purple-600 dark:text-purple-400'
-                    : member.membershipType === 'Pro'
-                      ? 'bg-blue-500/20 text-blue-600 dark:text-blue-400'
-                      : 'bg-muted text-muted-foreground'
-                    }`}>
-                    {member.membershipType}
-                  </span>
-                </TableCell>
-                <TableCell>
-                  {member.hasPersonalTraining ? (
-                    <Badge className="bg-ko-500/20 text-ko-500 hover:bg-ko-500/30 flex items-center gap-1 w-fit">
-                      <Dumbbell className="w-3 h-3" />
-                      Yes
-                    </Badge>
-                  ) : (
-                    <Badge variant="secondary" className="text-muted-foreground">No</Badge>
-                  )}
-                </TableCell>
-                <TableCell>{getStatusBadge(member.status)}</TableCell>
-                <TableCell className="text-muted-foreground">
-                  {member.membershipExpiry.toLocaleDateString()}
-                </TableCell>
-                <TableCell className="text-right">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground">
-                        <MoreHorizontal className="w-4 h-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="bg-card border-border">
-                      <DropdownMenuItem
-                        className="text-foreground hover:bg-muted cursor-pointer"
-                        onClick={() => handleEdit(member)}
-                      >
-                        <Edit className="w-4 h-4 mr-2" />
-                        Edit
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        className="text-foreground hover:bg-muted cursor-pointer"
-                        onClick={() => handleViewDetails(member)}
-                      >
-                        <UserIcon className="w-4 h-4 mr-2" />
-                        View Metrics
-                      </DropdownMenuItem>
-                      <DropdownMenuItem className="text-foreground hover:bg-muted cursor-pointer">
-                        <Mail className="w-4 h-4 mr-2" />
-                        Send SMS
-                      </DropdownMenuItem>
-                      <DropdownMenuItem className="text-foreground hover:bg-muted cursor-pointer">
-                        <UserCheck className="w-4 h-4 mr-2" />
-                        Renew Membership
-                      </DropdownMenuItem>
-                      <DropdownMenuItem className="text-red-500 hover:bg-red-500/10 cursor-pointer">
-                        <UserX className="w-4 h-4 mr-2" />
-                        Suspend
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </TableCell>
+      {loading ? (
+        <div className="p-12 text-center text-muted-foreground">Loading members...</div>
+      ) : (
+        <div className="rounded-xl bg-card/50 border border-border overflow-hidden">
+          <Table>
+            <TableHeader>
+              <TableRow className="border-border hover:bg-transparent">
+                <TableHead className="text-muted-foreground">Member</TableHead>
+                <TableHead className="text-muted-foreground">Membership ID</TableHead>
+                <TableHead className="text-muted-foreground">Plan</TableHead>
+                <TableHead className="text-muted-foreground">PT Status</TableHead>
+                <TableHead className="text-muted-foreground">Status</TableHead>
+                <TableHead className="text-muted-foreground">Expiry Date</TableHead>
+                <TableHead className="text-muted-foreground text-right">Actions</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
+            </TableHeader>
+            <TableBody>
+              {filteredMembers.map((member) => (
+                <TableRow key={member.id} className="border-border hover:bg-muted/50">
+                  <TableCell>
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center overflow-hidden">
+                        {member.avatar ? (
+                          <img src={member.avatar} alt={member.name} className="w-full h-full object-cover" />
+                        ) : (
+                          <span className="text-foreground font-medium">{member.name[0]}</span>
+                        )}
+                      </div>
+                      <div>
+                        <p className="text-foreground font-medium">{member.name}</p>
+                        <p className="text-muted-foreground text-sm">{member.phone}</p>
+                      </div>
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">{member.membershipId}</TableCell>
+                  <TableCell>
+                    <span className={`px-2 py-1 rounded-full text-xs ${member.membershipType === 'Elite'
+                      ? 'bg-purple-500/20 text-purple-600 dark:text-purple-400'
+                      : member.membershipType === 'Pro'
+                        ? 'bg-blue-500/20 text-blue-600 dark:text-blue-400'
+                        : 'bg-muted text-muted-foreground'
+                      }`}>
+                      {member.membershipType || 'No plan'}
+                    </span>
+                  </TableCell>
+                  <TableCell>
+                    {member.hasPersonalTraining ? (
+                      <Badge className="bg-ko-500/20 text-ko-500 hover:bg-ko-500/30 flex items-center gap-1 w-fit">
+                        <Dumbbell className="w-3 h-3" />
+                        Yes
+                      </Badge>
+                    ) : (
+                      <Badge variant="secondary" className="text-muted-foreground">No</Badge>
+                    )}
+                  </TableCell>
+                  <TableCell>{getStatusBadge(member.status)}</TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {member.membershipExpiry
+                      ? formatDate(member.membershipExpiry)
+                      : 'No plan'}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground">
+                          <MoreHorizontal className="w-4 h-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="bg-card border-border">
+                        <DropdownMenuItem
+                          className="text-foreground hover:bg-muted cursor-pointer"
+                          onClick={() => handleEdit(member)}
+                        >
+                          <Edit className="w-4 h-4 mr-2" />
+                          Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          className="text-foreground hover:bg-muted cursor-pointer"
+                          onClick={() => handleViewDetails(member)}
+                        >
+                          <UserIcon className="w-4 h-4 mr-2" />
+                          View Metrics
+                        </DropdownMenuItem>
+                        <DropdownMenuItem className="text-foreground hover:bg-muted cursor-pointer">
+                          <Mail className="w-4 h-4 mr-2" />
+                          Send SMS
+                        </DropdownMenuItem>
+                        <DropdownMenuItem className="text-foreground hover:bg-muted cursor-pointer">
+                          <UserCheck className="w-4 h-4 mr-2" />
+                          Renew Membership
+                        </DropdownMenuItem>
+                        <DropdownMenuItem className="text-red-500 hover:bg-red-500/10 cursor-pointer">
+                          <UserX className="w-4 h-4 mr-2" />
+                          Suspend
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          className="text-red-500 hover:bg-red-500/10 cursor-pointer"
+                          onClick={() => handleDelete(member.id)}
+                        >
+                          <Trash2 className="w-4 h-4 mr-2" />
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      )}
 
       {/* Pagination */}
       <div className="flex items-center justify-between">
         <p className="text-muted-foreground text-sm">
-          Showing {filteredMembers.length} of {mockMembers.length} members
+          Showing {filteredMembers.length} of {members.length} members
         </p>
         <div className="flex gap-2">
           <Button variant="outline" size="sm" className="border-border text-muted-foreground" disabled>

@@ -25,14 +25,19 @@ import {
 import type { MembershipPlan } from '@/types';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
+import { useConfirmDialog } from '@/context/ConfirmDialogContext';
 
 export function MembershipPlans() {
+  const confirmDialog = useConfirmDialog();
   const [plans, setPlans] = useState<MembershipPlan[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [currentPlan, setCurrentPlan] = useState<Partial<MembershipPlan>>({});
   const [saving, setSaving] = useState(false);
+  const [addFormIsAddOn, setAddFormIsAddOn] = useState(false);
+
+  const existingAddOnPlan = plans.find((p) => p.isAddOn);
 
   const loadPlans = () => {
     setLoading(true);
@@ -56,19 +61,21 @@ export function MembershipPlans() {
     const name = formData.get('name') as string;
     const description = formData.get('description') as string;
     const price = Number(formData.get('price'));
-    const duration = Number(formData.get('duration'));
+    const isAddOn = formData.get('isAddOn') === 'on';
+    const duration = isAddOn ? 0 : Number(formData.get('duration') || 1);
     const featuresStr = (formData.get('features') as string) || '';
     const features = featuresStr.split(',').map((f) => f.trim()).filter(Boolean);
     const isActive = formData.get('isActive') === 'on';
     setSaving(true);
     try {
-      await createMembershipPlan({ name, description, price, duration, features, isActive, isPopular: false });
+      await createMembershipPlan({ name, description, price, duration, features, isActive, isPopular: false, isAddOn });
       toast.success('Membership plan created successfully!');
       setIsAddDialogOpen(false);
       form.reset();
       loadPlans();
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : 'Could not create membership plan. Please try again.');
+      const msg = err && typeof err === 'object' && 'message' in err ? String((err as { message: string }).message) : 'Could not create membership plan. Please try again.';
+      toast.error(msg);
     } finally {
       setSaving(false);
     }
@@ -87,25 +94,33 @@ export function MembershipPlans() {
     const name = formData.get('name') as string;
     const description = formData.get('description') as string;
     const price = Number(formData.get('price'));
-    const duration = Number(formData.get('duration'));
+    const isAddOn = formData.get('isAddOn') === 'on';
+    const duration = isAddOn ? 0 : Number(formData.get('duration') || 1);
     const featuresStr = (formData.get('features') as string) || '';
     const features = featuresStr.split(',').map((f) => f.trim()).filter(Boolean);
     const isActive = formData.get('isActive') === 'on';
     setSaving(true);
     try {
-      await updateMembershipPlan(currentPlan.id, { name, description, price, duration, features, isActive });
+      await updateMembershipPlan(currentPlan.id, { name, description, price, duration, features, isActive, isAddOn });
       toast.success('Membership plan updated successfully!');
       setIsEditDialogOpen(false);
       loadPlans();
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : 'Could not update membership plan. Please try again.');
+      const msg = err && typeof err === 'object' && 'message' in err ? String((err as { message: string }).message) : 'Could not update membership plan. Please try again.';
+      toast.error(msg);
     } finally {
       setSaving(false);
     }
   };
 
   const handleDeletePlan = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this plan?')) return;
+    const confirmed = await confirmDialog({
+      title: 'Delete plan',
+      description: 'Are you sure you want to delete this plan?',
+      confirmLabel: 'Delete',
+      variant: 'destructive',
+    });
+    if (!confirmed) return;
     try {
       await deleteMembershipPlan(id);
       toast.success('Membership plan deleted successfully.');
@@ -115,7 +130,8 @@ export function MembershipPlans() {
     }
   };
 
-  const getDurationLabel = (duration: number) => {
+  const getDurationLabel = (duration: number, isAddOn?: boolean) => {
+    if (isAddOn || duration === 0) return 'Add-on (not monthly)';
     if (duration === 1) return '/month';
     if (duration === 3) return '/quarter';
     if (duration === 6) return '/half-year';
@@ -138,9 +154,18 @@ export function MembershipPlans() {
         <div>
           <h1 className="font-display text-3xl font-bold text-foreground">Membership Plans</h1>
           <p className="text-muted-foreground">Manage gym membership plans and pricing</p>
+          <p className="text-muted-foreground text-sm mt-1">
+            Create monthly plans here. For add-ons like Personal Training, create a plan and check &quot;Add-on plan&quot; so it is not treated as a monthly membership.
+          </p>
         </div>
 
-        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+        <Dialog
+          open={isAddDialogOpen}
+          onOpenChange={(open) => {
+            setIsAddDialogOpen(open);
+            if (!open) setAddFormIsAddOn(false);
+          }}
+        >
           <DialogTrigger asChild>
             <Button className="bg-lime-500 text-primary-foreground hover:bg-lime-400">
               <Plus className="w-4 h-4 mr-2" />
@@ -160,14 +185,46 @@ export function MembershipPlans() {
                 <label className="text-sm text-muted-foreground mb-2 block">Description</label>
                 <Input name="description" required className="bg-muted/50 border-border text-foreground" placeholder="Brief description..." />
               </div>
+              <div className="flex items-center space-x-2 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                <Checkbox
+                  id="isAddOn"
+                  name="isAddOn"
+                  checked={addFormIsAddOn}
+                  onCheckedChange={(v) => setAddFormIsAddOn(v === true)}
+                />
+                <label htmlFor="isAddOn" className="text-sm font-medium text-foreground cursor-pointer">
+                  Add-on plan (e.g. Personal Training) – not a monthly membership. Members add it on top of their plan.
+                </label>
+              </div>
+              {existingAddOnPlan && addFormIsAddOn && (
+                <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-600 text-sm">
+                  <p className="font-medium">Only one add-on plan is allowed at a time.</p>
+                  <p className="mt-1">An add-on plan already exists: &quot;{existingAddOnPlan.name}&quot;. Remove it or edit it instead of creating another.</p>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="mt-2 border-red-500/30 text-red-600 hover:bg-red-500/10"
+                    onClick={() => {
+                      setIsAddDialogOpen(false);
+                      setCurrentPlan(existingAddOnPlan);
+                      setIsEditDialogOpen(true);
+                      setAddFormIsAddOn(false);
+                    }}
+                  >
+                    Edit existing add-on plan
+                  </Button>
+                </div>
+              )}
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="text-sm text-muted-foreground mb-2 block">Price (₹)</label>
                   <Input name="price" type="number" required className="bg-muted/50 border-border text-foreground" placeholder="1000" />
                 </div>
-                <div>
+                <div id="duration-wrap-add">
                   <label className="text-sm text-muted-foreground mb-2 block">Duration (months)</label>
-                  <Input name="duration" type="number" required className="bg-muted/50 border-border text-foreground" placeholder="1" />
+                  <Input name="duration" type="number" min={1} defaultValue={1} className="bg-muted/50 border-border text-foreground" placeholder="1" />
+                  <p className="text-xs text-muted-foreground mt-1">N/A for add-on plans</p>
                 </div>
               </div>
               <div>
@@ -183,7 +240,11 @@ export function MembershipPlans() {
                   Active
                 </label>
               </div>
-              <Button type="submit" disabled={saving} className="w-full bg-lime-500 text-primary-foreground hover:bg-lime-400">
+              <Button
+                type="submit"
+                disabled={saving || (addFormIsAddOn && !!existingAddOnPlan)}
+                className="w-full bg-lime-500 text-primary-foreground hover:bg-lime-400"
+              >
                 {saving ? 'Creating...' : 'Create Plan'}
               </Button>
             </form>
@@ -191,11 +252,11 @@ export function MembershipPlans() {
         </Dialog>
 
         <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-          <DialogContent className="bg-card border-border text-foreground max-w-lg">
-            <DialogHeader>
+          <DialogContent className="bg-card border-border text-foreground max-w-lg max-h-[90vh] flex flex-col p-4 sm:p-6">
+            <DialogHeader className="shrink-0">
               <DialogTitle className="font-display text-2xl">Edit Plan</DialogTitle>
             </DialogHeader>
-            <form onSubmit={handleUpdatePlan} className="space-y-4 pt-4">
+            <form onSubmit={handleUpdatePlan} className="space-y-4 pt-4 overflow-y-auto flex-1 min-h-0 pr-1">
               <div>
                 <label className="text-sm text-muted-foreground mb-2 block">Plan Name</label>
                 <Input name="name" defaultValue={currentPlan.name} required className="bg-muted/50 border-border text-foreground" />
@@ -204,6 +265,12 @@ export function MembershipPlans() {
                 <label className="text-sm text-muted-foreground mb-2 block">Description</label>
                 <Input name="description" defaultValue={currentPlan.description} required className="bg-muted/50 border-border text-foreground" />
               </div>
+              <div className="flex items-center space-x-2 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                <Checkbox id="edit-isAddOn" name="isAddOn" defaultChecked={currentPlan.isAddOn} />
+                <label htmlFor="edit-isAddOn" className="text-sm font-medium text-foreground cursor-pointer">
+                  Add-on plan (not a monthly membership)
+                </label>
+              </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="text-sm text-muted-foreground mb-2 block">Price (₹)</label>
@@ -211,7 +278,7 @@ export function MembershipPlans() {
                 </div>
                 <div>
                   <label className="text-sm text-muted-foreground mb-2 block">Duration (months)</label>
-                  <Input name="duration" type="number" defaultValue={currentPlan.duration} required className="bg-muted/50 border-border text-foreground" />
+                  <Input name="duration" type="number" min={0} defaultValue={currentPlan.duration ?? 0} className="bg-muted/50 border-border text-foreground" />
                 </div>
               </div>
               <div>
@@ -253,6 +320,13 @@ export function MembershipPlans() {
                 </Badge>
               </div>
             )}
+            {plan.isAddOn && (
+              <div className="absolute -top-3 right-16">
+                <Badge variant="secondary" className="bg-amber-500/20 text-amber-600 border border-amber-500/30">
+                  Add-on
+                </Badge>
+              </div>
+            )}
 
             <div className="absolute top-4 right-4">
               <DropdownMenu>
@@ -289,7 +363,7 @@ export function MembershipPlans() {
               <span className="font-display text-5xl font-bold text-lime-500">
                 ₹{plan.price}
               </span>
-              <span className="text-muted-foreground">{getDurationLabel(plan.duration)}</span>
+              <span className="text-muted-foreground">{getDurationLabel(plan.duration ?? 0, plan.isAddOn)}</span>
             </div>
 
             <ul className="space-y-3 mb-6">

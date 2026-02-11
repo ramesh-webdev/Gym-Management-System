@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-dom';
 import { ThemeProvider } from '@/context/ThemeContext';
+import { ConfirmDialogProvider } from '@/context/ConfirmDialogContext';
 import { Navbar } from '@/components/public/Navbar';
 import { HeroSection } from '@/components/public/HeroSection';
 import { AboutSection } from '@/components/public/AboutSection';
@@ -9,7 +10,6 @@ import { BMISection } from '@/components/public/BMISection';
 import { PricingSection } from '@/components/public/PricingSection';
 import { TestimonialsSection } from '@/components/public/TestimonialsSection';
 import { ContactSection } from '@/components/public/ContactSection';
-import { FAQ } from '@/components/public/FAQ';
 import { PrivacyPolicy } from '@/components/public/PrivacyPolicy';
 import { TermsOfService } from '@/components/public/TermsOfService';
 import { Footer } from '@/components/public/Footer';
@@ -29,6 +29,7 @@ import { SettingsManagement } from '@/components/admin/SettingsManagement';
 import { DietPlanManagement } from '@/components/admin/DietPlanManagement';
 import { RecipeManagement } from '@/components/admin/RecipeManagement';
 import { MemberSidebar } from '@/components/member/MemberSidebar';
+import { MemberHeader } from '@/components/member/MemberHeader';
 import { MemberDashboard } from '@/components/member/MemberDashboard';
 import { MemberMembership } from '@/components/member/MemberMembership';
 import { MemberDiet } from '@/components/member/MemberDiet';
@@ -37,11 +38,17 @@ import { Recipes } from '@/components/member/Recipes';
 import { MemberPayments } from '@/components/member/MemberPayments';
 import { MemberSettings } from '@/components/member/MemberSettings';
 import { MemberOnboarding } from './components/member/MemberOnboarding';
+import { TrainerSidebar } from '@/components/trainer/TrainerSidebar';
+import { TrainerHeader } from '@/components/trainer/TrainerHeader';
+import { TrainerDashboard } from '@/components/trainer/TrainerDashboard';
+import { TrainerDietPlans } from '@/components/trainer/TrainerDietPlans';
+import { TrainerRecipes } from '@/components/trainer/TrainerRecipes';
+import { TrainerSettings } from '@/components/trainer/TrainerSettings';
+import { NotificationsPage } from '@/components/shared/NotificationsPage';
 import { ScrollToTop } from '@/components/ui/ScrollToTop';
 import { Toaster } from '@/components/ui/sonner';
 import { cn } from '@/lib/utils';
-import { hasPersonalTraining } from '@/utils/memberUtils';
-import { getStoredUser, logout as apiLogout } from '@/api/auth';
+import { getStoredUser, logout as apiLogout, fetchMe } from '@/api/auth';
 import type { User } from '@/types';
 
 function App() {
@@ -92,13 +99,20 @@ function App() {
   };
 
   // Handle onboarding completion
-  const handleOnboardingComplete = (_onboardingData: any) => {
+  const handleOnboardingComplete = async (_onboardingData: any) => {
     if (!user) return;
-    const updatedUser = { ...user, isOnboarded: true };
-    setUser(updatedUser);
-    localStorage.setItem('user', JSON.stringify(updatedUser));
-    // In a real app, we would also save the onboardingData to the database
-    navigate('/member/dashboard');
+    try {
+      // Refetch user from API to get updated data (onboardingData, isOnboarded)
+      const updatedUser = await fetchMe();
+      setUser(updatedUser);
+      navigate('/member/dashboard');
+    } catch (err) {
+      // If refetch fails, still update local state and navigate
+      const updatedUser = { ...user, isOnboarded: true };
+      setUser(updatedUser);
+      localStorage.setItem('user', JSON.stringify(updatedUser));
+      navigate('/member/dashboard');
+    }
   };
 
   // Get current page from location for sidebar highlighting
@@ -108,6 +122,8 @@ function App() {
       return path.replace('/admin/', 'admin-');
     } else if (path.startsWith('/member/')) {
       return path.replace('/member/', 'member-');
+    } else if (path.startsWith('/trainer/')) {
+      return path.replace('/trainer/', 'trainer-');
     }
     return path.replace('/', '') || 'home';
   };
@@ -136,7 +152,6 @@ function App() {
           <Route path="/programs" element={<ProgramsSection />} />
           <Route path="/pricing" element={<PricingSection />} />
           <Route path="/contact" element={<ContactSection />} />
-          <Route path="/faq" element={<FAQ />} />
           <Route path="/privacy-policy" element={<PrivacyPolicy />} />
           <Route path="/terms-of-service" element={<TermsOfService />} />
         </Routes>
@@ -205,7 +220,8 @@ function App() {
       return <Navigate to="/member/onboarding" replace />;
     }
 
-    const memberHasPersonalTraining = hasPersonalTraining(user.id);
+    // Use hasPersonalTraining from user object (from API)
+    const memberHasPersonalTraining = user.hasPersonalTraining === true;
 
     return (
       <div className="min-h-screen bg-background flex">
@@ -217,10 +233,17 @@ function App() {
           />
         )}
         <div className={cn("flex-1", user.isOnboarded && "lg:ml-64")}>
-          <main className="min-h-screen pt-0">
+            {user.isOnboarded && (
+              <MemberHeader
+                userName={user.name}
+                notificationsPath="/member/notifications"
+              />
+            )}
+            <main className="min-h-screen pt-0">
             <Routes>
               <Route path="onboarding" element={<MemberOnboarding onComplete={handleOnboardingComplete} user={user} />} />
               <Route path="dashboard" element={<MemberDashboard />} />
+              <Route path="notifications" element={<NotificationsPage backPath="/member/dashboard" backLabel="Dashboard" />} />
               <Route path="membership" element={<MemberMembership />} />
               <Route
                 path="diet"
@@ -244,8 +267,41 @@ function App() {
     );
   };
 
+  // Trainer Dashboard Layout
+  const TrainerLayout = () => {
+    if (!user || user.role !== 'trainer') {
+      return <Navigate to="/login" replace />;
+    }
+
+    return (
+      <div className="min-h-screen bg-background flex">
+        <TrainerSidebar
+          currentPage={getCurrentPage()}
+          onLogout={handleLogout}
+        />
+        <div className="flex-1 lg:ml-64">
+          <TrainerHeader
+            userName={user?.name}
+            notificationsPath="/trainer/notifications"
+          />
+          <main className="min-h-screen pt-0">
+            <Routes>
+              <Route path="dashboard" element={<TrainerDashboard />} />
+              <Route path="notifications" element={<NotificationsPage backPath="/trainer/dashboard" backLabel="Dashboard" />} />
+              <Route path="diet-plans" element={<TrainerDietPlans />} />
+              <Route path="recipes" element={<TrainerRecipes />} />
+              <Route path="settings" element={<TrainerSettings />} />
+              <Route path="*" element={<Navigate to="/trainer/dashboard" replace />} />
+            </Routes>
+          </main>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <ThemeProvider>
+      <ConfirmDialogProvider>
       <Routes>
         {/* Auth Routes */}
         <Route path="/login" element={<LoginForm onLogin={handleLogin} />} />
@@ -257,11 +313,15 @@ function App() {
         {/* Member Routes */}
         <Route path="/member/*" element={<MemberLayout />} />
 
+        {/* Trainer Routes */}
+        <Route path="/trainer/*" element={<TrainerLayout />} />
+
         {/* Public Routes - must be last */}
         <Route path="/*" element={<PublicLayout />} />
       </Routes>
       <ScrollToTop />
       <Toaster />
+      </ConfirmDialogProvider>
     </ThemeProvider>
   );
 }

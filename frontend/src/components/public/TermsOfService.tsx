@@ -1,4 +1,5 @@
 import { FileText } from 'lucide-react';
+import { formatDate } from '@/utils/date';
 
 export function TermsOfService() {
   return (
@@ -16,7 +17,7 @@ export function TermsOfService() {
             Terms of Service
           </h1>
           <p className="text-muted-foreground">
-            Last updated: {new Date().toLocaleDateString('en-US')}
+            Last updated: {formatDate(new Date())}
           </p>
         </div>
 

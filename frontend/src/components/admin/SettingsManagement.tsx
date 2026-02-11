@@ -30,6 +30,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { menuItems } from './AdminSidebar';
 import { toast } from 'sonner';
 import { getStaff, createStaff, updateStaff } from '@/api/staff';
+import { changePassword as apiChangePassword } from '@/api/auth';
+import { getSettings, updateSettings } from '@/api/settings';
 import type { User } from '@/types';
 
 function permissionLabels(permissionIds: string[] | undefined): string {
@@ -259,12 +261,18 @@ export function SettingsManagement({ isSuperAdmin }: SettingsManagementProps) {
   const [activeTab, setActiveTab] = useState('gym');
   const [isSaving, setIsSaving] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [personalTrainingPrice, setPersonalTrainingPrice] = useState(500);
 
   const [staffUsers, setStaffUsers] = useState<User[]>([]);
   const [staffLoading, setStaffLoading] = useState(false);
   const [staffSaving, setStaffSaving] = useState(false);
   const [isAddStaffOpen, setIsAddStaffOpen] = useState(false);
   const [editStaff, setEditStaff] = useState<User | null>(null);
+
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordSaving, setPasswordSaving] = useState(false);
 
   const loadStaff = () => {
     if (!isSuperAdmin) return;
@@ -282,10 +290,28 @@ export function SettingsManagement({ isSuperAdmin }: SettingsManagementProps) {
     if (isSuperAdmin && activeTab === 'staff') loadStaff();
   }, [isSuperAdmin, activeTab]);
 
+  useEffect(() => {
+    if (activeTab === 'gym') {
+      getSettings()
+        .then((s) => setPersonalTrainingPrice(s.personalTrainingPrice ?? 500))
+        .catch(() => {});
+    }
+  }, [activeTab]);
+
   const handleSave = async () => {
     setIsSaving(true);
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    setIsSaving(false);
+    try {
+      if (activeTab === 'gym') {
+        await updateSettings({ personalTrainingPrice });
+        toast.success('Settings saved');
+      } else {
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+      }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Failed to save');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -391,6 +417,17 @@ export function SettingsManagement({ isSuperAdmin }: SettingsManagementProps) {
                   rows={3}
                 />
               </div>
+              <div>
+                <label className="text-sm text-muted-foreground mb-2 block">Personal training add-on price (₹)</label>
+                <Input
+                  type="number"
+                  min={0}
+                  value={personalTrainingPrice}
+                  onChange={(e) => setPersonalTrainingPrice(Math.max(0, Number(e.target.value) || 0))}
+                  className="bg-muted/50 border-border text-foreground"
+                />
+                <p className="text-muted-foreground text-xs mt-1">Per member add-on (not part of any plan). Used when members add PT from Membership or Payments.</p>
+              </div>
             </div>
           </div>
 
@@ -422,12 +459,42 @@ export function SettingsManagement({ isSuperAdmin }: SettingsManagementProps) {
         <TabsContent value="security" className="space-y-6">
           <div className="p-6 rounded-xl bg-card/50 border border-border">
             <h3 className="font-display text-xl font-bold text-foreground mb-6">Change Password</h3>
-            <div className="space-y-4 max-w-md">
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                if (newPassword !== confirmPassword) {
+                  toast.error('New password and confirmation do not match');
+                  return;
+                }
+                if (newPassword.length < 6) {
+                  toast.error('New password must be at least 6 characters');
+                  return;
+                }
+                setPasswordSaving(true);
+                try {
+                  await apiChangePassword(currentPassword, newPassword);
+                  toast.success('Password updated successfully');
+                  setCurrentPassword('');
+                  setNewPassword('');
+                  setConfirmPassword('');
+                } catch (err: unknown) {
+                  const msg = err && typeof err === 'object' && 'message' in err ? String((err as { message: string }).message) : 'Failed to update password';
+                  toast.error(msg);
+                } finally {
+                  setPasswordSaving(false);
+                }
+              }}
+              className="space-y-4 max-w-md"
+            >
               <div>
                 <label className="text-sm text-muted-foreground mb-2 block">Current Password</label>
                 <Input
                   type="password"
                   placeholder="••••••••"
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  required
+                  minLength={1}
                   className="bg-muted/50 border-border text-foreground"
                 />
               </div>
@@ -436,6 +503,10 @@ export function SettingsManagement({ isSuperAdmin }: SettingsManagementProps) {
                 <Input
                   type="password"
                   placeholder="••••••••"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  required
+                  minLength={6}
                   className="bg-muted/50 border-border text-foreground"
                 />
               </div>
@@ -444,13 +515,21 @@ export function SettingsManagement({ isSuperAdmin }: SettingsManagementProps) {
                 <Input
                   type="password"
                   placeholder="••••••••"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  required
+                  minLength={6}
                   className="bg-muted/50 border-border text-foreground"
                 />
               </div>
-              <Button className="bg-gradient-to-r from-ko-500 to-ko-600 text-primary-foreground hover:from-ko-600 hover:to-ko-700">
-                Update Password
+              <Button
+                type="submit"
+                disabled={passwordSaving}
+                className="bg-gradient-to-r from-ko-500 to-ko-600 text-primary-foreground hover:from-ko-600 hover:to-ko-700"
+              >
+                {passwordSaving ? 'Updating...' : 'Update Password'}
               </Button>
-            </div>
+            </form>
           </div>
         </TabsContent>
 

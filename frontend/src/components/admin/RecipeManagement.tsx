@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Plus,
   Edit,
@@ -27,16 +27,37 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Badge } from '@/components/ui/badge';
-import { getAllRecipes, saveRecipe, deleteRecipe as removeRecipe } from '@/utils/recipeUtils';
+import { toast } from 'sonner';
+import { getRecipes, createRecipe, updateRecipe, deleteRecipe } from '@/api/recipes';
 import type { Recipe } from '@/types';
+import { useConfirmDialog } from '@/context/ConfirmDialogContext';
 
 export function RecipeManagement() {
-  const [recipes, setRecipes] = useState<Recipe[]>(getAllRecipes());
+  const confirmDialog = useConfirmDialog();
+  const [recipes, setRecipes] = useState<Recipe[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [currentRecipe, setCurrentRecipe] = useState<Partial<Recipe>>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    loadRecipes();
+  }, []);
+
+  const loadRecipes = async () => {
+    try {
+      setLoading(true);
+      const data = await getRecipes();
+      setRecipes(data);
+    } catch (error: any) {
+      toast.error(error?.message || 'Failed to load recipes');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const filteredRecipes = recipes.filter((recipe) => {
     const matchesSearch =
@@ -47,52 +68,56 @@ export function RecipeManagement() {
     return matchesSearch && matchesCategory;
   });
 
-  const handleAddRecipe = (e: React.FormEvent) => {
+  const handleAddRecipe = async (e: React.FormEvent) => {
     e.preventDefault();
-    const formData = new FormData(e.target as HTMLFormElement);
-    
-    const ingredients = (formData.get('ingredients') as string)
-      .split('\n')
-      .map((line) => line.trim())
-      .filter(Boolean);
-    
-    const instructions = (formData.get('instructions') as string)
-      .split('\n')
-      .map((line) => line.trim())
-      .filter(Boolean);
-    
-    const tags = (formData.get('tags') as string)
-      .split(',')
-      .map((tag) => tag.trim())
-      .filter(Boolean);
+    setIsSubmitting(true);
+    try {
+      const formData = new FormData(e.target as HTMLFormElement);
+      
+      const ingredients = (formData.get('ingredients') as string)
+        .split('\n')
+        .map((line) => line.trim())
+        .filter(Boolean);
+      
+      const instructions = (formData.get('instructions') as string)
+        .split('\n')
+        .map((line) => line.trim())
+        .filter(Boolean);
+      
+      const tags = (formData.get('tags') as string)
+        .split(',')
+        .map((tag) => tag.trim())
+        .filter(Boolean);
 
-    const newRecipe: Recipe = {
-      id: `recipe_${Date.now()}`,
-      name: formData.get('name') as string,
-      description: formData.get('description') as string,
-      category: formData.get('category') as Recipe['category'],
-      image: formData.get('image') as string || undefined,
-      prepTime: Number(formData.get('prepTime')),
-      cookTime: Number(formData.get('cookTime')),
-      servings: Number(formData.get('servings')),
-      calories: Number(formData.get('calories')),
-      macros: {
-        protein: Number(formData.get('protein')),
-        carbs: Number(formData.get('carbs')),
-        fats: Number(formData.get('fats')),
-      },
-      ingredients: ingredients,
-      instructions: instructions,
-      tags: tags,
-      createdBy: 'admin', // In real app, get from auth context
-      createdAt: new Date(),
-      isActive: true,
-    };
+      await createRecipe({
+        name: formData.get('name') as string,
+        description: formData.get('description') as string,
+        category: formData.get('category') as Recipe['category'],
+        image: formData.get('image') as string || undefined,
+        prepTime: Number(formData.get('prepTime')),
+        cookTime: Number(formData.get('cookTime')),
+        servings: Number(formData.get('servings')),
+        calories: Number(formData.get('calories')),
+        macros: {
+          protein: Number(formData.get('protein')),
+          carbs: Number(formData.get('carbs')),
+          fats: Number(formData.get('fats')),
+        },
+        ingredients: ingredients,
+        instructions: instructions,
+        tags: tags,
+        isActive: true,
+      });
 
-    saveRecipe(newRecipe);
-    setRecipes(getAllRecipes());
-    setIsAddDialogOpen(false);
-    (e.target as HTMLFormElement).reset();
+      toast.success('Recipe created successfully');
+      setIsAddDialogOpen(false);
+      (e.target as HTMLFormElement).reset();
+      await loadRecipes();
+    } catch (error: any) {
+      toast.error(error?.message || 'Failed to create recipe');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleEditClick = (recipe: Recipe) => {
@@ -100,61 +125,82 @@ export function RecipeManagement() {
     setIsEditDialogOpen(true);
   };
 
-  const handleUpdateRecipe = (e: React.FormEvent) => {
+  const handleUpdateRecipe = async (e: React.FormEvent) => {
     e.preventDefault();
-    const formData = new FormData(e.target as HTMLFormElement);
+    if (!currentRecipe.id) return;
+    setIsSubmitting(true);
+    try {
+      const formData = new FormData(e.target as HTMLFormElement);
 
-    const ingredients = (formData.get('ingredients') as string)
-      .split('\n')
-      .map((line) => line.trim())
-      .filter(Boolean);
-    
-    const instructions = (formData.get('instructions') as string)
-      .split('\n')
-      .map((line) => line.trim())
-      .filter(Boolean);
-    
-    const tags = (formData.get('tags') as string)
-      .split(',')
-      .map((tag) => tag.trim())
-      .filter(Boolean);
+      const ingredients = (formData.get('ingredients') as string)
+        .split('\n')
+        .map((line) => line.trim())
+        .filter(Boolean);
+      
+      const instructions = (formData.get('instructions') as string)
+        .split('\n')
+        .map((line) => line.trim())
+        .filter(Boolean);
+      
+      const tags = (formData.get('tags') as string)
+        .split(',')
+        .map((tag) => tag.trim())
+        .filter(Boolean);
 
-    const updatedRecipe: Recipe = {
-      ...currentRecipe as Recipe,
-      name: formData.get('name') as string,
-      description: formData.get('description') as string,
-      category: formData.get('category') as Recipe['category'],
-      image: formData.get('image') as string || undefined,
-      prepTime: Number(formData.get('prepTime')),
-      cookTime: Number(formData.get('cookTime')),
-      servings: Number(formData.get('servings')),
-      calories: Number(formData.get('calories')),
-      macros: {
-        protein: Number(formData.get('protein')),
-        carbs: Number(formData.get('carbs')),
-        fats: Number(formData.get('fats')),
-      },
-      ingredients: ingredients,
-      instructions: instructions,
-      tags: tags,
-    };
+      await updateRecipe(currentRecipe.id, {
+        name: formData.get('name') as string,
+        description: formData.get('description') as string,
+        category: formData.get('category') as Recipe['category'],
+        image: formData.get('image') as string || undefined,
+        prepTime: Number(formData.get('prepTime')),
+        cookTime: Number(formData.get('cookTime')),
+        servings: Number(formData.get('servings')),
+        calories: Number(formData.get('calories')),
+        macros: {
+          protein: Number(formData.get('protein')),
+          carbs: Number(formData.get('carbs')),
+          fats: Number(formData.get('fats')),
+        },
+        ingredients: ingredients,
+        instructions: instructions,
+        tags: tags,
+      });
 
-    saveRecipe(updatedRecipe);
-    setRecipes(getAllRecipes());
-    setIsEditDialogOpen(false);
-  };
-
-  const handleDeleteRecipe = (id: string) => {
-    if (confirm('Are you sure you want to delete this recipe?')) {
-      removeRecipe(id);
-      setRecipes(getAllRecipes());
+      toast.success('Recipe updated successfully');
+      setIsEditDialogOpen(false);
+      await loadRecipes();
+    } catch (error: any) {
+      toast.error(error?.message || 'Failed to update recipe');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
-  const handleToggleActive = (recipe: Recipe) => {
-    const updated = { ...recipe, isActive: !recipe.isActive };
-    saveRecipe(updated);
-    setRecipes(getAllRecipes());
+  const handleDeleteRecipe = async (id: string) => {
+    const confirmed = await confirmDialog({
+      title: 'Delete recipe',
+      description: 'Are you sure you want to delete this recipe?',
+      confirmLabel: 'Delete',
+      variant: 'destructive',
+    });
+    if (!confirmed) return;
+    try {
+      await deleteRecipe(id);
+      toast.success('Recipe deleted successfully');
+      await loadRecipes();
+    } catch (error: any) {
+      toast.error(error?.message || 'Failed to delete recipe');
+    }
+  };
+
+  const handleToggleActive = async (recipe: Recipe) => {
+    try {
+      await updateRecipe(recipe.id, { isActive: !recipe.isActive });
+      toast.success(`Recipe ${!recipe.isActive ? 'activated' : 'deactivated'} successfully`);
+      await loadRecipes();
+    } catch (error: any) {
+      toast.error(error?.message || 'Failed to update recipe status');
+    }
   };
 
   const categoryColors: Record<string, string> = {
@@ -349,9 +395,10 @@ export function RecipeManagement() {
 
               <Button
                 type="submit"
+                disabled={isSubmitting}
                 className="w-full bg-gradient-to-r from-ko-500 to-ko-600 text-primary-foreground hover:from-ko-600 hover:to-ko-700"
               >
-                Create Recipe
+                {isSubmitting ? 'Creating...' : 'Create Recipe'}
               </Button>
             </form>
           </DialogContent>
@@ -387,7 +434,12 @@ export function RecipeManagement() {
 
       {/* Recipes Grid */}
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredRecipes.length === 0 ? (
+        {loading ? (
+          <div className="col-span-full text-center py-12">
+            <Utensils className="w-16 h-16 mx-auto text-muted-foreground mb-4 animate-pulse" />
+            <p className="text-muted-foreground">Loading recipes...</p>
+          </div>
+        ) : filteredRecipes.length === 0 ? (
           <div className="col-span-full text-center py-12">
             <Utensils className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
             <p className="text-muted-foreground">No recipes found. Create your first recipe!</p>
@@ -672,9 +724,10 @@ export function RecipeManagement() {
 
               <Button
                 type="submit"
+                disabled={isSubmitting}
                 className="w-full bg-gradient-to-r from-ko-500 to-ko-600 text-primary-foreground hover:from-ko-600 hover:to-ko-700"
               >
-                Update Recipe
+                {isSubmitting ? 'Updating...' : 'Update Recipe'}
               </Button>
             </form>
           )}

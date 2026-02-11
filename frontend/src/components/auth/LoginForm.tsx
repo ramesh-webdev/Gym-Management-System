@@ -4,7 +4,7 @@ import { Eye, EyeOff, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
-import { login as apiLogin } from '@/api/auth';
+import { login as apiLogin, register as apiRegister } from '@/api/auth';
 import type { User } from '@/types';
 
 interface LoginFormProps {
@@ -29,15 +29,29 @@ export function LoginForm({ onLogin }: LoginFormProps) {
 
     try {
       if (isSignup) {
-        // Signup not implemented on backend yet; show message
-        setError('Sign up is not available yet. Use an existing account to sign in.');
-        setIsLoading(false);
-        return;
+        if (!name.trim()) {
+          setError('Name is required');
+          setIsLoading(false);
+          return;
+        }
+        if (mobile.length !== 10) {
+          setError('Mobile number must be 10 digits');
+          setIsLoading(false);
+          return;
+        }
+        if (password.length < 6) {
+          setError('Password must be at least 6 characters');
+          setIsLoading(false);
+          return;
+        }
+        const user = await apiRegister(name, mobile, password);
+        onLogin(user);
+      } else {
+        const user = await apiLogin(mobile, password);
+        onLogin(user);
       }
-      const user = await apiLogin(mobile, password);
-      onLogin(user);
     } catch (err: unknown) {
-      const message = err && typeof err === 'object' && 'message' in err ? String((err as { message: string }).message) : 'Login failed';
+      const message = err && typeof err === 'object' && 'message' in err ? String((err as { message: string }).message) : (isSignup ? 'Sign up failed' : 'Login failed');
       setError(message);
     } finally {
       setIsLoading(false);

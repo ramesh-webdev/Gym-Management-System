@@ -10,61 +10,58 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { getCurrentMember } from '@/utils/memberUtils';
-import { getDietPlanForMember } from '@/utils/dietPlanUtils';
-import type { DietPlan } from '@/types';
+import { getMyDietPlan } from '@/api/diet-plans';
+import { getStoredUser } from '@/api/auth';
+import { toast } from 'sonner';
+import type { DietPlan, User } from '@/types';
 
 export function MemberDiet() {
   const navigate = useNavigate();
   const [activeMeal, setActiveMeal] = useState<string | null>(null);
   const [dietPlan, setDietPlan] = useState<DietPlan | null>(null);
-  let userId: string | undefined;
+  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<User | null>(null);
 
-  try {
-    const saved = localStorage.getItem("user");
-    userId = saved ? JSON.parse(saved).id : undefined;
-  } catch {
-    userId = undefined;
-  }
-
-  const member = getCurrentMember(userId);
-
-  // Redirect if member doesn't have personal training and load diet plan
   useEffect(() => {
-    if (!member || !member.hasPersonalTraining) {
+    const currentUser = getStoredUser();
+    setUser(currentUser);
+    
+    if (!currentUser || currentUser.role !== 'member') {
       navigate('/member/dashboard');
-    } else {
-      // Load diet plan for this member
-      const plan = getDietPlanForMember(member.id);
-      setDietPlan(plan);
+      return;
     }
-  }, [member, navigate]);
+    
+    if (!currentUser.hasPersonalTraining) {
+      navigate('/member/dashboard');
+      return;
+    }
 
-  // Refresh diet plan when storage changes (for real-time updates)
-  useEffect(() => {
-    const handleDietPlanUpdate = () => {
-      if (member) {
-        const plan = getDietPlanForMember(member.id);
-        setDietPlan(plan);
-      }
-    };
-
-    // Listen for custom event (same tab) and storage event (different tab)
-    window.addEventListener('dietPlansUpdated', handleDietPlanUpdate);
-    window.addEventListener('storage', handleDietPlanUpdate);
-    // Also check on focus in case changes were made in another tab
-    window.addEventListener('focus', handleDietPlanUpdate);
-
-    return () => {
-      window.removeEventListener('dietPlansUpdated', handleDietPlanUpdate);
-      window.removeEventListener('storage', handleDietPlanUpdate);
-      window.removeEventListener('focus', handleDietPlanUpdate);
-    };
-  }, [member]);
+    // Load diet plan
+    setLoading(true);
+    getMyDietPlan()
+      .then(setDietPlan)
+      .catch((err) => {
+        if (err && typeof err === 'object' && 'status' in err && (err as any).status === 404) {
+          // No diet plan assigned - this is OK, show message
+          setDietPlan(null);
+        } else {
+          toast.error('Failed to load diet plan');
+        }
+      })
+      .finally(() => setLoading(false));
+  }, [navigate]);
 
   // Don't render if no access
-  if (!member || !member.hasPersonalTraining) {
+  if (!user || !user.hasPersonalTraining) {
     return null;
+  }
+
+  if (loading) {
+    return (
+      <div className="p-6 flex items-center justify-center min-h-[200px]">
+        <p className="text-muted-foreground">Loading diet plan...</p>
+      </div>
+    );
   }
 
   // Show message if no diet plan assigned
