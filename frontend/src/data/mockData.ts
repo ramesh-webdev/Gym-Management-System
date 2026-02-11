@@ -316,7 +316,7 @@ export const mockPayments: Payment[] = [
     amount: 49,
     type: 'membership',
     status: 'paid',
-    date: new Date('2024-01-01'),
+    date: '2024-01-01T00:00:00.000Z',
     invoiceNumber: 'INV-2024-001',
   },
   {
@@ -326,7 +326,7 @@ export const mockPayments: Payment[] = [
     amount: 79,
     type: 'membership',
     status: 'paid',
-    date: new Date('2024-01-05'),
+    date: '2024-01-05T00:00:00.000Z',
     invoiceNumber: 'INV-2024-002',
   },
   {
@@ -336,8 +336,8 @@ export const mockPayments: Payment[] = [
     amount: 29,
     type: 'membership',
     status: 'pending',
-    date: new Date('2024-01-10'),
-    dueDate: new Date('2024-01-15'),
+    date: '2024-01-10T00:00:00.000Z',
+    dueDate: '2024-01-15T00:00:00.000Z',
     invoiceNumber: 'INV-2024-003',
   },
   {
@@ -347,7 +347,7 @@ export const mockPayments: Payment[] = [
     amount: 49,
     type: 'membership',
     status: 'paid',
-    date: new Date('2024-01-12'),
+    date: '2024-01-12T00:00:00.000Z',
     invoiceNumber: 'INV-2024-004',
   },
   {
@@ -357,7 +357,7 @@ export const mockPayments: Payment[] = [
     amount: 150,
     type: 'personal_training',
     status: 'paid',
-    date: new Date('2024-01-15'),
+    date: '2024-01-15T00:00:00.000Z',
     invoiceNumber: 'INV-2024-005',
   },
 ];
@@ -432,7 +432,7 @@ export const mockNotifications: Notification[] = [
     message: 'John Smith has joined with a Pro membership.',
     type: 'info',
     isRead: false,
-    createdAt: new Date('2024-01-25T10:30:00'),
+    createdAt: '2024-01-25T10:30:00.000Z',
   },
   {
     id: 'n2',
@@ -441,7 +441,7 @@ export const mockNotifications: Notification[] = [
     message: 'Payment of $49 received from Sarah Johnson.',
     type: 'success',
     isRead: false,
-    createdAt: new Date('2024-01-25T09:15:00'),
+    createdAt: '2024-01-25T09:15:00.000Z',
   },
   {
     id: 'n3',
@@ -450,7 +450,7 @@ export const mockNotifications: Notification[] = [
     message: 'Emily Davis\'s membership expires in 3 days.',
     type: 'warning',
     isRead: true,
-    createdAt: new Date('2024-01-24T16:00:00'),
+    createdAt: '2024-01-24T16:00:00.000Z',
   },
 ];
 
