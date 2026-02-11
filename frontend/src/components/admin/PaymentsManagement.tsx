@@ -62,7 +62,6 @@ import {
   Cell,
 } from 'recharts';
 
-const PAYMENT_TYPES: Payment['type'][] = ['membership', 'personal_training', 'product', 'other'];
 const PAYMENT_STATUSES: Payment['status'][] = ['paid', 'pending', 'overdue', 'cancelled'];
 
 function getStatusIcon(status: string) {

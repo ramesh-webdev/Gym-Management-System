@@ -30,8 +30,10 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { getTrainers, createTrainer, updateTrainer, deleteTrainer, type TrainerListItem } from '@/api/trainers';
-import type { Trainer } from '@/types';
 import { useConfirmDialog } from '@/context/ConfirmDialogContext';
+
+/** Trainer with form-only firstName/lastName for the edit dialog */
+type EditingTrainer = TrainerListItem & { firstName: string; lastName: string };
 
 export function TrainersManagement() {
   const confirmDialog = useConfirmDialog();
@@ -42,7 +44,7 @@ export function TrainersManagement() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [editingTrainer, setEditingTrainer] = useState<TrainerListItem | null>(null);
+  const [editingTrainer, setEditingTrainer] = useState<EditingTrainer | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [newTrainerData, setNewTrainerData] = useState({

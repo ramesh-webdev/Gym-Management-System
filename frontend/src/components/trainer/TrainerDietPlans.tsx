@@ -28,7 +28,6 @@ import { toast } from 'sonner';
 import { getDietPlans, createDietPlan, updateDietPlan, deleteDietPlan } from '@/api/diet-plans';
 import { getMyClients } from '@/api/trainers';
 import type { DietPlan, Meal, Member } from '@/types';
-import { getStoredUser } from '@/api/auth';
 import { useConfirmDialog } from '@/context/ConfirmDialogContext';
 
 export function TrainerDietPlans() {

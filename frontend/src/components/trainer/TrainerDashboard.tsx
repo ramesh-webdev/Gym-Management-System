@@ -1,17 +1,13 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import {
   Users,
   User,
   Utensils,
-  Calendar,
   Phone,
-  Mail,
   ChevronRight,
   Dumbbell,
   Flame,
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
   Dialog,
@@ -26,7 +22,6 @@ import { formatDate } from '@/utils/date';
 import { toast } from 'sonner';
 
 export function TrainerDashboard() {
-  const navigate = useNavigate();
   const [clients, setClients] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedClient, setSelectedClient] = useState<Member & { dietPlan?: DietPlan | null } | null>(null);
