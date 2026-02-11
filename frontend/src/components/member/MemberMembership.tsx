@@ -25,6 +25,7 @@ import { getSettings } from '@/api/settings';
 import { createOrder, verifyPayment } from '@/api/payments';
 import type { User } from '@/types';
 import type { MembershipPlan } from '@/types';
+import { formatDate } from '@/utils/date';
 import { toast } from 'sonner';
 
 const USER_KEY = 'user';
@@ -311,14 +312,14 @@ export function MemberMembership() {
                 <div className="flex items-center gap-2 text-muted-foreground">
                   <Calendar className="w-4 h-4" />
                   <span>
-                    Period: {joinDate.toLocaleDateString()} – {membershipExpiry.toLocaleDateString()}
+                    Period: {formatDate(joinDate)} – {formatDate(membershipExpiry)}
                   </span>
                 </div>
               )}
               {!joinDate && membershipExpiry && (
                 <div className="flex items-center gap-2 text-muted-foreground">
                   <Clock className="w-4 h-4" />
-                  <span>Valid until {membershipExpiry.toLocaleDateString()}</span>
+                  <span>Valid until {formatDate(membershipExpiry)}</span>
                 </div>
               )}
             </div>
@@ -713,7 +714,7 @@ export function MemberMembership() {
               </div>
               <div className="flex-1">
                 <p className="text-foreground font-medium">Membership Started</p>
-                <p className="text-muted-foreground text-sm">{joinDate.toLocaleDateString()}</p>
+                <p className="text-muted-foreground text-sm">{formatDate(joinDate)}</p>
               </div>
               <span className="px-3 py-1 rounded-full bg-muted text-muted-foreground text-sm">
                 {membershipType || '—'}

@@ -33,6 +33,7 @@ import { getProducts } from '@/api/products';
 import { getMembershipPlans } from '@/api/membership-plans';
 import { getSettings } from '@/api/settings';
 import type { Payment, Product, MembershipPlan } from '@/types';
+import { formatDate } from '@/utils/date';
 import { toast } from 'sonner';
 
 type PayPurpose = 'product' | 'membership' | 'personal_training' | null;
@@ -212,7 +213,7 @@ export function MemberPayments() {
     .filter((p) => p.status === 'pending' && p.dueDate)
     .sort((a, b) => new Date(a.dueDate!).getTime() - new Date(b.dueDate!).getTime())[0];
   const nextPaymentLabel = nextPending?.dueDate
-    ? new Date(nextPending.dueDate).toLocaleDateString()
+    ? formatDate(nextPending.dueDate)
     : '—';
 
   return (
@@ -516,7 +517,7 @@ export function MemberPayments() {
                     </TableCell>
                     <TableCell className="text-foreground font-medium">₹{payment.amount}</TableCell>
                     <TableCell className="text-muted-foreground">
-                      {payment.date ? new Date(payment.date).toLocaleDateString() : '—'}
+                      {formatDate(payment.date)}
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">

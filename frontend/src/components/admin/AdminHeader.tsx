@@ -17,6 +17,7 @@ import {
   markNotificationRead,
 } from '@/api/notifications';
 import type { Notification } from '@/types';
+import { formatDateTime } from '@/utils/date';
 
 interface AdminHeaderProps {
   onLogout: () => void;
@@ -158,7 +159,7 @@ export function AdminHeader({ onLogout, userName = 'Admin User' }: AdminHeaderPr
                         </p>
                         <p className="text-muted-foreground/50 text-xs mt-1">
                           {notification.createdAt
-                            ? new Date(notification.createdAt).toLocaleString()
+                            ? formatDateTime(notification.createdAt)
                             : ''}
                         </p>
                       </div>

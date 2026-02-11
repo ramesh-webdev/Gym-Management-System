@@ -14,6 +14,7 @@ import {
   markNotificationRead,
 } from '@/api/notifications';
 import type { Notification } from '@/types';
+import { formatDateTime } from '@/utils/date';
 
 interface MemberHeaderProps {
   userName?: string;
@@ -123,7 +124,7 @@ export function MemberHeader({ userName = 'Member', notificationsPath }: MemberH
                   </p>
                   <p className="text-muted-foreground/50 text-xs mt-1">
                     {notification.createdAt
-                      ? new Date(notification.createdAt).toLocaleString()
+                      ? formatDateTime(notification.createdAt)
                       : ''}
                   </p>
                 </div>

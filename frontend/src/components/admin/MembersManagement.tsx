@@ -43,6 +43,7 @@ import { getMembers, createMember, updateMember, deleteMember } from '@/api/memb
 import { getMembershipPlans } from '@/api/membership-plans';
 import { getTrainers, type TrainerListItem } from '@/api/trainers';
 import type { Member, MembershipPlan } from '@/types';
+import { formatDate } from '@/utils/date';
 import { useConfirmDialog } from '@/context/ConfirmDialogContext';
 
 export function MembersManagement() {
@@ -617,7 +618,7 @@ export function MembersManagement() {
                   <TableCell>{getStatusBadge(member.status)}</TableCell>
                   <TableCell className="text-muted-foreground">
                     {member.membershipExpiry
-                      ? new Date(member.membershipExpiry).toLocaleDateString()
+                      ? formatDate(member.membershipExpiry)
                       : 'No plan'}
                   </TableCell>
                   <TableCell className="text-right">

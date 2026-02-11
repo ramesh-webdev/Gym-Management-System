@@ -22,6 +22,7 @@ import {
 import { getMyClients, getClientDetails } from '@/api/trainers';
 import { getStoredUser } from '@/api/auth';
 import type { Member, DietPlan } from '@/types';
+import { formatDate } from '@/utils/date';
 import { toast } from 'sonner';
 
 export function TrainerDashboard() {
@@ -172,7 +173,7 @@ export function TrainerDashboard() {
                   )}
                   {client.membershipExpiry && (
                     <p className="text-xs text-muted-foreground">
-                      Expires: {new Date(client.membershipExpiry).toLocaleDateString()}
+                      Expires: {formatDate(client.membershipExpiry)}
                     </p>
                   )}
                 </div>
@@ -221,7 +222,7 @@ export function TrainerDashboard() {
                     <div>
                       <p className="text-sm text-muted-foreground mb-1">Expiry Date</p>
                       <p className="text-foreground">
-                        {new Date(selectedClient.membershipExpiry).toLocaleDateString()}
+                        {formatDate(selectedClient.membershipExpiry)}
                       </p>
                     </div>
                   )}

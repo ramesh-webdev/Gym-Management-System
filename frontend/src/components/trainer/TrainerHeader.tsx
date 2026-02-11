@@ -14,6 +14,7 @@ import {
   markNotificationRead,
 } from '@/api/notifications';
 import type { Notification } from '@/types';
+import { formatDateTime } from '@/utils/date';
 
 interface TrainerHeaderProps {
   userName?: string;
@@ -123,7 +124,7 @@ export function TrainerHeader({ userName = 'Trainer', notificationsPath }: Train
                   </p>
                   <p className="text-muted-foreground/50 text-xs mt-1">
                     {notification.createdAt
-                      ? new Date(notification.createdAt).toLocaleString()
+                      ? formatDateTime(notification.createdAt)
                       : ''}
                   </p>
                 </div>

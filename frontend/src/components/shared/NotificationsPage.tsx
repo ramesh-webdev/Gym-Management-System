@@ -9,6 +9,7 @@ import {
   deleteNotification as deleteNotificationApi,
 } from '@/api/notifications';
 import type { Notification } from '@/types';
+import { formatDateTime } from '@/utils/date';
 
 interface NotificationsPageProps {
   /** Base path for back navigation (e.g. /member/dashboard or /trainer/dashboard) */
@@ -172,7 +173,7 @@ export function NotificationsPage({ backPath, backLabel = 'Dashboard' }: Notific
                         <p className="text-muted-foreground text-sm mt-1">{notification.message}</p>
                         <p className="text-muted-foreground text-xs mt-2">
                           {notification.createdAt
-                            ? new Date(notification.createdAt).toLocaleString()
+                            ? formatDateTime(notification.createdAt)
                             : ''}
                         </p>
                       </div>

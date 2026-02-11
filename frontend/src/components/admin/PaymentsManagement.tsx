@@ -48,6 +48,7 @@ import { listPayments, createPayment, updatePayment } from '@/api/payments';
 import { getMembers } from '@/api/members';
 import { getMembershipPlans } from '@/api/membership-plans';
 import type { Payment, Member, MembershipPlan } from '@/types';
+import { formatDate } from '@/utils/date';
 import {
   BarChart,
   Bar,
@@ -567,7 +568,7 @@ export function PaymentsManagement() {
                     </TableCell>
                     <TableCell className="text-foreground font-medium">₹{payment.amount}</TableCell>
                     <TableCell className="text-muted-foreground">
-                      {payment.date ? new Date(payment.date).toLocaleDateString() : '—'}
+                      {formatDate(payment.date)}
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">

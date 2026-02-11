@@ -12,6 +12,7 @@ import { getDietPlanForMember } from "@/utils/dietPlanUtils";
 import { getCurrentMember } from "@/utils/memberUtils";
 import gsap from "gsap";
 import { Button } from "../ui/button";
+import { formatDate } from "@/utils/date";
 
 export function MemberDashboard() {
   const navigate = useNavigate();
@@ -162,10 +163,10 @@ export function MemberDashboard() {
 
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">
-                    Started: {member.joinDate.toLocaleDateString()}
+                    Started: {formatDate(member.joinDate)}
                   </span>
                   <span className="text-muted-foreground">
-                    Expires: {member.membershipExpiry.toLocaleDateString()}
+                    Expires: {formatDate(member.membershipExpiry)}
                   </span>
                 </div>
               </div>
@@ -282,7 +283,7 @@ export function MemberDashboard() {
                 </div>
                 <div className="flex-1">
                   <p className="text-foreground font-medium">{item.activity}</p>
-                  <p className="text-muted-foreground text-sm">{item.date}</p>
+                  <p className="text-muted-foreground text-sm">{formatDate(item.date)}</p>
                 </div>
               </div>
             ))}

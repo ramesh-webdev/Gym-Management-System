@@ -33,6 +33,7 @@ import {
   deleteNotification as deleteNotificationApi,
   createNotification as createNotificationApi,
 } from '@/api/notifications';
+import { formatDateTime } from '@/utils/date';
 import { getStoredUser } from '@/api/auth';
 import type { Notification } from '@/types';
 
@@ -427,7 +428,7 @@ export function NotificationsManagement() {
                           <p className="text-muted-foreground text-sm mt-1">{notification.message}</p>
                           <p className="text-muted-foreground text-xs mt-2">
                             {notification.createdAt
-                              ? new Date(notification.createdAt).toLocaleString()
+                              ? formatDateTime(notification.createdAt)
                               : ''}
                           </p>
                         </div>
