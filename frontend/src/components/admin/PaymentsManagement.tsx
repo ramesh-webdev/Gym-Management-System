@@ -234,6 +234,17 @@ export function PaymentsManagement() {
   };
 
   const selectedMember = activeMembers.find((m) => m.id === formMemberId);
+  const selectedMemberHasPlan = selectedMember && !!(
+    (selectedMember as Member).membershipPlan ||
+    ((selectedMember as Member).membershipExpiry && new Date((selectedMember as Member).membershipExpiry) > new Date())
+  );
+
+  // When switching to a member with no plan, clear plan selection so admin must choose a plan
+  useEffect(() => {
+    if (formType === 'membership' && selectedMember && !selectedMemberHasPlan) {
+      setFormPlanId('');
+    }
+  }, [formMemberId, formType, selectedMember, selectedMemberHasPlan]);
 
   return (
     <div className="p-6 space-y-6">
@@ -325,12 +336,17 @@ export function PaymentsManagement() {
                   <>
                     <div>
                       <label className="text-sm font-medium text-foreground mb-2 block">Plan</label>
-                      <Select value={formPlanId || 'renewal'} onValueChange={(v) => setFormPlanId(v === 'renewal' ? '' : v)}>
+                      <Select
+                        value={formPlanId || (selectedMemberHasPlan ? 'renewal' : '')}
+                        onValueChange={(v) => setFormPlanId(v === 'renewal' ? '' : v)}
+                      >
                         <SelectTrigger className="w-full h-10 bg-muted/50 border-border text-foreground">
-                          <SelectValue placeholder="Select plan..." />
+                          <SelectValue placeholder={selectedMemberHasPlan ? 'Select plan...' : 'Select plan (required for new member)...'} />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="renewal">Current plan (renewal)</SelectItem>
+                          {selectedMemberHasPlan && (
+                            <SelectItem value="renewal">Current plan (renewal)</SelectItem>
+                          )}
                           {membershipPlans.map((p) => (
                             <SelectItem key={p.id} value={p.id}>
                               {p.name} — ₹{p.price?.toLocaleString() ?? '—'}/{p.duration === 1 ? 'mo' : `${p.duration} mo`}
@@ -338,7 +354,11 @@ export function PaymentsManagement() {
                           ))}
                         </SelectContent>
                       </Select>
-                      <p className="text-xs text-muted-foreground mt-1.5">Choose &quot;Current plan (renewal)&quot; to extend existing membership, or a specific plan for new join or upgrade.</p>
+                      <p className="text-xs text-muted-foreground mt-1.5">
+                        {selectedMemberHasPlan
+                          ? 'Choose &quot;Current plan (renewal)&quot; to extend existing membership, or a specific plan for new join or upgrade.'
+                          : 'This member has no current plan. Select the plan they are joining on.'}
+                      </p>
                     </div>
                     <div className="flex items-center gap-2">
                       <Checkbox
@@ -368,7 +388,13 @@ export function PaymentsManagement() {
                 </div>
                 <Button
                   className="w-full bg-lime-500 text-primary-foreground hover:bg-lime-400"
-                  disabled={!selectedMember || !formAmount.trim() || Number(formAmount) <= 0 || formSubmitting}
+                  disabled={
+                    !selectedMember ||
+                    !formAmount.trim() ||
+                    Number(formAmount) <= 0 ||
+                    formSubmitting ||
+                    (formType === 'membership' && !selectedMemberHasPlan && !formPlanId)
+                  }
                   onClick={handleCreatePayment}
                 >
                   {formSubmitting ? 'Recording...' : 'Record Payment'}
