@@ -64,8 +64,8 @@ export function TrainerDietPlans() {
   const loadClients = () => {
     getMyClients()
       .then((allClients) => {
-        // Filter clients with personal training
-        setClients(allClients.filter((c) => c.hasPersonalTraining));
+        // Filter: active clients with personal training (for diet plan assignment)
+        setClients(allClients.filter((c) => c.hasPersonalTraining && c.status === 'active'));
       })
       .catch(() => {
         toast.error('Failed to load clients');

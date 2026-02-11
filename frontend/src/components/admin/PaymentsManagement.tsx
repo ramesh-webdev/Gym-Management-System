@@ -121,6 +121,7 @@ export function PaymentsManagement() {
   }, []);
 
   const membershipPlans = plans.filter((p) => p.isActive !== false && !p.isAddOn);
+  const activeMembers = members.filter((m) => m.status === 'active');
 
   const filteredPayments = payments.filter((p) => {
     const matchesSearch =
@@ -191,7 +192,7 @@ export function PaymentsManagement() {
   }
 
   const handleCreatePayment = async () => {
-    const member = members.find((m) => m.id === formMemberId);
+    const member = activeMembers.find((m) => m.id === formMemberId);
     if (!member || !formAmount.trim() || Number(formAmount) <= 0) return;
     setFormSubmitting(true);
     setError(null);
@@ -231,7 +232,7 @@ export function PaymentsManagement() {
     }
   };
 
-  const selectedMember = members.find((m) => m.id === formMemberId);
+  const selectedMember = activeMembers.find((m) => m.id === formMemberId);
 
   return (
     <div className="p-6 space-y-6">
@@ -277,7 +278,7 @@ export function PaymentsManagement() {
                       <SelectValue placeholder="Select the member who made the payment..." />
                     </SelectTrigger>
                     <SelectContent>
-                      {members.map((m) => (
+                      {activeMembers.map((m) => (
                         <SelectItem key={m.id} value={m.id}>
                           {m.name} {m.membershipId ? `(${m.membershipId})` : ''}
                         </SelectItem>

@@ -61,8 +61,8 @@ export function DietPlanManagement() {
     loadDietPlans();
     getMembers()
       .then((allMembers) => {
-        // Filter members with personal training
-        setMembers(allMembers.filter((m) => m.hasPersonalTraining));
+        // Filter: active members with personal training (for diet plan assignment)
+        setMembers(allMembers.filter((m) => m.hasPersonalTraining && m.status === 'active'));
       })
       .catch(() => {
         toast.error('Failed to load members');
