@@ -29,8 +29,10 @@ import { getDietPlans, createDietPlan, updateDietPlan, deleteDietPlan } from '@/
 import { getMyClients } from '@/api/trainers';
 import type { DietPlan, Meal, Member } from '@/types';
 import { getStoredUser } from '@/api/auth';
+import { useConfirmDialog } from '@/context/ConfirmDialogContext';
 
 export function TrainerDietPlans() {
+  const confirmDialog = useConfirmDialog();
   const [dietPlans, setDietPlans] = useState<DietPlan[]>([]);
   const [clients, setClients] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
@@ -176,7 +178,13 @@ export function TrainerDietPlans() {
   };
 
   const handleDeletePlan = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this diet plan?')) return;
+    const confirmed = await confirmDialog({
+      title: 'Delete diet plan',
+      description: 'Are you sure you want to delete this diet plan?',
+      confirmLabel: 'Delete',
+      variant: 'destructive',
+    });
+    if (!confirmed) return;
     try {
       await deleteDietPlan(id);
       toast.success('Diet plan deleted successfully');

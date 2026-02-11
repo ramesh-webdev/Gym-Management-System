@@ -122,6 +122,7 @@ async function create(req, res, next) {
       }
       membershipPlan = plan._id;
       membershipType = plan.name;
+      // Plan duration = calendar months by date (e.g. 10 Feb + 1 month = 10 Mar)
       const expiryDate = new Date(now);
       expiryDate.setMonth(expiryDate.getMonth() + plan.duration);
       membershipExpiry = expiryDate;

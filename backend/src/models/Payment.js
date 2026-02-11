@@ -9,6 +9,16 @@ const paymentSchema = new mongoose.Schema({
   date: { type: Date, default: Date.now },
   dueDate: Date,
   invoiceNumber: { type: String, required: true, unique: true },
+  // Razorpay-style: order created for checkout; when real Razorpay is used, these will be set
+  orderId: { type: String, unique: true, sparse: true },
+  razorpayPaymentId: { type: String, default: null },
+  razorpaySignature: { type: String, default: null },
+  // When type is membership: optional plan to switch to (else renew current plan)
+  membershipPlanId: { type: mongoose.Schema.Types.ObjectId, ref: 'MembershipPlan', default: null },
+  // When type is membership: add personal training add-on to this payment (member-level, not plan)
+  addPersonalTraining: { type: Boolean, default: false },
+  // When type is product: which product was purchased
+  product: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', default: null },
 }, {
   timestamps: true,
   toJSON: {

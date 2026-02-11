@@ -25,12 +25,12 @@ interface MemberSidebarProps {
 
 const baseMenuItems = [
   { id: 'member-dashboard', label: 'Dashboard', icon: LayoutDashboard, path: '/member/dashboard' },
-  { id: 'member-notifications', label: 'Notifications', icon: Bell, path: '/member/notifications' },
   { id: 'member-membership', label: 'My Membership', icon: CreditCard, path: '/member/membership' },
   { id: 'member-diet', label: 'Diet Plan', icon: Utensils, path: '/member/diet', requiresPersonalTraining: true },
   { id: 'member-recipes', label: 'Recipes', icon: ChefHat, path: '/member/recipes' },
   { id: 'member-shop', label: 'Shop', icon: ShoppingBag, path: '/member/shop' },
   { id: 'member-payments', label: 'Payments', icon: CreditCard, path: '/member/payments' },
+  { id: 'member-notifications', label: 'Notifications', icon: Bell, path: '/member/notifications' },
   { id: 'member-settings', label: 'Account Security', icon: Shield, path: '/member/settings' },
 ];
 

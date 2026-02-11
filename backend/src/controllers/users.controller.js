@@ -6,6 +6,24 @@ async function getMe(req, res, next) {
     if (!req.user) {
       return res.status(401).json({ message: 'Authentication required' });
     }
+    // For members, fetch with populated plan so we always return plan name and id
+    if (req.user.role === 'member') {
+      const member = await User.findById(req.user.id)
+        .populate('membershipPlan', 'name duration')
+        .lean();
+      if (member) {
+        const { passwordHash, membershipPlan, ...rest } = member;
+        const out = { ...rest, id: member._id.toString() };
+        if (out.createdAt) out.createdAt = member.createdAt?.toISOString?.() ?? out.createdAt;
+        if (out.updatedAt) out.updatedAt = member.updatedAt?.toISOString?.() ?? out.updatedAt;
+        if (out.lastLogin) out.lastLogin = member.lastLogin?.toISOString?.() ?? out.lastLogin;
+        if (out.membershipExpiry) out.membershipExpiry = member.membershipExpiry?.toISOString?.() ?? out.membershipExpiry;
+        if (out.joinDate) out.joinDate = member.joinDate?.toISOString?.() ?? out.joinDate;
+        out.membershipPlan = membershipPlan ? String(membershipPlan._id) : null;
+        out.membershipType = membershipPlan?.name ?? rest.membershipType ?? null;
+        return res.json(out);
+      }
+    }
     res.json(req.user);
   } catch (err) {
     next(err);

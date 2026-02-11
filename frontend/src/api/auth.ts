@@ -4,10 +4,13 @@ import type { User } from '@/types';
 const USER_KEY = 'user';
 const TOKEN_KEY = 'accessToken';
 
-/** User as stored from API (dates may be strings) */
+/** User as stored from API (dates may be strings; members have extra fields) */
 type UserFromStorage = User & {
   membershipExpiry?: Date | string;
   joinDate?: Date | string;
+  membershipId?: string;
+  membershipType?: string;
+  membershipPlan?: string;
 };
 
 function parseDate(value: unknown): Date | undefined {
@@ -110,6 +113,10 @@ export async function fetchMe(): Promise<User> {
   };
   if (raw.membershipExpiry) (user as UserFromStorage).membershipExpiry = parseDate(raw.membershipExpiry);
   if (raw.joinDate) (user as UserFromStorage).joinDate = parseDate(raw.joinDate);
+  // Member-specific (for membership page and plan display)
+  if (raw.membershipId != null) (user as UserFromStorage).membershipId = raw.membershipId as string;
+  if (raw.membershipType != null) (user as UserFromStorage).membershipType = raw.membershipType as string;
+  if (raw.membershipPlan != null) (user as UserFromStorage).membershipPlan = raw.membershipPlan as string;
   // Include onboardingData if present (for members)
   if (raw.onboardingData) {
     (user as any).onboardingData = raw.onboardingData;

@@ -43,8 +43,10 @@ import { getMembers, createMember, updateMember, deleteMember } from '@/api/memb
 import { getMembershipPlans } from '@/api/membership-plans';
 import { getTrainers, type TrainerListItem } from '@/api/trainers';
 import type { Member, MembershipPlan } from '@/types';
+import { useConfirmDialog } from '@/context/ConfirmDialogContext';
 
 export function MembersManagement() {
+  const confirmDialog = useConfirmDialog();
   const [members, setMembers] = useState<Member[]>([]);
   const [plans, setPlans] = useState<MembershipPlan[]>([]);
   const [trainers, setTrainers] = useState<TrainerListItem[]>([]);
@@ -84,7 +86,13 @@ export function MembersManagement() {
   const [selectedMemberForDetails, setSelectedMemberForDetails] = useState<any>(null);
 
   const handleDelete = async (memberId: string) => {
-    if (!confirm('Are you sure you want to delete this member?')) return;
+    const confirmed = await confirmDialog({
+      title: 'Delete member',
+      description: 'Are you sure you want to delete this member?',
+      confirmLabel: 'Delete',
+      variant: 'destructive',
+    });
+    if (!confirmed) return;
     try {
       await deleteMember(memberId);
       toast.success('Member deleted successfully');
@@ -169,11 +177,11 @@ export function MembersManagement() {
               Add Member
             </Button>
           </DialogTrigger>
-          <DialogContent className="bg-card border-border text-foreground max-w-lg">
-            <DialogHeader>
+          <DialogContent className="bg-card border-border text-foreground max-w-lg max-h-[90vh] flex flex-col p-4 sm:p-6">
+            <DialogHeader className="shrink-0">
               <DialogTitle className="font-display text-2xl">Add New Member</DialogTitle>
             </DialogHeader>
-            <div className="space-y-4 pt-4">
+            <div className="space-y-4 pt-4 overflow-y-auto flex-1 min-h-0 pr-1">
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="text-sm text-muted-foreground mb-2 block">First Name</label>
@@ -201,6 +209,8 @@ export function MembersManagement() {
                   placeholder="9876543210"
                   value={newMemberData.mobile}
                   onChange={(e) => setNewMemberData({ ...newMemberData, mobile: e.target.value })}
+                  pattern="[0-9]{10}"
+                  maxLength={10}
                 />
               </div>
               <div>
@@ -221,7 +231,7 @@ export function MembersManagement() {
                   onChange={(e) => setNewMemberData({ ...newMemberData, membershipPlan: e.target.value })}
                 >
                   <option value="">Select a plan (optional)</option>
-                  {plans.filter(p => p.isActive).map((plan) => (
+                  {plans.filter(p => p.isActive && !p.isAddOn).map((plan) => (
                     <option key={plan.id} value={plan.id}>{plan.name} - ₹{plan.price}/{plan.duration === 1 ? 'mo' : `${plan.duration}mo`}</option>
                   ))}
                 </select>
@@ -305,12 +315,12 @@ export function MembersManagement() {
 
         {/* Edit Member Dialog */}
         <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-          <DialogContent className="bg-card border-border text-foreground max-w-lg">
-            <DialogHeader>
+          <DialogContent className="bg-card border-border text-foreground max-w-lg max-h-[90vh] flex flex-col p-4 sm:p-6">
+            <DialogHeader className="shrink-0">
               <DialogTitle className="font-display text-2xl">Edit Member</DialogTitle>
             </DialogHeader>
             {editingMember && (
-              <div className="space-y-4 pt-4">
+              <div className="space-y-4 pt-4 overflow-y-auto flex-1 min-h-0 pr-1">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="text-sm text-muted-foreground mb-2 block">First Name</label>
@@ -360,7 +370,7 @@ export function MembersManagement() {
                     onChange={(e) => setEditingMember({ ...editingMember, membershipPlanId: e.target.value })}
                   >
                     <option value="">No plan</option>
-                    {plans.filter(p => p.isActive).map((plan) => (
+                    {plans.filter(p => p.isActive && !p.isAddOn).map((plan) => (
                       <option key={plan.id} value={plan.id}>{plan.name} - ₹{plan.price}/{plan.duration === 1 ? 'mo' : `${plan.duration}mo`}</option>
                     ))}
                   </select>
@@ -433,12 +443,12 @@ export function MembersManagement() {
 
         {/* Member Details / Metrics Dialog */}
         <Dialog open={isDetailsDialogOpen} onOpenChange={setIsDetailsDialogOpen}>
-          <DialogContent className="bg-card border-border text-foreground max-w-lg">
-            <DialogHeader>
+          <DialogContent className="bg-card border-border text-foreground max-w-lg max-h-[90vh] flex flex-col p-4 sm:p-6">
+            <DialogHeader className="shrink-0">
               <DialogTitle className="font-display text-2xl">Member Metrics</DialogTitle>
             </DialogHeader>
             {selectedMemberForDetails && (
-              <div className="space-y-6 pt-4">
+              <div className="space-y-6 pt-4 overflow-y-auto flex-1 min-h-0 pr-1">
                 <div className="flex items-center gap-4 p-4 rounded-xl bg-muted/30 border border-border">
                   <div className="w-12 h-12 rounded-full bg-ko-500/10 flex items-center justify-center text-ko-500 font-bold text-xl">
                     {selectedMemberForDetails.name.charAt(0)}

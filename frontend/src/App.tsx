@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-dom';
 import { ThemeProvider } from '@/context/ThemeContext';
+import { ConfirmDialogProvider } from '@/context/ConfirmDialogContext';
 import { Navbar } from '@/components/public/Navbar';
 import { HeroSection } from '@/components/public/HeroSection';
 import { AboutSection } from '@/components/public/AboutSection';
@@ -300,6 +301,7 @@ function App() {
 
   return (
     <ThemeProvider>
+      <ConfirmDialogProvider>
       <Routes>
         {/* Auth Routes */}
         <Route path="/login" element={<LoginForm onLogin={handleLogin} />} />
@@ -319,6 +321,7 @@ function App() {
       </Routes>
       <ScrollToTop />
       <Toaster />
+      </ConfirmDialogProvider>
     </ThemeProvider>
   );
 }

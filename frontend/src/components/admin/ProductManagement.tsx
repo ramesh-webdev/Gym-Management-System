@@ -41,11 +41,13 @@ import {
 import { uploadImage } from "@/api/upload";
 import type { Product } from "@/types";
 import { toast } from "sonner";
+import { useConfirmDialog } from "@/context/ConfirmDialogContext";
 
 const CATEGORIES = ["supplements", "gear", "clothing", "other"] as const;
 const STATUSES = ["active", "inactive"] as const;
 
 export function ProductManagement() {
+  const confirmDialog = useConfirmDialog();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -183,7 +185,13 @@ export function ProductManagement() {
   };
 
   const handleDeleteProduct = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this product?")) return;
+    const confirmed = await confirmDialog({
+      title: 'Delete product',
+      description: 'Are you sure you want to delete this product?',
+      confirmLabel: 'Delete',
+      variant: 'destructive',
+    });
+    if (!confirmed) return;
     try {
       await deleteProduct(id);
       toast.success("Product deleted successfully.");
@@ -222,13 +230,13 @@ export function ProductManagement() {
               Add Product
             </Button>
           </DialogTrigger>
-          <DialogContent className="bg-card border-border text-foreground max-w-lg w-full overflow-hidden">
-            <DialogHeader>
+          <DialogContent className="bg-card border-border text-foreground max-w-lg w-full max-h-[90vh] flex flex-col p-4 sm:p-6">
+            <DialogHeader className="shrink-0">
               <DialogTitle className="font-display text-2xl">
                 Add New Product
               </DialogTitle>
             </DialogHeader>
-            <form onSubmit={handleAddProduct} className="space-y-4 pt-4">
+            <form onSubmit={handleAddProduct} className="space-y-4 pt-4 overflow-y-auto flex-1 min-h-0 pr-1">
               <div>
                 <label className="text-sm text-muted-foreground mb-2 block">
                   Product Name
@@ -462,13 +470,13 @@ export function ProductManagement() {
       )}
 
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="bg-card border-border text-foreground max-w-lg w-full overflow-hidden">
-          <DialogHeader>
+        <DialogContent className="bg-card border-border text-foreground max-w-lg w-full max-h-[90vh] flex flex-col p-4 sm:p-6">
+          <DialogHeader className="shrink-0">
             <DialogTitle className="font-display text-2xl">
               Edit Product
             </DialogTitle>
           </DialogHeader>
-          <form onSubmit={handleUpdateProduct} className="space-y-4 pt-4">
+          <form onSubmit={handleUpdateProduct} className="space-y-4 pt-4 overflow-y-auto flex-1 min-h-0 pr-1">
             <div>
               <label className="text-sm text-muted-foreground mb-2 block">
                 Product Name

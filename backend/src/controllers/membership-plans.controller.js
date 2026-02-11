@@ -35,21 +35,37 @@ async function getById(req, res, next) {
   }
 }
 
-/** POST / - Create plan (admin). */
+/** POST / - Create plan (admin). Only one add-on plan allowed at a time. */
 async function create(req, res, next) {
   try {
-    const { name, description, price, duration, features, isPopular, isActive } = req.body;
-    if (!name || price == null || duration == null) {
-      return res.status(400).json({ message: 'name, price, and duration are required' });
+    const { name, description, price, duration, features, isPopular, isActive, isAddOn } = req.body;
+    if (!name || price == null) {
+      return res.status(400).json({ message: 'name and price are required' });
+    }
+    const isAddOnPlan = isAddOn === true;
+    if (isAddOnPlan) {
+      const existingAddOn = await MembershipPlan.findOne({ isAddOn: true }).lean();
+      if (existingAddOn) {
+        return res.status(400).json({
+          message: 'Only one add-on plan is allowed at a time. Edit or remove the existing add-on plan first.',
+          existingAddOnPlanId: existingAddOn._id.toString(),
+          existingAddOnPlanName: existingAddOn.name,
+        });
+      }
+    }
+    const durationVal = duration != null ? Number(duration) : (isAddOnPlan ? 0 : 1);
+    if (!isAddOnPlan && durationVal < 1) {
+      return res.status(400).json({ message: 'duration (months) is required for monthly plans' });
     }
     const plan = await MembershipPlan.create({
       name: String(name).trim(),
       description: description ? String(description).trim() : '',
       price: Number(price),
-      duration: Number(duration),
+      duration: durationVal,
       features: Array.isArray(features) ? features : (typeof features === 'string' ? features.split(',').map((f) => f.trim()).filter(Boolean) : []),
       isPopular: Boolean(isPopular),
       isActive: isActive !== false,
+      isAddOn: isAddOnPlan,
     });
     res.status(201).json(toResponse(plan));
   } catch (err) {
@@ -57,27 +73,39 @@ async function create(req, res, next) {
   }
 }
 
-/** PUT /:id - Update plan (admin). */
+/** PUT /:id - Update plan (admin). Only one add-on plan allowed at a time. */
 async function update(req, res, next) {
   try {
     const { id } = req.params;
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({ message: 'Invalid plan id' });
     }
-    const { name, description, price, duration, features, isPopular, isActive } = req.body;
+    const { name, description, price, duration, features, isPopular, isActive, isAddOn } = req.body;
+    if (isAddOn === true) {
+      const existingAddOn = await MembershipPlan.findOne({ isAddOn: true, _id: { $ne: id } }).lean();
+      if (existingAddOn) {
+        return res.status(400).json({
+          message: 'Only one add-on plan is allowed at a time. Edit or remove the other add-on plan first.',
+          existingAddOnPlanId: existingAddOn._id.toString(),
+          existingAddOnPlanName: existingAddOn.name,
+        });
+      }
+    }
+    const updateFields = {
+      ...(name !== undefined && { name: String(name).trim() }),
+      ...(description !== undefined && { description: String(description).trim() }),
+      ...(price !== undefined && { price: Number(price) }),
+      ...(duration !== undefined && { duration: Number(duration) }),
+      ...(features !== undefined && {
+        features: Array.isArray(features) ? features : (typeof features === 'string' ? features.split(',').map((f) => f.trim()).filter(Boolean) : []),
+      }),
+      ...(isPopular !== undefined && { isPopular: Boolean(isPopular) }),
+      ...(isActive !== undefined && { isActive: Boolean(isActive) }),
+      ...(isAddOn !== undefined && { isAddOn: Boolean(isAddOn) }),
+    };
     const plan = await MembershipPlan.findByIdAndUpdate(
       id,
-      {
-        ...(name !== undefined && { name: String(name).trim() }),
-        ...(description !== undefined && { description: String(description).trim() }),
-        ...(price !== undefined && { price: Number(price) }),
-        ...(duration !== undefined && { duration: Number(duration) }),
-        ...(features !== undefined && {
-          features: Array.isArray(features) ? features : (typeof features === 'string' ? features.split(',').map((f) => f.trim()).filter(Boolean) : []),
-        }),
-        ...(isPopular !== undefined && { isPopular: Boolean(isPopular) }),
-        ...(isActive !== undefined && { isActive: Boolean(isActive) }),
-      },
+      updateFields,
       { new: true, runValidators: true }
     ).lean();
     if (!plan) return res.status(404).json({ message: 'Plan not found' });

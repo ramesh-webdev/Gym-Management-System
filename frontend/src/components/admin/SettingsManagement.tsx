@@ -31,6 +31,7 @@ import { menuItems } from './AdminSidebar';
 import { toast } from 'sonner';
 import { getStaff, createStaff, updateStaff } from '@/api/staff';
 import { changePassword as apiChangePassword } from '@/api/auth';
+import { getSettings, updateSettings } from '@/api/settings';
 import type { User } from '@/types';
 
 function permissionLabels(permissionIds: string[] | undefined): string {
@@ -260,6 +261,7 @@ export function SettingsManagement({ isSuperAdmin }: SettingsManagementProps) {
   const [activeTab, setActiveTab] = useState('gym');
   const [isSaving, setIsSaving] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [personalTrainingPrice, setPersonalTrainingPrice] = useState(500);
 
   const [staffUsers, setStaffUsers] = useState<User[]>([]);
   const [staffLoading, setStaffLoading] = useState(false);
@@ -288,10 +290,28 @@ export function SettingsManagement({ isSuperAdmin }: SettingsManagementProps) {
     if (isSuperAdmin && activeTab === 'staff') loadStaff();
   }, [isSuperAdmin, activeTab]);
 
+  useEffect(() => {
+    if (activeTab === 'gym') {
+      getSettings()
+        .then((s) => setPersonalTrainingPrice(s.personalTrainingPrice ?? 500))
+        .catch(() => {});
+    }
+  }, [activeTab]);
+
   const handleSave = async () => {
     setIsSaving(true);
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    setIsSaving(false);
+    try {
+      if (activeTab === 'gym') {
+        await updateSettings({ personalTrainingPrice });
+        toast.success('Settings saved');
+      } else {
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+      }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Failed to save');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -396,6 +416,17 @@ export function SettingsManagement({ isSuperAdmin }: SettingsManagementProps) {
                   className="bg-muted/50 border-border text-foreground resize-none"
                   rows={3}
                 />
+              </div>
+              <div>
+                <label className="text-sm text-muted-foreground mb-2 block">Personal training add-on price (₹)</label>
+                <Input
+                  type="number"
+                  min={0}
+                  value={personalTrainingPrice}
+                  onChange={(e) => setPersonalTrainingPrice(Math.max(0, Number(e.target.value) || 0))}
+                  className="bg-muted/50 border-border text-foreground"
+                />
+                <p className="text-muted-foreground text-xs mt-1">Per member add-on (not part of any plan). Used when members add PT from Membership or Payments.</p>
               </div>
             </div>
           </div>

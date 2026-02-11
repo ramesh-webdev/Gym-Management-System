@@ -59,10 +59,12 @@ export interface MembershipPlan {
   name: string;
   description: string;
   price: number;
-  duration: number; // in months
+  duration: number; // in months (0 or unused for add-on plans)
   features: string[];
   isPopular?: boolean;
   isActive: boolean;
+  /** Add-on plan (e.g. Personal Training) – not a monthly membership */
+  isAddOn?: boolean;
 }
 
 // Product Types
@@ -78,7 +80,7 @@ export interface Product {
   status: 'active' | 'inactive';
 }
 
-// Payment Types
+// Payment Types (API: date/dueDate/createdAt are ISO strings)
 export interface Payment {
   id: string;
   memberId: string;
@@ -86,9 +88,14 @@ export interface Payment {
   amount: number;
   type: 'membership' | 'personal_training' | 'product' | 'other';
   status: 'paid' | 'pending' | 'overdue' | 'cancelled';
-  date: Date;
-  dueDate?: Date;
+  date: string; // ISO from API
+  dueDate?: string | null;
   invoiceNumber: string;
+  createdAt?: string;
+  /** Populated by API for display: plan name (membership), product name (product), etc. */
+  planName?: string | null;
+  productName?: string | null;
+  addPersonalTraining?: boolean;
 }
 
 
@@ -220,4 +227,6 @@ export interface GymSettings {
     instagram?: string;
     twitter?: string;
   };
+  /** Personal training add-on price (per member, not part of any plan) */
+  personalTrainingPrice?: number;
 }

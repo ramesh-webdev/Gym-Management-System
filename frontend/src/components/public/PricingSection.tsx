@@ -18,7 +18,7 @@ export function PricingSection() {
 
   useEffect(() => {
     getMembershipPlans()
-      .then(setPlans)
+      .then((list) => setPlans((list || []).filter((p) => !p.isAddOn)))
       .catch(() => setPlans([]))
       .finally(() => setPlansLoading(false));
   }, []);

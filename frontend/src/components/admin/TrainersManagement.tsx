@@ -31,8 +31,10 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { getTrainers, createTrainer, updateTrainer, deleteTrainer, type TrainerListItem } from '@/api/trainers';
 import type { Trainer } from '@/types';
+import { useConfirmDialog } from '@/context/ConfirmDialogContext';
 
 export function TrainersManagement() {
+  const confirmDialog = useConfirmDialog();
   const [trainers, setTrainers] = useState<TrainerListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -81,9 +83,13 @@ export function TrainersManagement() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this trainer? This will remove their assignment from all members.')) {
-      return;
-    }
+    const confirmed = await confirmDialog({
+      title: 'Delete trainer',
+      description: 'Are you sure you want to delete this trainer? This will remove their assignment from all members.',
+      confirmLabel: 'Delete',
+      variant: 'destructive',
+    });
+    if (!confirmed) return;
     try {
       await deleteTrainer(id);
       toast.success('Trainer deleted successfully');

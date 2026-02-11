@@ -30,8 +30,10 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { getRecipes, createRecipe, updateRecipe, deleteRecipe } from '@/api/recipes';
 import type { Recipe } from '@/types';
+import { useConfirmDialog } from '@/context/ConfirmDialogContext';
 
 export function RecipeManagement() {
+  const confirmDialog = useConfirmDialog();
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -175,7 +177,13 @@ export function RecipeManagement() {
   };
 
   const handleDeleteRecipe = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this recipe?')) return;
+    const confirmed = await confirmDialog({
+      title: 'Delete recipe',
+      description: 'Are you sure you want to delete this recipe?',
+      confirmLabel: 'Delete',
+      variant: 'destructive',
+    });
+    if (!confirmed) return;
     try {
       await deleteRecipe(id);
       toast.success('Recipe deleted successfully');

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Search, ShoppingBag, Filter } from 'lucide-react';
+import { Search, ShoppingBag, Filter, CheckCircle, Lock, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -10,14 +10,33 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
 import { getProducts } from '@/api/products';
+import { createOrder, verifyPayment } from '@/api/payments';
 import type { Product } from '@/types';
+import { toast } from 'sonner';
+
+type PayStep = 'confirm' | 'checkout' | 'success';
 
 export function Shop() {
     const [products, setProducts] = useState<Product[]>([]);
     const [productsLoading, setProductsLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [categoryFilter, setCategoryFilter] = useState('all');
+
+    // Payment dialog state (same flow as MemberPayments)
+    const [payDialogOpen, setPayDialogOpen] = useState(false);
+    const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+    const [step, setStep] = useState<PayStep>('confirm');
+    const [orderId, setOrderId] = useState<string | null>(null);
+    const [orderAmountRupees, setOrderAmountRupees] = useState(0);
+    const [submitting, setSubmitting] = useState(false);
+    const [verifyError, setVerifyError] = useState<string | null>(null);
 
     useEffect(() => {
         getProducts()
@@ -28,15 +47,67 @@ export function Shop() {
 
     const filteredProducts = products.filter(product => {
         const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            product.description.toLowerCase().includes(searchQuery.toLowerCase());
+            (product.description || '').toLowerCase().includes(searchQuery.toLowerCase());
         const matchesCategory = categoryFilter === 'all' || product.category === categoryFilter;
         const isActive = product.status === 'active';
         return matchesSearch && matchesCategory && isActive;
     });
 
-    const handleBuyNow = (_product: Product) => {
-        // In a real app, this would add to cart or checkout
-        alert('Thank you for your purchase! This is a mock transaction.');
+    const resetPayDialog = () => {
+        setSelectedProduct(null);
+        setStep('confirm');
+        setOrderId(null);
+        setOrderAmountRupees(0);
+        setVerifyError(null);
+    };
+
+    const handleOpenPayDialog = (open: boolean) => {
+        setPayDialogOpen(open);
+        if (!open) resetPayDialog();
+    };
+
+    const handleBuyNow = (product: Product) => {
+        setSelectedProduct(product);
+        setStep('confirm');
+        setOrderId(null);
+        setOrderAmountRupees(0);
+        setVerifyError(null);
+        setPayDialogOpen(true);
+    };
+
+    const handleProceedToPay = async () => {
+        if (!selectedProduct || selectedProduct.price <= 0) return;
+        setSubmitting(true);
+        setVerifyError(null);
+        try {
+            const res = await createOrder({ amount: selectedProduct.price, type: 'product', productId: selectedProduct.id });
+            setOrderId(res.orderId);
+            setOrderAmountRupees(res.amount / 100);
+            setStep('checkout');
+        } catch (e) {
+            setVerifyError(e instanceof Error ? e.message : 'Failed to create order');
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    const handleConfirmPay = async () => {
+        if (!orderId) return;
+        setSubmitting(true);
+        setVerifyError(null);
+        try {
+            await verifyPayment({
+                orderId,
+                razorpayPaymentId: `auto_${orderId}`,
+                razorpaySignature: 'auto_approved',
+            });
+            setStep('success');
+            toast.success('Payment successful!');
+        } catch (e) {
+            setVerifyError(e instanceof Error ? e.message : 'Payment failed');
+        } finally {
+            setSubmitting(false);
+        }
     };
 
     return (
@@ -133,6 +204,123 @@ export function Shop() {
                     </div>
                 )}
             </div>
+
+            {/* Payment dialog (same flow as Member Payments) */}
+            <Dialog open={payDialogOpen} onOpenChange={handleOpenPayDialog}>
+                <DialogContent className="bg-card border-border text-foreground max-w-lg max-h-[90vh] flex flex-col p-4 sm:p-6">
+                    <DialogHeader className="shrink-0">
+                        <DialogTitle className="font-display text-2xl flex items-center gap-2">
+                            <ShoppingBag className="w-5 h-5" />
+                            {step === 'confirm' && 'Confirm purchase'}
+                            {step === 'checkout' && 'Confirm Payment'}
+                            {step === 'success' && 'Payment Successful'}
+                        </DialogTitle>
+                    </DialogHeader>
+
+                    <div className="overflow-y-auto flex-1 min-h-0 pr-1">
+                    {step === 'confirm' && selectedProduct && (
+                        <div className="space-y-4 pt-4">
+                            <div className="p-4 rounded-xl bg-muted/50 border border-border flex gap-4">
+                                <div className="w-20 h-20 rounded-lg overflow-hidden bg-muted shrink-0">
+                                    <img
+                                        src={selectedProduct.image}
+                                        alt={selectedProduct.name}
+                                        className="w-full h-full object-cover"
+                                    />
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                    <p className="font-medium text-foreground">{selectedProduct.name}</p>
+                                    <p className="text-sm text-muted-foreground line-clamp-2 mt-0.5">
+                                        {selectedProduct.description}
+                                    </p>
+                                    <p className="font-display text-xl font-bold text-foreground mt-2">
+                                        ₹{selectedProduct.price.toLocaleString()}
+                                    </p>
+                                </div>
+                            </div>
+                            {verifyError && (
+                                <p className="text-sm text-red-500 bg-red-500/10 px-3 py-2 rounded-lg">{verifyError}</p>
+                            )}
+                            <div className="flex gap-2">
+                                <Button
+                                    variant="outline"
+                                    className="flex-1 border-border text-foreground"
+                                    onClick={() => handleOpenPayDialog(false)}
+                                >
+                                    Cancel
+                                </Button>
+                                <Button
+                                    className="flex-1 bg-lime-500 text-primary-foreground hover:bg-lime-400"
+                                    disabled={submitting}
+                                    onClick={handleProceedToPay}
+                                >
+                                    {submitting ? 'Creating order...' : 'Proceed to Pay'}
+                                </Button>
+                            </div>
+                        </div>
+                    )}
+
+                    {step === 'checkout' && (
+                        <div className="space-y-4 pt-4">
+                            <div className="p-4 rounded-xl bg-muted/50 border border-border">
+                                <p className="text-muted-foreground text-sm">
+                                    {selectedProduct?.name ?? 'Product'}
+                                </p>
+                                <p className="font-display text-2xl font-bold text-foreground mt-1">
+                                    ₹{orderAmountRupees.toLocaleString()}
+                                </p>
+                                <p className="text-muted-foreground text-xs mt-1">product</p>
+                            </div>
+                            <p className="text-muted-foreground text-xs flex items-center gap-1">
+                                <Lock className="w-3 h-3" />
+                                Secure payment (auto-approved in test mode; Razorpay will be used for live payments)
+                            </p>
+                            {verifyError && (
+                                <p className="text-sm text-red-500 bg-red-500/10 px-3 py-2 rounded-lg">{verifyError}</p>
+                            )}
+                            <div className="flex gap-2">
+                                <Button
+                                    variant="outline"
+                                    className="flex-1 border-border text-foreground"
+                                    onClick={() => setStep('confirm')}
+                                    disabled={submitting}
+                                >
+                                    <ArrowLeft className="w-4 h-4 mr-2" />
+                                    Back
+                                </Button>
+                                <Button
+                                    className="flex-1 bg-lime-500 text-primary-foreground hover:bg-lime-400"
+                                    disabled={submitting}
+                                    onClick={handleConfirmPay}
+                                >
+                                    {submitting ? 'Processing...' : `Pay ₹${orderAmountRupees.toLocaleString()}`}
+                                </Button>
+                            </div>
+                        </div>
+                    )}
+
+                    {step === 'success' && (
+                        <div className="space-y-4 pt-4 text-center">
+                            <div className="w-14 h-14 rounded-full bg-lime-500/20 flex items-center justify-center mx-auto">
+                                <CheckCircle className="w-8 h-8 text-lime-500" />
+                            </div>
+                            <p className="text-foreground font-medium">
+                                Your payment of ₹{orderAmountRupees.toLocaleString()} was successful.
+                            </p>
+                            <p className="text-muted-foreground text-sm">
+                                Invoice will appear in your payment history.
+                            </p>
+                            <Button
+                                className="w-full bg-lime-500 text-primary-foreground hover:bg-lime-400"
+                                onClick={() => handleOpenPayDialog(false)}
+                            >
+                                Done
+                            </Button>
+                        </div>
+                    )}
+                    </div>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

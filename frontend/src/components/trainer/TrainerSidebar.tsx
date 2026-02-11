@@ -22,9 +22,9 @@ interface TrainerSidebarProps {
 
 const menuItems = [
   { id: 'trainer-dashboard', label: 'Dashboard', icon: LayoutDashboard, path: '/trainer/dashboard' },
-  { id: 'trainer-notifications', label: 'Notifications', icon: Bell, path: '/trainer/notifications' },
   { id: 'trainer-diet-plans', label: 'Diet Plans', icon: Utensils, path: '/trainer/diet-plans' },
   { id: 'trainer-recipes', label: 'Recipes', icon: ChefHat, path: '/trainer/recipes' },
+  { id: 'trainer-notifications', label: 'Notifications', icon: Bell, path: '/trainer/notifications' },
   { id: 'trainer-settings', label: 'Account Security', icon: Shield, path: '/trainer/settings' },
 ];
 
@@ -74,9 +74,9 @@ export function TrainerSidebar({ onLogout }: TrainerSidebarProps) {
               />
             ) : (
               <img
-                src="/logo.png"
+                src="/Logo.png"
                 alt="Logo"
-                className="h-8 object-contain"
+                className="h-16 object-contain"
               />
             )}
           </button>
