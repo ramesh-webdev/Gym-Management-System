@@ -1,13 +1,5 @@
-import { useEffect, useRef } from 'react';
-import {
-  Users,
-  TrendingUp,
-  DollarSign,
-  AlertCircle,
-  ArrowUpRight,
-  ArrowDownRight,
-  Dumbbell,
-} from 'lucide-react';
+import { AlertCircle, ArrowUpRight, ArrowDownRight, Dumbbell, Users, TrendingUp, DollarSign } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
 import { mockDashboardStats, mockMembers, mockPayments } from '@/data/mockData';
 import {
   LineChart,
@@ -19,6 +11,7 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import gsap from 'gsap';
+import { useEffect, useRef, useState } from 'react';
 
 const revenueData = [
   { month: 'Jan', revenue: 4200 },
@@ -30,10 +23,45 @@ const revenueData = [
   { month: 'Jul', revenue: 5230 },
 ];
 
+function StatCardSkeleton() {
+  return (
+    <div className="p-6 rounded-xl bg-card/50 border border-border">
+      <div className="flex items-start justify-between mb-4">
+        <Skeleton className="w-12 h-12 rounded-lg" />
+        <Skeleton className="w-12 h-4" />
+      </div>
+      <Skeleton className="h-4 w-24 mb-2" />
+      <Skeleton className="h-8 w-32" />
+    </div>
+  );
+}
 
+function ListSkeleton() {
+  return (
+    <div className="space-y-4">
+      {[1, 2, 3, 4].map((i) => (
+        <div key={i} className="flex items-center gap-4 p-3 rounded-lg bg-muted/50">
+          <Skeleton className="w-10 h-10 rounded-full" />
+          <div className="flex-1 space-y-2">
+            <Skeleton className="h-4 w-1/3" />
+            <Skeleton className="h-3 w-1/4" />
+          </div>
+          <Skeleton className="h-6 w-16 rounded-full" />
+        </div>
+      ))}
+    </div>
+  );
+}
 
 export function DashboardOverview() {
+  const [loading, setLoading] = useState(true);
   const cardsRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    // Simulate loading
+    const timer = setTimeout(() => setLoading(false), 2000);
+    return () => clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
     const ctx = gsap.context(() => {
@@ -83,38 +111,46 @@ export function DashboardOverview() {
           <p className="text-muted-foreground">Welcome back! Here's what's happening today.</p>
         </div>
         <div className="flex gap-3">
-          <div className="px-4 py-2 rounded-lg bg-yellow-500/10 border border-yellow-500/20 text-yellow-600 dark:text-yellow-500 text-sm flex items-center gap-2">
-            <AlertCircle className="w-4 h-4" />
-            {mockDashboardStats.expiringMemberships} memberships expiring soon
-          </div>
+          {loading ? (
+            <Skeleton className="h-10 w-64 rounded-lg" />
+          ) : (
+            <div className="px-4 py-2 rounded-lg bg-yellow-500/10 border border-yellow-500/20 text-yellow-600 dark:text-yellow-500 text-sm flex items-center gap-2">
+              <AlertCircle className="w-4 h-4" />
+              {mockDashboardStats.expiringMemberships} memberships expiring soon
+            </div>
+          )}
         </div>
       </div>
 
       {/* Stats Grid */}
       <div ref={cardsRef} className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        {stats.map((stat, index) => (
-          <div
-            key={index}
-            className="stat-card p-6 rounded-xl bg-card/50 border border-border hover:border-border/80 transition-colors"
-          >
-            <div className="flex items-start justify-between mb-4">
-              <div className={`w-12 h-12 rounded-lg ${stat.color} flex items-center justify-center`}>
-                <stat.icon className="w-6 h-6" />
+        {loading ? (
+          Array.from({ length: 4 }).map((_, i) => <StatCardSkeleton key={i} />)
+        ) : (
+          stats.map((stat, index) => (
+            <div
+              key={index}
+              className="stat-card p-6 rounded-xl bg-card/50 border border-border hover:border-border/80 transition-colors"
+            >
+              <div className="flex items-start justify-between mb-4">
+                <div className={`w-12 h-12 rounded-lg ${stat.color} flex items-center justify-center`}>
+                  <stat.icon className="w-6 h-6" />
+                </div>
+                <div className={`flex items-center gap-1 text-sm ${stat.trend === 'up' ? 'bg-gradient-to-r from-ko-500 to-ko-600 bg-clip-text text-transparent' : 'text-red-500'
+                  }`}>
+                  {stat.trend === 'up' ? (
+                    <ArrowUpRight className="w-4 h-4" />
+                  ) : (
+                    <ArrowDownRight className="w-4 h-4" />
+                  )}
+                  {stat.change}
+                </div>
               </div>
-              <div className={`flex items-center gap-1 text-sm ${stat.trend === 'up' ? 'bg-gradient-to-r from-ko-500 to-ko-600 bg-clip-text text-transparent' : 'text-red-500'
-                }`}>
-                {stat.trend === 'up' ? (
-                  <ArrowUpRight className="w-4 h-4" />
-                ) : (
-                  <ArrowDownRight className="w-4 h-4" />
-                )}
-                {stat.change}
-              </div>
+              <h3 className="text-muted-foreground text-sm mb-1">{stat.title}</h3>
+              <p className="font-display text-3xl font-bold text-foreground">{stat.value}</p>
             </div>
-            <h3 className="text-muted-foreground text-sm mb-1">{stat.title}</h3>
-            <p className="font-display text-3xl font-bold text-foreground">{stat.value}</p>
-          </div>
-        ))}
+          ))
+        )}
       </div>
 
       {/* Charts Row */}
@@ -122,34 +158,36 @@ export function DashboardOverview() {
         {/* Revenue Chart */}
         <div className="p-6 rounded-xl bg-card/50 border border-border">
           <h3 className="font-display text-xl font-bold text-foreground mb-6">Revenue Overview</h3>
-          <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={revenueData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                <XAxis dataKey="month" stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: 'hsl(var(--card))',
-                    border: '1px solid hsl(var(--border))',
-                    borderRadius: '8px',
-                  }}
-                  labelStyle={{ color: 'hsl(var(--foreground))' }}
-                  itemStyle={{ color: '#a3ff00' }}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="revenue"
-                  stroke="#a3ff00"
-                  strokeWidth={2}
-                  dot={{ fill: '#a3ff00', strokeWidth: 0 }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
+          {loading ? (
+            <Skeleton className="h-64 w-full rounded-lg" />
+          ) : (
+            <div className="h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={revenueData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                  <XAxis dataKey="month" stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                  <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: 'hsl(var(--card))',
+                      border: '1px solid hsl(var(--border))',
+                      borderRadius: '8px',
+                    }}
+                    labelStyle={{ color: 'hsl(var(--foreground))' }}
+                    itemStyle={{ color: '#a3ff00' }}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="revenue"
+                    stroke="#a3ff00"
+                    strokeWidth={2}
+                    dot={{ fill: '#a3ff00', strokeWidth: 0 }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          )}
         </div>
-
-
       </div>
 
       {/* Recent Activity */}
@@ -160,38 +198,40 @@ export function DashboardOverview() {
             <h3 className="font-display text-xl font-bold text-foreground">Recent Members</h3>
             <button className="text-lime-600 dark:text-lime-500 text-sm hover:text-lime-500">View All</button>
           </div>
-          <div className="space-y-4">
-            {mockMembers.slice(0, 4).map((member) => (
-              <div
-                key={member.id}
-                className="flex items-center gap-4 p-3 rounded-lg bg-muted hover:bg-muted/80 transition-colors"
-              >
-                <img
-                  src={member.avatar}
-                  alt={member.name}
-                  className="w-10 h-10 rounded-full"
-                />
-                <div className="flex-1">
-                  <p className="text-foreground font-medium">{member.name}</p>
-                  <div className="flex items-center gap-2 mt-1">
-                    <p className="text-muted-foreground text-sm">{member.membershipType} Plan</p>
-                    {member.hasPersonalTraining && (
-                      <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-ko-500/20 text-ko-500">
-                        <Dumbbell className="w-3 h-3" />
-                        PT
-                      </span>
-                    )}
+          {loading ? <ListSkeleton /> : (
+            <div className="space-y-4">
+              {mockMembers.slice(0, 4).map((member) => (
+                <div
+                  key={member.id}
+                  className="flex items-center gap-4 p-3 rounded-lg bg-muted hover:bg-muted/80 transition-colors"
+                >
+                  <img
+                    src={member.avatar}
+                    alt={member.name}
+                    className="w-10 h-10 rounded-full"
+                  />
+                  <div className="flex-1">
+                    <p className="text-foreground font-medium">{member.name}</p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <p className="text-muted-foreground text-sm">{member.membershipType} Plan</p>
+                      {member.hasPersonalTraining && (
+                        <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-ko-500/20 text-ko-500">
+                          <Dumbbell className="w-3 h-3" />
+                          PT
+                        </span>
+                      )}
+                    </div>
                   </div>
+                  <span className={`px-2 py-1 rounded-full text-xs ${member.status === 'active'
+                    ? 'bg-ko-500/20 text-ko-500'
+                    : 'bg-red-500/20 text-red-500'
+                    }`}>
+                    {member.status}
+                  </span>
                 </div>
-                <span className={`px-2 py-1 rounded-full text-xs ${member.status === 'active'
-                  ? 'bg-ko-500/20 text-ko-500'
-                  : 'bg-red-500/20 text-red-500'
-                  }`}>
-                  {member.status}
-                </span>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Recent Payments */}
@@ -200,33 +240,35 @@ export function DashboardOverview() {
             <h3 className="font-display text-xl font-bold text-foreground">Recent Payments</h3>
             <button className="text-lime-600 dark:text-lime-500 text-sm hover:text-lime-500">View All</button>
           </div>
-          <div className="space-y-4">
-            {mockPayments.slice(0, 4).map((payment) => (
-              <div
-                key={payment.id}
-                className="flex items-center gap-4 p-3 rounded-lg bg-muted hover:bg-muted/80 transition-colors"
-              >
-                <div className="w-10 h-10 rounded-full bg-lime-500/20 flex items-center justify-center">
-                  <DollarSign className="w-5 h-5 text-lime-500" />
+          {loading ? <ListSkeleton /> : (
+            <div className="space-y-4">
+              {mockPayments.slice(0, 4).map((payment) => (
+                <div
+                  key={payment.id}
+                  className="flex items-center gap-4 p-3 rounded-lg bg-muted hover:bg-muted/80 transition-colors"
+                >
+                  <div className="w-10 h-10 rounded-full bg-lime-500/20 flex items-center justify-center">
+                    <DollarSign className="w-5 h-5 text-lime-500" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-foreground font-medium">{payment.memberName}</p>
+                    <p className="text-muted-foreground text-sm">{payment.invoiceNumber}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-foreground font-medium">${payment.amount}</p>
+                    <span className={`text-xs ${payment.status === 'paid'
+                      ? 'bg-gradient-to-r from-ko-500 to-ko-600 bg-clip-text text-transparent'
+                      : payment.status === 'pending'
+                        ? 'text-yellow-500'
+                        : 'text-red-500'
+                      }`}>
+                      {payment.status}
+                    </span>
+                  </div>
                 </div>
-                <div className="flex-1">
-                  <p className="text-foreground font-medium">{payment.memberName}</p>
-                  <p className="text-muted-foreground text-sm">{payment.invoiceNumber}</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-foreground font-medium">${payment.amount}</p>
-                  <span className={`text-xs ${payment.status === 'paid'
-                    ? 'bg-gradient-to-r from-ko-500 to-ko-600 bg-clip-text text-transparent'
-                    : payment.status === 'pending'
-                      ? 'text-yellow-500'
-                      : 'text-red-500'
-                    }`}>
-                    {payment.status}
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>

@@ -14,6 +14,7 @@ import {
   User as UserIcon,
   Trash2,
 } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -45,6 +46,28 @@ import { getTrainers, type TrainerListItem } from '@/api/trainers';
 import type { Member, MembershipPlan } from '@/types';
 import { formatDate } from '@/utils/date';
 import { useConfirmDialog } from '@/context/ConfirmDialogContext';
+
+function RowSkeleton() {
+  return (
+    <TableRow className="border-border hover:bg-transparent">
+      <TableCell>
+        <div className="flex items-center gap-3">
+          <Skeleton className="w-10 h-10 rounded-full" />
+          <div className="space-y-2">
+            <Skeleton className="h-4 w-24" />
+            <Skeleton className="h-3 w-32" />
+          </div>
+        </div>
+      </TableCell>
+      <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+      <TableCell><Skeleton className="h-6 w-16 rounded-full" /></TableCell>
+      <TableCell><Skeleton className="h-6 w-12 rounded-full" /></TableCell>
+      <TableCell><Skeleton className="h-6 w-16 rounded-full" /></TableCell>
+      <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+      <TableCell className="text-right"><Skeleton className="h-8 w-8 ml-auto rounded-md" /></TableCell>
+    </TableRow>
+  );
+}
 
 export function MembersManagement() {
   const confirmDialog = useConfirmDialog();
@@ -560,24 +583,24 @@ export function MembersManagement() {
       </div>
 
       {/* Members Table */}
-      {loading ? (
-        <div className="p-12 text-center text-muted-foreground">Loading members...</div>
-      ) : (
-        <div className="rounded-xl bg-card/50 border border-border overflow-hidden">
-          <Table>
-            <TableHeader>
-              <TableRow className="border-border hover:bg-transparent">
-                <TableHead className="text-muted-foreground">Member</TableHead>
-                <TableHead className="text-muted-foreground">Membership ID</TableHead>
-                <TableHead className="text-muted-foreground">Plan</TableHead>
-                <TableHead className="text-muted-foreground">PT Status</TableHead>
-                <TableHead className="text-muted-foreground">Status</TableHead>
-                <TableHead className="text-muted-foreground">Expiry Date</TableHead>
-                <TableHead className="text-muted-foreground text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredMembers.map((member) => (
+      <div className="rounded-xl bg-card/50 border border-border overflow-hidden">
+        <Table>
+          <TableHeader>
+            <TableRow className="border-border hover:bg-transparent">
+              <TableHead className="text-muted-foreground">Member</TableHead>
+              <TableHead className="text-muted-foreground">Membership ID</TableHead>
+              <TableHead className="text-muted-foreground">Plan</TableHead>
+              <TableHead className="text-muted-foreground">PT Status</TableHead>
+              <TableHead className="text-muted-foreground">Status</TableHead>
+              <TableHead className="text-muted-foreground">Expiry Date</TableHead>
+              <TableHead className="text-muted-foreground text-right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {loading ? (
+              Array.from({ length: 5 }).map((_, i) => <RowSkeleton key={i} />)
+            ) : (
+              filteredMembers.map((member) => (
                 <TableRow key={member.id} className="border-border hover:bg-muted/50">
                   <TableCell>
                     <div className="flex items-center gap-3">
@@ -666,11 +689,11 @@ export function MembersManagement() {
                     </DropdownMenu>
                   </TableCell>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      )}
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </div>
 
       {/* Pagination */}
       <div className="flex items-center justify-between">

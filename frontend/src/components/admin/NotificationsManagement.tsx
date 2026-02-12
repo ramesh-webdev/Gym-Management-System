@@ -9,6 +9,7 @@ import {
   Send,
   Plus,
 } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -55,6 +56,30 @@ const NOTIFICATION_TYPES = [
   { value: 'error', label: 'Error' },
   { value: 'payment', label: 'Payment' },
 ] as const;
+
+function NotificationSkeleton() {
+  return (
+    <div className="p-4 rounded-xl border border-border bg-card/30">
+      <div className="flex items-start gap-4">
+        <Skeleton className="w-10 h-10 rounded-lg flex-shrink-0" />
+        <div className="flex-1 space-y-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Skeleton className="h-5 w-32" />
+              <Skeleton className="h-4 w-24 rounded-md" />
+            </div>
+            <div className="flex gap-2">
+              <Skeleton className="h-8 w-8 rounded-md" />
+              <Skeleton className="h-8 w-8 rounded-md" />
+            </div>
+          </div>
+          <Skeleton className="h-4 w-full" />
+          <Skeleton className="h-3 w-24" />
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export function NotificationsManagement() {
   const currentUser = getStoredUser();
@@ -311,28 +336,39 @@ export function NotificationsManagement() {
 
       {/* Stats */}
       <div className="grid sm:grid-cols-3 gap-4">
-        {[
-          { label: 'Total Notifications', value: notifications.length, icon: Bell },
-          { label: 'Unread', value: unreadCount, icon: Mail, highlight: true },
-          { label: 'Sent Today', value: sentToday, icon: Send },
-        ].map((stat, index) => (
-          <div
-            key={index}
-            className={`p-4 rounded-xl border ${
-              stat.highlight
-                ? 'bg-ko-500/5 border-ko-500/20'
-                : 'bg-card/50 border-border'
-            }`}
-          >
-            <div className="flex items-center gap-3 mb-2">
-              <stat.icon className={`w-5 h-5 ${stat.highlight ? 'text-ko-500' : 'text-muted-foreground'}`} />
-              <span className="text-muted-foreground text-sm">{stat.label}</span>
+        {loading ? (
+          Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="p-4 rounded-xl border border-border bg-card/50 space-y-3">
+              <div className="flex items-center gap-3">
+                <Skeleton className="w-5 h-5 rounded-full" />
+                <Skeleton className="h-3 w-32" />
+              </div>
+              <Skeleton className="h-9 w-12" />
             </div>
-            <p className={`font-display text-3xl font-bold ${stat.highlight ? 'bg-gradient-to-r from-ko-500 to-ko-600 bg-clip-text text-transparent' : 'text-foreground'}`}>
-              {stat.value}
-            </p>
-          </div>
-        ))}
+          ))
+        ) : (
+          [
+            { label: 'Total Notifications', value: notifications.length, icon: Bell },
+            { label: 'Unread', value: unreadCount, icon: Mail, highlight: true },
+            { label: 'Sent Today', value: sentToday, icon: Send },
+          ].map((stat, index) => (
+            <div
+              key={index}
+              className={`p-4 rounded-xl border ${stat.highlight
+                  ? 'bg-ko-500/5 border-ko-500/20'
+                  : 'bg-card/50 border-border'
+                }`}
+            >
+              <div className="flex items-center gap-3 mb-2">
+                <stat.icon className={`w-5 h-5 ${stat.highlight ? 'text-ko-500' : 'text-muted-foreground'}`} />
+                <span className="text-muted-foreground text-sm">{stat.label}</span>
+              </div>
+              <p className={`font-display text-3xl font-bold ${stat.highlight ? 'bg-gradient-to-r from-ko-500 to-ko-600 bg-clip-text text-transparent' : 'text-foreground'}`}>
+                {stat.value}
+              </p>
+            </div>
+          ))
+        )}
       </div>
 
       {/* Filter: Read status */}
@@ -342,11 +378,10 @@ export function NotificationsManagement() {
           <button
             key={f}
             onClick={() => setFilter(f)}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              filter === f
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${filter === f
                 ? 'bg-gradient-to-r from-ko-500 to-ko-600 text-primary-foreground'
                 : 'bg-muted/50 text-muted-foreground hover:bg-muted'
-            }`}
+              }`}
           >
             {f.charAt(0).toUpperCase() + f.slice(1)}
             {f === 'unread' && unreadCount > 0 && (
@@ -393,7 +428,7 @@ export function NotificationsManagement() {
       {/* Notifications List */}
       <div className="space-y-3">
         {loading ? (
-          <div className="text-center py-12 text-muted-foreground">Loading...</div>
+          Array.from({ length: 5 }).map((_, i) => <NotificationSkeleton key={i} />)
         ) : (
           <>
             {filteredNotifications.map((notification) => {
@@ -404,11 +439,10 @@ export function NotificationsManagement() {
               return (
                 <div
                   key={notification.id}
-                  className={`p-4 rounded-xl border transition-colors ${
-                    notification.isRead
+                  className={`p-4 rounded-xl border transition-colors ${notification.isRead
                       ? 'bg-card/30 border-border'
                       : 'bg-ko-500/5 border-ko-500/20'
-                  }`}
+                    }`}
                 >
                   <div className="flex items-start gap-4">
                     <div className="w-10 h-10 rounded-lg bg-muted/50 flex items-center justify-center flex-shrink-0">

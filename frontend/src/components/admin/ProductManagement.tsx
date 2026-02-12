@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Plus, Edit, Trash2, Search, MoreHorizontal } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -45,6 +46,27 @@ import { useConfirmDialog } from "@/context/ConfirmDialogContext";
 
 const CATEGORIES = ["supplements", "gear", "clothing", "other"] as const;
 const STATUSES = ["active", "inactive"] as const;
+
+function ProductRowSkeleton() {
+  return (
+    <TableRow className="border-border hover:bg-transparent">
+      <TableCell>
+        <div className="flex items-center gap-3">
+          <Skeleton className="w-10 h-10 rounded-lg" />
+          <div className="space-y-2">
+            <Skeleton className="h-4 w-24" />
+            <Skeleton className="h-3 w-32" />
+          </div>
+        </div>
+      </TableCell>
+      <TableCell><Skeleton className="h-6 w-16 rounded-full" /></TableCell>
+      <TableCell><Skeleton className="h-4 w-12" /></TableCell>
+      <TableCell><Skeleton className="h-4 w-8" /></TableCell>
+      <TableCell><Skeleton className="h-6 w-16 rounded-full" /></TableCell>
+      <TableCell className="text-right"><Skeleton className="h-8 w-8 ml-auto rounded-md" /></TableCell>
+    </TableRow>
+  );
+}
 
 export function ProductManagement() {
   const confirmDialog = useConfirmDialog();
@@ -203,13 +225,7 @@ export function ProductManagement() {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="p-6 flex items-center justify-center min-h-[200px]">
-        <p className="text-muted-foreground">Loading products...</p>
-      </div>
-    );
-  }
+
 
   return (
     <div className="p-6 space-y-6">
@@ -371,92 +387,96 @@ export function ProductManagement() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredProducts.map((product) => (
-              <TableRow
-                key={product.id}
-                className="border-border hover:bg-muted/50"
-              >
-                <TableCell>
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-muted overflow-hidden">
-                      <img
-                        src={product.image || ""}
-                        alt={product.name}
-                        className="w-full h-full object-cover"
-                      />
+            {loading ? (
+              Array.from({ length: 5 }).map((_, i) => <ProductRowSkeleton key={i} />)
+            ) : (
+              filteredProducts.map((product) => (
+                <TableRow
+                  key={product.id}
+                  className="border-border hover:bg-muted/50"
+                >
+                  <TableCell>
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-lg bg-muted overflow-hidden">
+                        <img
+                          src={product.image || ""}
+                          alt={product.name}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                      <div>
+                        <p className="font-medium text-foreground">
+                          {product.name}
+                        </p>
+                        <p className="text-xs text-muted-foreground truncate max-w-[200px]">
+                          {product.description}
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="font-medium text-foreground">
-                        {product.name}
-                      </p>
-                      <p className="text-xs text-muted-foreground truncate max-w-[200px]">
-                        {product.description}
-                      </p>
-                    </div>
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <Badge
-                    variant="outline"
-                    className="capitalize border-ko-500/30 bg-ko-500/10 text-foreground"
-                  >
-                    {product.category}
-                  </Badge>
-                </TableCell>
-                <TableCell className="text-foreground">
-                  ₹{product.price}
-                </TableCell>
-                <TableCell className="text-foreground">
-                  {product.stock}
-                </TableCell>
-                <TableCell>
-                  <Badge
-                    variant={
-                      product.status === "active" ? "default" : "secondary"
-                    }
-                    className={
-                      product.status === "active"
-                        ? "bg-lime-500/20 text-lime-600"
-                        : ""
-                    }
-                  >
-                    {product.status}
-                  </Badge>
-                </TableCell>
-                <TableCell className="text-right">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-muted-foreground hover:text-foreground"
-                      >
-                        <MoreHorizontal className="w-4 h-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent
-                      align="end"
-                      className="bg-card border-border"
+                  </TableCell>
+                  <TableCell>
+                    <Badge
+                      variant="outline"
+                      className="capitalize border-ko-500/30 bg-ko-500/10 text-foreground"
                     >
-                      <DropdownMenuItem
-                        onClick={() => handleEditClick(product)}
-                        className="text-foreground focus:bg-muted cursor-pointer"
+                      {product.category}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-foreground">
+                    ₹{product.price}
+                  </TableCell>
+                  <TableCell className="text-foreground">
+                    {product.stock}
+                  </TableCell>
+                  <TableCell>
+                    <Badge
+                      variant={
+                        product.status === "active" ? "default" : "secondary"
+                      }
+                      className={
+                        product.status === "active"
+                          ? "bg-lime-500/20 text-lime-600"
+                          : ""
+                      }
+                    >
+                      {product.status}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                        >
+                          <MoreHorizontal className="w-4 h-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent
+                        align="end"
+                        className="bg-card border-border"
                       >
-                        <Edit className="w-4 h-4 mr-2" />
-                        Edit
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() => handleDeleteProduct(product.id)}
-                        className="text-red-500 focus:bg-red-500/10 cursor-pointer"
-                      >
-                        <Trash2 className="w-4 h-4 mr-2" />
-                        Delete
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </TableCell>
-              </TableRow>
-            ))}
+                        <DropdownMenuItem
+                          onClick={() => handleEditClick(product)}
+                          className="text-foreground focus:bg-muted cursor-pointer"
+                        >
+                          <Edit className="w-4 h-4 mr-2" />
+                          Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => handleDeleteProduct(product.id)}
+                          className="text-red-500 focus:bg-red-500/10 cursor-pointer"
+                        >
+                          <Trash2 className="w-4 h-4 mr-2" />
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
           </TableBody>
         </Table>
       </div>

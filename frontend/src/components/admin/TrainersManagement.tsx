@@ -11,6 +11,7 @@ import {
   Eye,
   EyeOff,
 } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -34,6 +35,38 @@ import { useConfirmDialog } from '@/context/ConfirmDialogContext';
 
 /** Trainer with form-only firstName/lastName for the edit dialog */
 type EditingTrainer = TrainerListItem & { firstName: string; lastName: string };
+
+function TrainerSkeleton() {
+  return (
+    <div className="p-6 rounded-xl bg-card/50 border border-border">
+      <div className="flex items-start justify-between mb-4">
+        <div className="flex items-center gap-4">
+          <Skeleton className="w-16 h-16 rounded-xl" />
+          <div className="space-y-2">
+            <Skeleton className="h-6 w-32" />
+            <Skeleton className="h-4 w-12" />
+          </div>
+        </div>
+        <Skeleton className="w-8 h-8 rounded-md" />
+      </div>
+      <div className="space-y-3 mb-4">
+        <Skeleton className="h-4 w-3/4" />
+        <Skeleton className="h-4 w-1/2" />
+      </div>
+      <div className="flex gap-2 mb-4">
+        <Skeleton className="h-6 w-16 rounded-full" />
+        <Skeleton className="h-6 w-16 rounded-full" />
+      </div>
+      <div className="flex items-center justify-between pt-4 border-t border-border">
+        <div className="space-y-1">
+          <Skeleton className="h-3 w-16" />
+          <Skeleton className="h-4 w-20" />
+        </div>
+        <Skeleton className="h-6 w-16 rounded-full" />
+      </div>
+    </div>
+  );
+}
 
 export function TrainersManagement() {
   const confirmDialog = useConfirmDialog();
@@ -329,9 +362,8 @@ export function TrainersManagement() {
 
       {/* Trainers Grid */}
       {loading ? (
-        <div className="text-center py-12">
-          <Users className="w-16 h-16 mx-auto text-muted-foreground mb-4 animate-pulse" />
-          <p className="text-muted-foreground">Loading trainers...</p>
+        <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-6">
+          {Array.from({ length: 6 }).map((_, i) => <TrainerSkeleton key={i} />)}
         </div>
       ) : filteredTrainers.length === 0 ? (
         <div className="text-center py-12">
@@ -422,8 +454,8 @@ export function TrainersManagement() {
                     trainer.status === 'active'
                       ? 'bg-lime-500/20 text-lime-500'
                       : trainer.status === 'suspended'
-                      ? 'bg-red-500/20 text-red-500'
-                      : 'bg-muted text-muted-foreground'
+                        ? 'bg-red-500/20 text-red-500'
+                        : 'bg-muted text-muted-foreground'
                   }
                 >
                   {trainer.status}

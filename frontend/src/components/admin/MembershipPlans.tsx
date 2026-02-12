@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
 import { Plus, Edit, Trash2, Check, Star, MoreHorizontal } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -26,6 +26,34 @@ import type { MembershipPlan } from '@/types';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
 import { useConfirmDialog } from '@/context/ConfirmDialogContext';
+import { useEffect, useState } from 'react';
+
+function PlanCardSkeleton() {
+  return (
+    <div className="relative p-6 rounded-xl border bg-card/50 border-border">
+      <div className="absolute top-4 right-4"><Skeleton className="w-8 h-8 rounded-md" /></div>
+      <div className="mb-6 space-y-2">
+        <Skeleton className="h-8 w-3/4" />
+        <Skeleton className="h-4 w-full" />
+      </div>
+      <div className="flex items-baseline gap-2 mb-6">
+        <Skeleton className="h-12 w-24" />
+        <Skeleton className="h-4 w-16" />
+      </div>
+      <div className="space-y-3 mb-6">
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="flex items-center gap-3">
+            <Skeleton className="w-5 h-5 rounded-full" />
+            <Skeleton className="h-4 w-5/6" />
+          </div>
+        ))}
+      </div>
+      <div className="pt-4 border-t border-border">
+        <Skeleton className="h-6 w-16 rounded-full" />
+      </div>
+    </div>
+  );
+}
 
 export function MembershipPlans() {
   const confirmDialog = useConfirmDialog();
@@ -138,14 +166,6 @@ export function MembershipPlans() {
     if (duration === 12) return '/year';
     return `/${duration}mo`;
   };
-
-  if (loading) {
-    return (
-      <div className="p-6 flex items-center justify-center min-h-[200px]">
-        <p className="text-muted-foreground">Loading plans...</p>
-      </div>
-    );
-  }
 
   return (
     <div className="p-6 space-y-6">
@@ -304,92 +324,96 @@ export function MembershipPlans() {
 
       {/* Plans Grid */}
       <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-6">
-        {plans.map((plan) => (
-          <div
-            key={plan.id}
-            className={`relative p-6 rounded-xl border transition-colors ${plan.isPopular
-              ? 'bg-lime-500/5 border-lime-500/30'
-              : 'bg-card/50 border-border hover:border-border'
-              }`}
-          >
-            {plan.isPopular && (
-              <div className="absolute -top-3 left-6">
-                <Badge className="bg-lime-500 text-primary-foreground">
-                  <Star className="w-3 h-3 mr-1 fill-primary-foreground" />
-                  Popular
+        {loading ? (
+          Array.from({ length: 3 }).map((_, i) => <PlanCardSkeleton key={i} />)
+        ) : (
+          plans.map((plan) => (
+            <div
+              key={plan.id}
+              className={`relative p-6 rounded-xl border transition-colors ${plan.isPopular
+                ? 'bg-lime-500/5 border-lime-500/30'
+                : 'bg-card/50 border-border hover:border-border'
+                }`}
+            >
+              {plan.isPopular && (
+                <div className="absolute -top-3 left-6">
+                  <Badge className="bg-lime-500 text-primary-foreground">
+                    <Star className="w-3 h-3 mr-1 fill-primary-foreground" />
+                    Popular
+                  </Badge>
+                </div>
+              )}
+              {plan.isAddOn && (
+                <div className="absolute -top-3 right-16">
+                  <Badge variant="secondary" className="bg-amber-500/20 text-amber-600 border border-amber-500/30">
+                    Add-on
+                  </Badge>
+                </div>
+              )}
+
+              <div className="absolute top-4 right-4">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground">
+                      <MoreHorizontal className="w-4 h-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="bg-card border-border">
+                    <DropdownMenuItem
+                      onClick={() => handleEditClick(plan)}
+                      className="text-foreground hover:bg-muted/50 cursor-pointer"
+                    >
+                      <Edit className="w-4 h-4 mr-2" />
+                      Edit
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => handleDeletePlan(plan.id)}
+                      className="text-red-500 hover:bg-red-500/10 cursor-pointer"
+                    >
+                      <Trash2 className="w-4 h-4 mr-2" />
+                      Delete
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+
+              <div className="mb-6">
+                <h3 className="font-display text-2xl font-bold text-foreground mb-2">{plan.name}</h3>
+                <p className="text-muted-foreground text-sm min-h-[40px]">{plan.description}</p>
+              </div>
+
+              <div className="flex items-baseline gap-1 mb-6">
+                <span className="font-display text-5xl font-bold text-lime-500">
+                  ₹{plan.price}
+                </span>
+                <span className="text-muted-foreground">{getDurationLabel(plan.duration ?? 0, plan.isAddOn)}</span>
+              </div>
+
+              <ul className="space-y-3 mb-6">
+                {(plan.features || []).map((feature, index) => (
+                  <li key={index} className="flex items-start gap-3">
+                    <div className="w-5 h-5 rounded-full bg-lime-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <Check className="w-3 h-3 text-lime-500" />
+                    </div>
+                    <span className="text-muted-foreground text-sm">{feature}</span>
+                  </li>
+                ))}
+              </ul>
+
+              <div className="pt-4 border-t border-border">
+                <Badge
+                  className={
+                    plan.isActive
+                      ? 'bg-lime-500/20 text-lime-500'
+                      : 'bg-red-500/20 text-red-500'
+                  }
+                >
+                  {plan.isActive ? 'Active' : 'Inactive'}
                 </Badge>
               </div>
-            )}
-            {plan.isAddOn && (
-              <div className="absolute -top-3 right-16">
-                <Badge variant="secondary" className="bg-amber-500/20 text-amber-600 border border-amber-500/30">
-                  Add-on
-                </Badge>
-              </div>
-            )}
-
-            <div className="absolute top-4 right-4">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground">
-                    <MoreHorizontal className="w-4 h-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="bg-card border-border">
-                  <DropdownMenuItem
-                    onClick={() => handleEditClick(plan)}
-                    className="text-foreground hover:bg-muted/50 cursor-pointer"
-                  >
-                    <Edit className="w-4 h-4 mr-2" />
-                    Edit
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => handleDeletePlan(plan.id)}
-                    className="text-red-500 hover:bg-red-500/10 cursor-pointer"
-                  >
-                    <Trash2 className="w-4 h-4 mr-2" />
-                    Delete
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
             </div>
-
-            <div className="mb-6">
-              <h3 className="font-display text-2xl font-bold text-foreground mb-2">{plan.name}</h3>
-              <p className="text-muted-foreground text-sm min-h-[40px]">{plan.description}</p>
-            </div>
-
-            <div className="flex items-baseline gap-1 mb-6">
-              <span className="font-display text-5xl font-bold text-lime-500">
-                ₹{plan.price}
-              </span>
-              <span className="text-muted-foreground">{getDurationLabel(plan.duration ?? 0, plan.isAddOn)}</span>
-            </div>
-
-            <ul className="space-y-3 mb-6">
-              {(plan.features || []).map((feature, index) => (
-                <li key={index} className="flex items-start gap-3">
-                  <div className="w-5 h-5 rounded-full bg-lime-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
-                    <Check className="w-3 h-3 text-lime-500" />
-                  </div>
-                  <span className="text-muted-foreground text-sm">{feature}</span>
-                </li>
-              ))}
-            </ul>
-
-            <div className="pt-4 border-t border-border">
-              <Badge
-                className={
-                  plan.isActive
-                    ? 'bg-lime-500/20 text-lime-500'
-                    : 'bg-red-500/20 text-red-500'
-                }
-              >
-                {plan.isActive ? 'Active' : 'Inactive'}
-              </Badge>
-            </div>
-          </div>
-        ))}
+          ))
+        )}
       </div>
 
       {plans.length === 0 && (

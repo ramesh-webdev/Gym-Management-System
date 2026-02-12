@@ -10,6 +10,7 @@ import {
   Users,
   Flame,
 } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -31,6 +32,47 @@ import { toast } from 'sonner';
 import { getRecipes, createRecipe, updateRecipe, deleteRecipe } from '@/api/recipes';
 import type { Recipe } from '@/types';
 import { useConfirmDialog } from '@/context/ConfirmDialogContext';
+
+function RecipeCardSkeleton() {
+  return (
+    <div className="p-6 rounded-xl bg-card/50 border border-border">
+      <div className="flex items-start justify-between mb-4">
+        <div className="flex-1 space-y-2">
+          <Skeleton className="h-6 w-3/4" />
+          <Skeleton className="h-4 w-1/4" />
+        </div>
+        <Skeleton className="w-8 h-8 rounded-md" />
+      </div>
+
+      <Skeleton className="w-full h-48 rounded-lg mb-4" />
+      <Skeleton className="h-4 w-full mb-2" />
+      <Skeleton className="h-4 w-2/3 mb-4" />
+
+      <div className="grid grid-cols-3 gap-3 mb-4">
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="flex items-center gap-2">
+            <Skeleton className="w-4 h-4 rounded-full" />
+            <Skeleton className="h-3 w-12" />
+          </div>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-3 gap-2 mb-4 p-3 rounded-lg bg-muted/30">
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="space-y-1">
+            <Skeleton className="h-3 w-10 mx-auto" />
+            <Skeleton className="h-4 w-8 mx-auto" />
+          </div>
+        ))}
+      </div>
+
+      <div className="flex gap-2">
+        <Skeleton className="h-5 w-16 rounded-full" />
+        <Skeleton className="h-5 w-16 rounded-full" />
+      </div>
+    </div>
+  );
+}
 
 export function RecipeManagement() {
   const confirmDialog = useConfirmDialog();
@@ -73,17 +115,17 @@ export function RecipeManagement() {
     setIsSubmitting(true);
     try {
       const formData = new FormData(e.target as HTMLFormElement);
-      
+
       const ingredients = (formData.get('ingredients') as string)
         .split('\n')
         .map((line) => line.trim())
         .filter(Boolean);
-      
+
       const instructions = (formData.get('instructions') as string)
         .split('\n')
         .map((line) => line.trim())
         .filter(Boolean);
-      
+
       const tags = (formData.get('tags') as string)
         .split(',')
         .map((tag) => tag.trim())
@@ -136,12 +178,12 @@ export function RecipeManagement() {
         .split('\n')
         .map((line) => line.trim())
         .filter(Boolean);
-      
+
       const instructions = (formData.get('instructions') as string)
         .split('\n')
         .map((line) => line.trim())
         .filter(Boolean);
-      
+
       const tags = (formData.get('tags') as string)
         .split(',')
         .map((tag) => tag.trim())
@@ -435,10 +477,7 @@ export function RecipeManagement() {
       {/* Recipes Grid */}
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
         {loading ? (
-          <div className="col-span-full text-center py-12">
-            <Utensils className="w-16 h-16 mx-auto text-muted-foreground mb-4 animate-pulse" />
-            <p className="text-muted-foreground">Loading recipes...</p>
-          </div>
+          Array.from({ length: 6 }).map((_, i) => <RecipeCardSkeleton key={i} />)
         ) : filteredRecipes.length === 0 ? (
           <div className="col-span-full text-center py-12">
             <Utensils className="w-16 h-16 mx-auto text-muted-foreground mb-4" />

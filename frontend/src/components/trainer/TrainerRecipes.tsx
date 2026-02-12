@@ -10,6 +10,7 @@ import {
   Users,
   Flame,
 } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -74,17 +75,17 @@ export function TrainerRecipes() {
     setIsSubmitting(true);
     try {
       const formData = new FormData(e.target as HTMLFormElement);
-      
+
       const ingredients = (formData.get('ingredients') as string)
         .split('\n')
         .map((line) => line.trim())
         .filter(Boolean);
-      
+
       const instructions = (formData.get('instructions') as string)
         .split('\n')
         .map((line) => line.trim())
         .filter(Boolean);
-      
+
       const tags = (formData.get('tags') as string)
         .split(',')
         .map((tag) => tag.trim())
@@ -137,12 +138,12 @@ export function TrainerRecipes() {
         .split('\n')
         .map((line) => line.trim())
         .filter(Boolean);
-      
+
       const instructions = (formData.get('instructions') as string)
         .split('\n')
         .map((line) => line.trim())
         .filter(Boolean);
-      
+
       const tags = (formData.get('tags') as string)
         .split(',')
         .map((tag) => tag.trim())
@@ -436,14 +437,36 @@ export function TrainerRecipes() {
       {/* Recipes Grid */}
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
         {loading ? (
-          <div className="col-span-full text-center py-12">
-            <Utensils className="w-16 h-16 mx-auto text-muted-foreground mb-4 animate-pulse" />
-            <p className="text-muted-foreground">Loading recipes...</p>
-          </div>
+          Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="p-6 rounded-xl bg-card/50 border border-border space-y-4">
+              <div className="flex justify-between items-start">
+                <div className="space-y-2">
+                  <Skeleton className="h-6 w-32" />
+                  <Skeleton className="h-4 w-16 rounded-full" />
+                </div>
+                <Skeleton className="w-8 h-8 rounded-md" />
+              </div>
+              <Skeleton className="w-full h-48 rounded-lg" />
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-5/6" />
+              <div className="grid grid-cols-3 gap-3">
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-full" />
+              </div>
+              <div className="grid grid-cols-3 gap-2 p-3 rounded-lg bg-muted/30">
+                <Skeleton className="h-8 w-full" />
+                <Skeleton className="h-8 w-full" />
+                <Skeleton className="h-8 w-full" />
+              </div>
+            </div>
+          ))
         ) : filteredRecipes.length === 0 ? (
           <div className="col-span-full text-center py-12">
             <Utensils className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
-            <p className="text-muted-foreground">No recipes found. Create your first recipe!</p>
+            <p className="text-muted-foreground">
+              No recipes found. Create your first recipe!
+            </p>
           </div>
         ) : (
           filteredRecipes.map((recipe) => (
@@ -455,18 +478,30 @@ export function TrainerRecipes() {
               <div className="flex items-start justify-between mb-4">
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-2">
-                    <h3 className="font-display text-xl font-bold text-foreground">{recipe.name}</h3>
+                    <h3 className="font-display text-xl font-bold text-foreground">
+                      {recipe.name}
+                    </h3>
                     {!recipe.isActive && (
-                      <Badge variant="secondary" className="text-xs">Inactive</Badge>
+                      <Badge variant="secondary" className="text-xs">
+                        Inactive
+                      </Badge>
                     )}
                   </div>
-                  <Badge className={`${categoryColors[recipe.category] || 'bg-muted text-muted-foreground'} text-xs`}>
+                  <Badge
+                    className={`${categoryColors[recipe.category] ||
+                      'bg-muted text-muted-foreground'
+                      } text-xs`}
+                  >
                     {recipe.category}
                   </Badge>
                 </div>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="text-muted-foreground hover:text-foreground"
+                    >
                       <MoreHorizontal className="w-4 h-4" />
                     </Button>
                   </DropdownMenuTrigger>
@@ -498,26 +533,38 @@ export function TrainerRecipes() {
               {/* Image */}
               {recipe.image && (
                 <div className="w-full h-48 rounded-lg bg-muted mb-4 overflow-hidden">
-                  <img src={recipe.image} alt={recipe.name} className="w-full h-full object-cover" />
+                  <img
+                    src={recipe.image}
+                    alt={recipe.name}
+                    className="w-full h-full object-cover"
+                  />
                 </div>
               )}
 
               {/* Description */}
-              <p className="text-muted-foreground text-sm mb-4 line-clamp-2">{recipe.description}</p>
+              <p className="text-muted-foreground text-sm mb-4 line-clamp-2">
+                {recipe.description}
+              </p>
 
               {/* Stats */}
               <div className="grid grid-cols-3 gap-3 mb-4">
                 <div className="flex items-center gap-2 text-sm">
                   <Clock className="w-4 h-4 text-muted-foreground" />
-                  <span className="text-muted-foreground">{recipe.prepTime + recipe.cookTime} min</span>
+                  <span className="text-muted-foreground">
+                    {recipe.prepTime + recipe.cookTime} min
+                  </span>
                 </div>
                 <div className="flex items-center gap-2 text-sm">
                   <Users className="w-4 h-4 text-muted-foreground" />
-                  <span className="text-muted-foreground">{recipe.servings} servings</span>
+                  <span className="text-muted-foreground">
+                    {recipe.servings} servings
+                  </span>
                 </div>
                 <div className="flex items-center gap-2 text-sm">
                   <Flame className="w-4 h-4 text-ko-500" />
-                  <span className="text-foreground font-medium">{recipe.calories} kcal</span>
+                  <span className="text-foreground font-medium">
+                    {recipe.calories} kcal
+                  </span>
                 </div>
               </div>
 
@@ -525,15 +572,21 @@ export function TrainerRecipes() {
               <div className="grid grid-cols-3 gap-2 mb-4 p-3 rounded-lg bg-muted/30">
                 <div className="text-center">
                   <p className="text-xs text-muted-foreground">Protein</p>
-                  <p className="text-sm font-medium text-foreground">{recipe.macros.protein}g</p>
+                  <p className="text-sm font-medium text-foreground">
+                    {recipe.macros.protein}g
+                  </p>
                 </div>
                 <div className="text-center">
                   <p className="text-xs text-muted-foreground">Carbs</p>
-                  <p className="text-sm font-medium text-foreground">{recipe.macros.carbs}g</p>
+                  <p className="text-sm font-medium text-foreground">
+                    {recipe.macros.carbs}g
+                  </p>
                 </div>
                 <div className="text-center">
                   <p className="text-xs text-muted-foreground">Fats</p>
-                  <p className="text-sm font-medium text-foreground">{recipe.macros.fats}g</p>
+                  <p className="text-sm font-medium text-foreground">
+                    {recipe.macros.fats}g
+                  </p>
                 </div>
               </div>
 
@@ -546,7 +599,9 @@ export function TrainerRecipes() {
                     </Badge>
                   ))}
                   {recipe.tags.length > 3 && (
-                    <Badge variant="secondary" className="text-xs">+{recipe.tags.length - 3}</Badge>
+                    <Badge variant="secondary" className="text-xs">
+                      +{recipe.tags.length - 3}
+                    </Badge>
                   )}
                 </div>
               )}

@@ -10,6 +10,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
 import { changePassword, updateMe, fetchMe } from '@/api/auth';
 import { useNavigate } from 'react-router-dom';
@@ -20,7 +21,7 @@ export function MemberSettings() {
   const [loading, setLoading] = useState(true);
   const [passwordSaving, setPasswordSaving] = useState(false);
   const [profileSaving, setProfileSaving] = useState(false);
-  
+
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -138,8 +139,65 @@ export function MemberSettings() {
 
   if (loading) {
     return (
-      <div className="p-6 flex items-center justify-center min-h-[200px]">
-        <p className="text-muted-foreground">Loading settings...</p>
+      <div className="p-6 space-y-6">
+        <div className="space-y-2">
+          <Skeleton className="h-10 w-64" />
+          <Skeleton className="h-4 w-48" />
+        </div>
+
+        <div className="p-6 rounded-xl bg-card/50 border border-border space-y-6">
+          <div className="flex items-center gap-3">
+            <Skeleton className="w-5 h-5 rounded-full" />
+            <Skeleton className="h-7 w-48" />
+          </div>
+          <div className="space-y-4 max-w-md">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="space-y-2">
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-10 w-full" />
+              </div>
+            ))}
+            <Skeleton className="h-10 w-32" />
+          </div>
+        </div>
+
+        <div className="p-6 rounded-xl bg-card/50 border border-border space-y-6">
+          <div className="flex items-center gap-3">
+            <Skeleton className="w-5 h-5 rounded-full" />
+            <Skeleton className="h-7 w-48" />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="space-y-6">
+              <Skeleton className="h-4 w-32" />
+              <div className="grid grid-cols-2 gap-4">
+                {[1, 2, 3, 4].map((i) => (
+                  <div key={i} className="space-y-2">
+                    <Skeleton className="h-4 w-16" />
+                    <Skeleton className="h-10 w-full" />
+                  </div>
+                ))}
+              </div>
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-20" />
+                <div className="flex flex-wrap gap-2">
+                  {[1, 2, 3, 4, 5, 6].map((i) => (
+                    <Skeleton key={i} className="h-7 w-20 rounded-full" />
+                  ))}
+                </div>
+              </div>
+            </div>
+            <div className="space-y-6">
+              <Skeleton className="h-4 w-32" />
+              {[1, 2].map((i) => (
+                <div key={i} className="space-y-2">
+                  <Skeleton className="h-4 w-20" />
+                  <Skeleton className="h-10 w-full" />
+                </div>
+              ))}
+            </div>
+          </div>
+          <Skeleton className="h-10 w-40 mt-4" />
+        </div>
       </div>
     );
   }
@@ -286,11 +344,10 @@ export function MemberSettings() {
                   <Badge
                     key={goal}
                     variant={profileData.fitnessGoals?.includes(goal) ? "default" : "secondary"}
-                    className={`px-3 py-1 cursor-pointer transition-colors ${
-                      profileData.fitnessGoals?.includes(goal)
+                    className={`px-3 py-1 cursor-pointer transition-colors ${profileData.fitnessGoals?.includes(goal)
                         ? 'bg-ko-500/10 text-ko-500 border-ko-500/20 hover:bg-ko-500/20'
                         : 'hover:bg-muted'
-                    }`}
+                      }`}
                     onClick={() => toggleGoal(goal)}
                   >
                     {goal}

@@ -8,6 +8,7 @@ import {
   Dumbbell,
   Flame,
 } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import {
   Dialog,
@@ -84,48 +85,82 @@ export function TrainerDashboard() {
 
       {/* Quick Stats */}
       <div className="grid sm:grid-cols-3 gap-4">
-        <div className="p-5 rounded-xl bg-card/50 border border-border">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-muted-foreground mb-1">Total Clients</p>
-              <p className="text-2xl font-bold text-foreground">{clients.length}</p>
+        {loading ? (
+          Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="p-5 rounded-xl bg-card/50 border border-border flex items-center justify-between">
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-8 w-12" />
+              </div>
+              <Skeleton className="w-12 h-12 rounded-full" />
             </div>
-            <div className="w-12 h-12 rounded-full bg-blue-500/20 flex items-center justify-center">
-              <Users className="w-6 h-6 text-blue-500" />
+          ))
+        ) : (
+          <>
+            <div className="p-5 rounded-xl bg-card/50 border border-border">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground mb-1">Total Clients</p>
+                  <p className="text-2xl font-bold text-foreground">{clients.length}</p>
+                </div>
+                <div className="w-12 h-12 rounded-full bg-blue-500/20 flex items-center justify-center">
+                  <Users className="w-6 h-6 text-blue-500" />
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
-        <div className="p-5 rounded-xl bg-card/50 border border-border">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-muted-foreground mb-1">Active Clients</p>
-              <p className="text-2xl font-bold text-foreground">{activeClients.length}</p>
+            <div className="p-5 rounded-xl bg-card/50 border border-border">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground mb-1">Active Clients</p>
+                  <p className="text-2xl font-bold text-foreground">{activeClients.length}</p>
+                </div>
+                <div className="w-12 h-12 rounded-full bg-green-500/20 flex items-center justify-center">
+                  <User className="w-6 h-6 text-green-500" />
+                </div>
+              </div>
             </div>
-            <div className="w-12 h-12 rounded-full bg-green-500/20 flex items-center justify-center">
-              <User className="w-6 h-6 text-green-500" />
+            <div className="p-5 rounded-xl bg-card/50 border border-border">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground mb-1">PT Clients</p>
+                  <p className="text-2xl font-bold text-foreground">{ptClients.length}</p>
+                </div>
+                <div className="w-12 h-12 rounded-full bg-purple-500/20 flex items-center justify-center">
+                  <Dumbbell className="w-6 h-6 text-purple-500" />
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
-        <div className="p-5 rounded-xl bg-card/50 border border-border">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-muted-foreground mb-1">PT Clients</p>
-              <p className="text-2xl font-bold text-foreground">{ptClients.length}</p>
-            </div>
-            <div className="w-12 h-12 rounded-full bg-purple-500/20 flex items-center justify-center">
-              <Dumbbell className="w-6 h-6 text-purple-500" />
-            </div>
-          </div>
-        </div>
+          </>
+        )}
       </div>
 
       {/* Clients List */}
       <div>
         <h2 className="font-display text-xl font-bold text-foreground mb-4">My Clients</h2>
         {loading ? (
-          <div className="text-center py-12">
-            <Users className="w-16 h-16 mx-auto text-muted-foreground mb-4 animate-pulse" />
-            <p className="text-muted-foreground">Loading clients...</p>
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="p-6 rounded-xl bg-card/50 border border-border space-y-4">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-3">
+                    <Skeleton className="w-12 h-12 rounded-full" />
+                    <div className="space-y-2">
+                      <Skeleton className="h-5 w-32" />
+                      <Skeleton className="h-3 w-24" />
+                    </div>
+                  </div>
+                  <Skeleton className="w-5 h-5 rounded-md" />
+                </div>
+                <div className="space-y-2">
+                  <div className="flex gap-2">
+                    <Skeleton className="h-5 w-16" />
+                    <Skeleton className="h-5 w-12" />
+                  </div>
+                  <Skeleton className="h-4 w-40" />
+                  <Skeleton className="h-3 w-32" />
+                </div>
+              </div>
+            ))}
           </div>
         ) : clients.length === 0 ? (
           <div className="text-center py-12">

@@ -9,6 +9,7 @@ import {
   Utensils,
   AlertCircle,
 } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { getMyDietPlan } from '@/api/diet-plans';
 import { getStoredUser } from '@/api/auth';
@@ -25,12 +26,12 @@ export function MemberDiet() {
   useEffect(() => {
     const currentUser = getStoredUser();
     setUser(currentUser);
-    
+
     if (!currentUser || currentUser.role !== 'member') {
       navigate('/member/dashboard');
       return;
     }
-    
+
     if (!currentUser.hasPersonalTraining) {
       navigate('/member/dashboard');
       return;
@@ -58,8 +59,54 @@ export function MemberDiet() {
 
   if (loading) {
     return (
-      <div className="p-6 flex items-center justify-center min-h-[200px]">
-        <p className="text-muted-foreground">Loading diet plan...</p>
+      <div className="p-6 space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="space-y-2">
+            <Skeleton className="h-10 w-64" />
+            <Skeleton className="h-4 w-48" />
+          </div>
+          <Skeleton className="h-10 w-32" />
+        </div>
+
+        <div className="p-6 rounded-xl bg-card/50 border border-border">
+          <div className="flex flex-col lg:flex-row gap-8">
+            <div className="lg:w-48 flex flex-col items-center">
+              <Skeleton className="w-32 h-32 rounded-full" />
+              <Skeleton className="h-4 w-24 mt-4" />
+            </div>
+            <div className="flex-1 space-y-4">
+              <Skeleton className="h-6 w-32" />
+              <div className="grid sm:grid-cols-3 gap-4">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="p-4 rounded-xl bg-muted/50 space-y-3">
+                    <div className="flex items-center gap-2">
+                      <Skeleton className="w-8 h-8 rounded-lg" />
+                      <Skeleton className="h-4 w-12" />
+                    </div>
+                    <Skeleton className="h-8 w-20" />
+                    <Skeleton className="h-1.5 w-full rounded-full" />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <Skeleton className="h-8 w-48" />
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="p-5 rounded-xl border border-border flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <Skeleton className="w-12 h-12 rounded-xl" />
+                <div className="space-y-2">
+                  <Skeleton className="h-5 w-32" />
+                  <Skeleton className="h-4 w-24" />
+                </div>
+              </div>
+              <Skeleton className="w-5 h-5 rounded-md" />
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
@@ -176,20 +223,19 @@ export function MemberDiet() {
       {/* Meals */}
       <div className="space-y-4">
         <h3 className="font-display text-xl font-bold text-foreground">Today's Meals</h3>
-        
+
         {dietPlan.meals.map((meal) => {
           const Icon = mealIcons[meal.type] || Apple;
           const colorClass = mealColors[meal.type] || 'bg-muted/50 text-foreground';
           const isExpanded = activeMeal === meal.id;
-          
+
           return (
             <div
               key={meal.id}
-              className={`p-5 rounded-xl border transition-all ${
-                isExpanded
+              className={`p-5 rounded-xl border transition-all ${isExpanded
                   ? 'bg-ko-500/5 border-ko-500/20'
                   : 'bg-card/50 border-border hover:border-border'
-              }`}
+                }`}
             >
               <button
                 onClick={() => setActiveMeal(isExpanded ? null : meal.id)}
@@ -207,12 +253,11 @@ export function MemberDiet() {
                       <p className="text-muted-foreground text-sm">{meal.time} • {meal.calories} kcal</p>
                     </div>
                   </div>
-                  <ChevronRight className={`w-5 h-5 text-muted-foreground transition-transform ${
-                    isExpanded ? 'rotate-90' : ''
-                  }`} />
+                  <ChevronRight className={`w-5 h-5 text-muted-foreground transition-transform ${isExpanded ? 'rotate-90' : ''
+                    }`} />
                 </div>
               </button>
-              
+
               {isExpanded && (
                 <div className="mt-4 pt-4 border-t border-border animate-slide-up">
                   <h5 className="text-muted-foreground text-sm mb-3">Foods:</h5>

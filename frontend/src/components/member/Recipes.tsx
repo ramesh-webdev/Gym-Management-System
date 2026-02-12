@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -117,11 +118,10 @@ export function Recipes() {
                 variant={categoryFilter === cat ? 'default' : 'outline'}
                 size="sm"
                 onClick={() => setCategoryFilter(cat)}
-                className={`flex items-center gap-2 ${
-                  categoryFilter === cat
+                className={`flex items-center gap-2 ${categoryFilter === cat
                     ? 'bg-gradient-to-r from-ko-500 to-ko-600 text-primary-foreground'
                     : ''
-                }`}
+                  }`}
               >
                 <Icon className="w-4 h-4" />
                 {cat.charAt(0).toUpperCase() + cat.slice(1)}
@@ -133,9 +133,27 @@ export function Recipes() {
 
       {/* Recipes Grid */}
       {loading ? (
-        <div className="text-center py-12">
-          <Utensils className="w-16 h-16 mx-auto text-muted-foreground mb-4 animate-pulse" />
-          <p className="text-muted-foreground">Loading recipes...</p>
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="p-6 rounded-xl bg-card/50 border border-border space-y-4">
+              <Skeleton className="w-full h-48 rounded-lg" />
+              <div className="space-y-3">
+                <div className="flex justify-between items-center">
+                  <Skeleton className="h-6 w-32" />
+                  <Skeleton className="h-5 w-5" />
+                </div>
+                <Skeleton className="h-4 w-16 rounded-full" />
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-5/6" />
+                <div className="grid grid-cols-3 gap-3">
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-full" />
+                </div>
+                <Skeleton className="h-16 w-full rounded-lg" />
+              </div>
+            </div>
+          ))}
         </div>
       ) : filteredRecipes.length === 0 ? (
         <div className="text-center py-12">

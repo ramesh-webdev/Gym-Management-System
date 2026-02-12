@@ -8,6 +8,7 @@ import {
   Utensils,
   Flame,
 } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -84,13 +85,13 @@ export function TrainerDietPlans() {
   const handleAddPlan = async (e: React.FormEvent) => {
     e.preventDefault();
     const formData = new FormData(e.target as HTMLFormElement);
-    
+
     const meals: Array<{ type: Meal['type']; foods: string[]; calories: number; time: string }> = [];
     ['breakfast', 'lunch', 'dinner', 'snack'].forEach((type) => {
       const foods = formData.get(`${type}_foods`) as string;
       const calories = formData.get(`${type}_calories`) as string;
       const time = formData.get(`${type}_time`) as string;
-      
+
       if (foods && calories && time) {
         meals.push({
           type: type as Meal['type'],
@@ -142,7 +143,7 @@ export function TrainerDietPlans() {
       const foods = formData.get(`${type}_foods`) as string;
       const calories = formData.get(`${type}_calories`) as string;
       const time = formData.get(`${type}_time`) as string;
-      
+
       if (foods && calories && time) {
         meals.push({
           type: type as Meal['type'],
@@ -442,9 +443,30 @@ export function TrainerDietPlans() {
 
       {/* Plans Grid */}
       {loading ? (
-        <div className="text-center py-12">
-          <Utensils className="w-16 h-16 mx-auto text-muted-foreground mb-4 animate-pulse" />
-          <p className="text-muted-foreground">Loading diet plans...</p>
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="p-6 rounded-xl bg-card/50 border border-border space-y-4">
+              <div className="space-y-3">
+                <div className="flex justify-between items-start">
+                  <div className="space-y-2">
+                    <Skeleton className="h-6 w-32" />
+                    <Skeleton className="h-4 w-24" />
+                  </div>
+                  <Skeleton className="w-8 h-8 rounded-md" />
+                </div>
+                <div className="flex items-center gap-2">
+                  <Skeleton className="w-4 h-4 rounded-full" />
+                  <Skeleton className="h-4 w-28" />
+                </div>
+                <div className="grid grid-cols-3 gap-2 p-3 rounded-lg bg-muted/30">
+                  <Skeleton className="h-8 w-full" />
+                  <Skeleton className="h-8 w-full" />
+                  <Skeleton className="h-8 w-full" />
+                </div>
+                <Skeleton className="h-4 w-20" />
+              </div>
+            </div>
+          ))}
         </div>
       ) : filteredPlans.length === 0 ? (
         <div className="text-center py-12">

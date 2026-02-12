@@ -55,7 +55,7 @@ export function TrainerSidebar({ onLogout }: TrainerSidebarProps) {
       {/* Sidebar */}
       <aside
         className={cn(
-          'fixed left-0 top-0 h-full bg-background border-r border-border z-40 transition-all duration-300',
+          'fixed left-0 top-0 h-full bg-background border-r border-border z-40 transition-all duration-300 flex flex-col',
           isCollapsed ? 'w-20' : 'w-64',
           isMobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
         )}

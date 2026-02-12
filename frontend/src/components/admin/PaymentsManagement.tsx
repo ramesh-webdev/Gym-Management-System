@@ -13,6 +13,7 @@ import {
   Info,
   Wallet,
 } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -78,6 +79,34 @@ function getStatusIcon(status: string) {
 }
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+function PaymentRowSkeleton() {
+  return (
+    <TableRow className="border-border hover:bg-transparent">
+      <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+      <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+      <TableCell><Skeleton className="h-4 w-16" /></TableCell>
+      <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+      <TableCell><Skeleton className="h-4 w-12" /></TableCell>
+      <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+      <TableCell><Skeleton className="h-6 w-16 rounded-full" /></TableCell>
+      <TableCell className="text-right"><Skeleton className="h-8 w-8 ml-auto rounded-md" /></TableCell>
+    </TableRow>
+  );
+}
+
+function StatSkeleton() {
+  return (
+    <div className="p-5 rounded-xl bg-card/50 border border-border">
+      <div className="flex items-center justify-between mb-2">
+        <Skeleton className="w-5 h-5 rounded-full" />
+        <Skeleton className="h-3 w-12" />
+      </div>
+      <Skeleton className="h-8 w-24 mb-1" />
+      <Skeleton className="h-3 w-32" />
+    </div>
+  );
+}
 
 export function PaymentsManagement() {
   const [payments, setPayments] = useState<Payment[]>([]);
@@ -410,50 +439,56 @@ export function PaymentsManagement() {
 
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-        <div className="p-5 rounded-xl bg-gradient-to-br from-lime-500/15 to-lime-500/5 border border-lime-500/30">
-          <div className="flex items-center justify-between mb-2">
-            <CreditCard className="w-5 h-5 text-lime-500" />
-            <span className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Lifetime</span>
-          </div>
-          <p className="font-display text-2xl lg:text-3xl font-bold text-foreground">₹{totalRevenue.toLocaleString()}</p>
-          <p className="text-xs text-muted-foreground mt-1">{paidCount} paid transaction{paidCount !== 1 ? 's' : ''}</p>
-        </div>
-        <div className="p-5 rounded-xl bg-card/50 border border-border">
-          <div className="flex items-center justify-between mb-2">
-            <TrendingUp className="w-5 h-5 text-blue-500" />
-            <span className="text-xs text-muted-foreground font-medium uppercase tracking-wide">This month</span>
-          </div>
-          <p className="font-display text-2xl lg:text-3xl font-bold text-foreground">₹{thisMonthRevenue.toLocaleString()}</p>
-          <p className="text-xs text-muted-foreground mt-1">
-            Last month: ₹{lastMonthRevenue.toLocaleString()}
-          </p>
-        </div>
-        <div className="p-5 rounded-xl bg-card/50 border border-amber-500/30">
-          <div className="flex items-center justify-between mb-2">
-            <Clock className="w-5 h-5 text-amber-500" />
-            <span className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Pending</span>
-          </div>
-          <p className="font-display text-2xl lg:text-3xl font-bold text-foreground">₹{pendingAmount.toLocaleString()}</p>
-          <p className="text-xs text-muted-foreground mt-1">{pendingCount} invoice{pendingCount !== 1 ? 's' : ''} awaiting payment</p>
-        </div>
-        <div className="p-5 rounded-xl bg-card/50 border border-red-500/30">
-          <div className="flex items-center justify-between mb-2">
-            <XCircle className="w-5 h-5 text-red-400" />
-            <span className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Overdue</span>
-          </div>
-          <p className="font-display text-2xl lg:text-3xl font-bold text-foreground">₹{overdueAmount.toLocaleString()}</p>
-          <p className="text-xs text-muted-foreground mt-1">{overdueCount} past due</p>
-        </div>
-        <div className="p-5 rounded-xl bg-card/50 border border-border">
-          <div className="flex items-center justify-between mb-2">
-            <Receipt className="w-5 h-5 text-muted-foreground" />
-            <span className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Last 7 days</span>
-          </div>
-          <p className="font-display text-2xl lg:text-3xl font-bold text-foreground">₹{last7DaysRevenue.toLocaleString()}</p>
-          <p className="text-xs text-muted-foreground mt-1">
-            Avg ₹{avgPayment.toLocaleString()} per payment
-          </p>
-        </div>
+        {loading ? (
+          Array.from({ length: 5 }).map((_, i) => <StatSkeleton key={i} />)
+        ) : (
+          <>
+            <div className="p-5 rounded-xl bg-gradient-to-br from-lime-500/15 to-lime-500/5 border border-lime-500/30">
+              <div className="flex items-center justify-between mb-2">
+                <CreditCard className="w-5 h-5 text-lime-500" />
+                <span className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Lifetime</span>
+              </div>
+              <p className="font-display text-2xl lg:text-3xl font-bold text-foreground">₹{totalRevenue.toLocaleString()}</p>
+              <p className="text-xs text-muted-foreground mt-1">{paidCount} paid transaction{paidCount !== 1 ? 's' : ''}</p>
+            </div>
+            <div className="p-5 rounded-xl bg-card/50 border border-border">
+              <div className="flex items-center justify-between mb-2">
+                <TrendingUp className="w-5 h-5 text-blue-500" />
+                <span className="text-xs text-muted-foreground font-medium uppercase tracking-wide">This month</span>
+              </div>
+              <p className="font-display text-2xl lg:text-3xl font-bold text-foreground">₹{thisMonthRevenue.toLocaleString()}</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Last month: ₹{lastMonthRevenue.toLocaleString()}
+              </p>
+            </div>
+            <div className="p-5 rounded-xl bg-card/50 border border-amber-500/30">
+              <div className="flex items-center justify-between mb-2">
+                <Clock className="w-5 h-5 text-amber-500" />
+                <span className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Pending</span>
+              </div>
+              <p className="font-display text-2xl lg:text-3xl font-bold text-foreground">₹{pendingAmount.toLocaleString()}</p>
+              <p className="text-xs text-muted-foreground mt-1">{pendingCount} invoice{pendingCount !== 1 ? 's' : ''} awaiting payment</p>
+            </div>
+            <div className="p-5 rounded-xl bg-card/50 border border-red-500/30">
+              <div className="flex items-center justify-between mb-2">
+                <XCircle className="w-5 h-5 text-red-400" />
+                <span className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Overdue</span>
+              </div>
+              <p className="font-display text-2xl lg:text-3xl font-bold text-foreground">₹{overdueAmount.toLocaleString()}</p>
+              <p className="text-xs text-muted-foreground mt-1">{overdueCount} past due</p>
+            </div>
+            <div className="p-5 rounded-xl bg-card/50 border border-border">
+              <div className="flex items-center justify-between mb-2">
+                <Receipt className="w-5 h-5 text-muted-foreground" />
+                <span className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Last 7 days</span>
+              </div>
+              <p className="font-display text-2xl lg:text-3xl font-bold text-foreground">₹{last7DaysRevenue.toLocaleString()}</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Avg ₹{avgPayment.toLocaleString()} per payment
+              </p>
+            </div>
+          </>
+        )}
       </div>
 
       {/* Charts */}
@@ -561,11 +596,7 @@ export function PaymentsManagement() {
             </TableHeader>
             <TableBody>
               {loading ? (
-                <TableRow>
-                  <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
-                    Loading...
-                  </TableCell>
-                </TableRow>
+                Array.from({ length: 5 }).map((_, i) => <PaymentRowSkeleton key={i} />)
               ) : filteredPayments.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
@@ -599,13 +630,12 @@ export function PaymentsManagement() {
                       <div className="flex items-center gap-2">
                         {getStatusIcon(payment.status)}
                         <span
-                          className={`capitalize ${
-                            payment.status === 'paid'
+                          className={`capitalize ${payment.status === 'paid'
                               ? 'text-lime-500'
                               : payment.status === 'pending'
                                 ? 'text-yellow-500'
                                 : 'text-red-400'
-                          }`}
+                            }`}
                         >
                           {payment.status}
                         </span>

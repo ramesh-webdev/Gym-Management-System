@@ -10,6 +10,7 @@ import {
   Droplets,
   Flame,
 } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -31,6 +32,46 @@ import { getDietPlans, createDietPlan, updateDietPlan, deleteDietPlan } from '@/
 import { getMembers } from '@/api/members';
 import type { DietPlan, Meal, Member } from '@/types';
 import { useConfirmDialog } from '@/context/ConfirmDialogContext';
+
+function DietPlanSkeleton() {
+  return (
+    <div className="p-6 rounded-xl bg-card/50 border border-border">
+      <div className="flex items-start justify-between mb-4">
+        <div className="flex-1 space-y-2">
+          <Skeleton className="h-7 w-1/2" />
+          <Skeleton className="h-4 w-1/3" />
+        </div>
+        <Skeleton className="w-8 h-8 rounded-md" />
+      </div>
+
+      <div className="mb-4 p-4 rounded-lg bg-muted/30 space-y-4">
+        <div className="flex items-center gap-2">
+          <Skeleton className="w-5 h-5 rounded-full" />
+          <Skeleton className="h-8 w-16" />
+          <Skeleton className="h-4 w-12" />
+        </div>
+        <div className="grid grid-cols-3 gap-3">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="space-y-1">
+              <Skeleton className="h-3 w-12" />
+              <Skeleton className="h-4 w-8" />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="space-y-3">
+        <Skeleton className="h-4 w-24 mb-2" />
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="flex justify-between">
+            <Skeleton className="h-4 w-16" />
+            <Skeleton className="h-4 w-32" />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 export function DietPlanManagement() {
   const confirmDialog = useConfirmDialog();
@@ -82,13 +123,13 @@ export function DietPlanManagement() {
   const handleAddPlan = async (e: React.FormEvent) => {
     e.preventDefault();
     const formData = new FormData(e.target as HTMLFormElement);
-    
+
     const meals: Array<{ type: Meal['type']; foods: string[]; calories: number; time: string }> = [];
     ['breakfast', 'lunch', 'dinner', 'snack'].forEach((type) => {
       const foods = formData.get(`${type}_foods`) as string;
       const calories = formData.get(`${type}_calories`) as string;
       const time = formData.get(`${type}_time`) as string;
-      
+
       if (foods && calories && time) {
         meals.push({
           type: type as Meal['type'],
@@ -140,7 +181,7 @@ export function DietPlanManagement() {
       const foods = formData.get(`${type}_foods`) as string;
       const calories = formData.get(`${type}_calories`) as string;
       const time = formData.get(`${type}_time`) as string;
-      
+
       if (foods && calories && time) {
         meals.push({
           type: type as Meal['type'],
@@ -448,7 +489,9 @@ export function DietPlanManagement() {
 
       {/* Diet Plans Grid */}
       {loading ? (
-        <div className="p-12 text-center text-muted-foreground">Loading diet plans...</div>
+        <div className="grid md:grid-cols-2 gap-6">
+          {Array.from({ length: 4 }).map((_, i) => <DietPlanSkeleton key={i} />)}
+        </div>
       ) : filteredPlans.length === 0 ? (
         <div className="p-12 text-center text-muted-foreground">
           {dietPlans.length === 0 ? 'No diet plans yet. Create one to get started.' : 'No diet plans match your search.'}
@@ -456,94 +499,94 @@ export function DietPlanManagement() {
       ) : (
         <div className="grid md:grid-cols-2 gap-6">
           {filteredPlans.map((plan) => {
-          return (
-            <div
-              key={plan.id}
-              className="p-6 rounded-xl bg-card/50 border border-border hover:border-border transition-colors"
-            >
-              {/* Header */}
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex-1">
-                  <h3 className="font-display text-xl font-bold text-foreground mb-1">{plan.name}</h3>
-                  <p className="text-muted-foreground text-sm">
-                    Assigned to: <span className="text-foreground font-medium">{getMemberName(plan)}</span>
-                  </p>
+            return (
+              <div
+                key={plan.id}
+                className="p-6 rounded-xl bg-card/50 border border-border hover:border-border transition-colors"
+              >
+                {/* Header */}
+                <div className="flex items-start justify-between mb-4">
+                  <div className="flex-1">
+                    <h3 className="font-display text-xl font-bold text-foreground mb-1">{plan.name}</h3>
+                    <p className="text-muted-foreground text-sm">
+                      Assigned to: <span className="text-foreground font-medium">{getMemberName(plan)}</span>
+                    </p>
+                  </div>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground">
+                        <MoreHorizontal className="w-4 h-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="bg-card border-border">
+                      <DropdownMenuItem
+                        className="text-foreground hover:bg-muted cursor-pointer"
+                        onClick={() => handleEditClick(plan)}
+                      >
+                        <Edit className="w-4 h-4 mr-2" />
+                        Edit
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        className="text-red-400 hover:bg-red-500/10 cursor-pointer"
+                        onClick={() => handleDeletePlan(plan.id)}
+                      >
+                        <Trash2 className="w-4 h-4 mr-2" />
+                        Delete
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground">
-                      <MoreHorizontal className="w-4 h-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="bg-card border-border">
-                    <DropdownMenuItem
-                      className="text-foreground hover:bg-muted cursor-pointer"
-                      onClick={() => handleEditClick(plan)}
-                    >
-                      <Edit className="w-4 h-4 mr-2" />
-                      Edit
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      className="text-red-400 hover:bg-red-500/10 cursor-pointer"
-                      onClick={() => handleDeletePlan(plan.id)}
-                    >
-                      <Trash2 className="w-4 h-4 mr-2" />
-                      Delete
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
 
-              {/* Calories & Macros */}
-              <div className="mb-4 p-4 rounded-lg bg-muted/30">
-                <div className="flex items-center gap-2 mb-3">
-                  <Flame className="w-5 h-5 text-ko-500" />
-                  <span className="font-display text-2xl font-bold text-foreground">
-                    {plan.dailyCalories}
-                  </span>
-                  <span className="text-muted-foreground text-sm">kcal/day</span>
+                {/* Calories & Macros */}
+                <div className="mb-4 p-4 rounded-lg bg-muted/30">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Flame className="w-5 h-5 text-ko-500" />
+                    <span className="font-display text-2xl font-bold text-foreground">
+                      {plan.dailyCalories}
+                    </span>
+                    <span className="text-muted-foreground text-sm">kcal/day</span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div>
+                      <div className="flex items-center gap-1 mb-1">
+                        <Apple className="w-4 h-4 text-ko-500" />
+                        <span className="text-xs text-muted-foreground">Protein</span>
+                      </div>
+                      <p className="font-medium text-foreground">{plan.macros.protein}g</p>
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-1 mb-1">
+                        <Utensils className="w-4 h-4 text-blue-500" />
+                        <span className="text-xs text-muted-foreground">Carbs</span>
+                      </div>
+                      <p className="font-medium text-foreground">{plan.macros.carbs}g</p>
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-1 mb-1">
+                        <Droplets className="w-4 h-4 text-orange-500" />
+                        <span className="text-xs text-muted-foreground">Fats</span>
+                      </div>
+                      <p className="font-medium text-foreground">{plan.macros.fats}g</p>
+                    </div>
+                  </div>
                 </div>
-                <div className="grid grid-cols-3 gap-3">
-                  <div>
-                    <div className="flex items-center gap-1 mb-1">
-                      <Apple className="w-4 h-4 text-ko-500" />
-                      <span className="text-xs text-muted-foreground">Protein</span>
-                    </div>
-                    <p className="font-medium text-foreground">{plan.macros.protein}g</p>
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-1 mb-1">
-                      <Utensils className="w-4 h-4 text-blue-500" />
-                      <span className="text-xs text-muted-foreground">Carbs</span>
-                    </div>
-                    <p className="font-medium text-foreground">{plan.macros.carbs}g</p>
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-1 mb-1">
-                      <Droplets className="w-4 h-4 text-orange-500" />
-                      <span className="text-xs text-muted-foreground">Fats</span>
-                    </div>
-                    <p className="font-medium text-foreground">{plan.macros.fats}g</p>
-                  </div>
-                </div>
-              </div>
 
-              {/* Meals Preview */}
-              <div className="space-y-2">
-                <h4 className="text-sm font-medium text-foreground mb-2">Meals ({plan.meals.length})</h4>
-                {plan.meals.slice(0, 3).map((meal) => (
-                  <div key={meal.id} className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground capitalize">{meal.type}</span>
-                    <span className="text-foreground">{meal.time} • {meal.calories} kcal</span>
-                  </div>
-                ))}
-                {plan.meals.length > 3 && (
-                  <p className="text-xs text-muted-foreground">+{plan.meals.length - 3} more meals</p>
-                )}
+                {/* Meals Preview */}
+                <div className="space-y-2">
+                  <h4 className="text-sm font-medium text-foreground mb-2">Meals ({plan.meals.length})</h4>
+                  {plan.meals.slice(0, 3).map((meal) => (
+                    <div key={meal.id} className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground capitalize">{meal.type}</span>
+                      <span className="text-foreground">{meal.time} • {meal.calories} kcal</span>
+                    </div>
+                  ))}
+                  {plan.meals.length > 3 && (
+                    <p className="text-xs text-muted-foreground">+{plan.meals.length - 3} more meals</p>
+                  )}
+                </div>
               </div>
-            </div>
-          );
-        })}
+            );
+          })}
         </div>
       )}
 

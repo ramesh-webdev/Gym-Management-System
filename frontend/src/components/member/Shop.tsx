@@ -3,6 +3,7 @@ import { Search, ShoppingBag, Filter, CheckCircle, Lock, ArrowLeft } from 'lucid
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
     Select,
     SelectContent,
@@ -151,51 +152,64 @@ export function Shop() {
             {/* Product Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                 {productsLoading ? (
-                    <p className="col-span-full text-center text-muted-foreground py-8">Loading products...</p>
+                    Array.from({ length: 8 }).map((_, i) => (
+                        <div key={i} className="bg-card/50 border border-border rounded-xl overflow-hidden flex flex-col space-y-4 p-4">
+                            <Skeleton className="aspect-square w-full rounded-lg" />
+                            <div className="space-y-2 flex-1">
+                                <Skeleton className="h-6 w-3/4" />
+                                <Skeleton className="h-4 w-full" />
+                                <Skeleton className="h-4 w-5/6" />
+                            </div>
+                            <div className="flex items-center justify-between mt-auto pt-4">
+                                <Skeleton className="h-8 w-20" />
+                                <Skeleton className="h-9 w-24 rounded-md" />
+                            </div>
+                        </div>
+                    ))
                 ) : (
-                filteredProducts.map((product) => (
-                    <div
-                        key={product.id}
-                        className="group relative bg-card/50 border border-border rounded-xl overflow-hidden hover:border-ko-500/30 transition-all flex flex-col"
-                    >
-                        {/* Image */}
-                        <div className="aspect-square bg-muted relative overflow-hidden">
-                            <img
-                                src={product.image}
-                                alt={product.name}
-                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                            />
-                            <div className="absolute top-2 right-2">
-                                <Badge className="bg-background/80 backdrop-blur text-foreground border-none">
-                                    {product.category}
-                                </Badge>
+                    filteredProducts.map((product) => (
+                        <div
+                            key={product.id}
+                            className="group relative bg-card/50 border border-border rounded-xl overflow-hidden hover:border-ko-500/30 transition-all flex flex-col"
+                        >
+                            {/* Image */}
+                            <div className="aspect-square bg-muted relative overflow-hidden">
+                                <img
+                                    src={product.image}
+                                    alt={product.name}
+                                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                />
+                                <div className="absolute top-2 right-2">
+                                    <Badge className="bg-background/80 backdrop-blur text-foreground border-none">
+                                        {product.category}
+                                    </Badge>
+                                </div>
+                            </div>
+
+                            {/* Content */}
+                            <div className="p-4 flex flex-col flex-1">
+                                <h3 className="font-display font-bold text-lg text-foreground mb-1">{product.name}</h3>
+                                <p className="text-sm text-muted-foreground line-clamp-2 mb-4 flex-1">
+                                    {product.description}
+                                </p>
+
+                                <div className="flex items-center justify-between mt-auto">
+                                    <span className="font-display text-xl font-bold bg-gradient-to-r from-ko-500 to-ko-600 bg-clip-text text-transparent">
+                                        ₹{product.price}
+                                    </span>
+                                    <Button
+                                        size="sm"
+                                        className="bg-gradient-to-r from-ko-500 to-ko-600 text-primary-foreground hover:from-ko-600 hover:to-ko-700"
+                                        onClick={() => handleBuyNow(product)}
+                                        disabled={product.stock === 0}
+                                    >
+                                        <ShoppingBag className="w-4 h-4 mr-2" />
+                                        {product.stock > 0 ? 'Buy Now' : 'Out of Stock'}
+                                    </Button>
+                                </div>
                             </div>
                         </div>
-
-                        {/* Content */}
-                        <div className="p-4 flex flex-col flex-1">
-                            <h3 className="font-display font-bold text-lg text-foreground mb-1">{product.name}</h3>
-                            <p className="text-sm text-muted-foreground line-clamp-2 mb-4 flex-1">
-                                {product.description}
-                            </p>
-
-                            <div className="flex items-center justify-between mt-auto">
-                                <span className="font-display text-xl font-bold bg-gradient-to-r from-ko-500 to-ko-600 bg-clip-text text-transparent">
-                                    ₹{product.price}
-                                </span>
-                                <Button
-                                    size="sm"
-                                    className="bg-gradient-to-r from-ko-500 to-ko-600 text-primary-foreground hover:from-ko-600 hover:to-ko-700"
-                                    onClick={() => handleBuyNow(product)}
-                                    disabled={product.stock === 0}
-                                >
-                                    <ShoppingBag className="w-4 h-4 mr-2" />
-                                    {product.stock > 0 ? 'Buy Now' : 'Out of Stock'}
-                                </Button>
-                            </div>
-                        </div>
-                    </div>
-                ))
+                    ))
                 )}
 
                 {!productsLoading && filteredProducts.length === 0 && (
@@ -218,106 +232,106 @@ export function Shop() {
                     </DialogHeader>
 
                     <div className="overflow-y-auto flex-1 min-h-0 pr-1">
-                    {step === 'confirm' && selectedProduct && (
-                        <div className="space-y-4 pt-4">
-                            <div className="p-4 rounded-xl bg-muted/50 border border-border flex gap-4">
-                                <div className="w-20 h-20 rounded-lg overflow-hidden bg-muted shrink-0">
-                                    <img
-                                        src={selectedProduct.image}
-                                        alt={selectedProduct.name}
-                                        className="w-full h-full object-cover"
-                                    />
+                        {step === 'confirm' && selectedProduct && (
+                            <div className="space-y-4 pt-4">
+                                <div className="p-4 rounded-xl bg-muted/50 border border-border flex gap-4">
+                                    <div className="w-20 h-20 rounded-lg overflow-hidden bg-muted shrink-0">
+                                        <img
+                                            src={selectedProduct.image}
+                                            alt={selectedProduct.name}
+                                            className="w-full h-full object-cover"
+                                        />
+                                    </div>
+                                    <div className="min-w-0 flex-1">
+                                        <p className="font-medium text-foreground">{selectedProduct.name}</p>
+                                        <p className="text-sm text-muted-foreground line-clamp-2 mt-0.5">
+                                            {selectedProduct.description}
+                                        </p>
+                                        <p className="font-display text-xl font-bold text-foreground mt-2">
+                                            ₹{selectedProduct.price.toLocaleString()}
+                                        </p>
+                                    </div>
                                 </div>
-                                <div className="min-w-0 flex-1">
-                                    <p className="font-medium text-foreground">{selectedProduct.name}</p>
-                                    <p className="text-sm text-muted-foreground line-clamp-2 mt-0.5">
-                                        {selectedProduct.description}
-                                    </p>
-                                    <p className="font-display text-xl font-bold text-foreground mt-2">
-                                        ₹{selectedProduct.price.toLocaleString()}
-                                    </p>
+                                {verifyError && (
+                                    <p className="text-sm text-red-500 bg-red-500/10 px-3 py-2 rounded-lg">{verifyError}</p>
+                                )}
+                                <div className="flex gap-2">
+                                    <Button
+                                        variant="outline"
+                                        className="flex-1 border-border text-foreground"
+                                        onClick={() => handleOpenPayDialog(false)}
+                                    >
+                                        Cancel
+                                    </Button>
+                                    <Button
+                                        className="flex-1 bg-lime-500 text-primary-foreground hover:bg-lime-400"
+                                        disabled={submitting}
+                                        onClick={handleProceedToPay}
+                                    >
+                                        {submitting ? 'Creating order...' : 'Proceed to Pay'}
+                                    </Button>
                                 </div>
                             </div>
-                            {verifyError && (
-                                <p className="text-sm text-red-500 bg-red-500/10 px-3 py-2 rounded-lg">{verifyError}</p>
-                            )}
-                            <div className="flex gap-2">
+                        )}
+
+                        {step === 'checkout' && (
+                            <div className="space-y-4 pt-4">
+                                <div className="p-4 rounded-xl bg-muted/50 border border-border">
+                                    <p className="text-muted-foreground text-sm">
+                                        {selectedProduct?.name ?? 'Product'}
+                                    </p>
+                                    <p className="font-display text-2xl font-bold text-foreground mt-1">
+                                        ₹{orderAmountRupees.toLocaleString()}
+                                    </p>
+                                    <p className="text-muted-foreground text-xs mt-1">product</p>
+                                </div>
+                                <p className="text-muted-foreground text-xs flex items-center gap-1">
+                                    <Lock className="w-3 h-3" />
+                                    Secure payment (auto-approved in test mode; Razorpay will be used for live payments)
+                                </p>
+                                {verifyError && (
+                                    <p className="text-sm text-red-500 bg-red-500/10 px-3 py-2 rounded-lg">{verifyError}</p>
+                                )}
+                                <div className="flex gap-2">
+                                    <Button
+                                        variant="outline"
+                                        className="flex-1 border-border text-foreground"
+                                        onClick={() => setStep('confirm')}
+                                        disabled={submitting}
+                                    >
+                                        <ArrowLeft className="w-4 h-4 mr-2" />
+                                        Back
+                                    </Button>
+                                    <Button
+                                        className="flex-1 bg-lime-500 text-primary-foreground hover:bg-lime-400"
+                                        disabled={submitting}
+                                        onClick={handleConfirmPay}
+                                    >
+                                        {submitting ? 'Processing...' : `Pay ₹${orderAmountRupees.toLocaleString()}`}
+                                    </Button>
+                                </div>
+                            </div>
+                        )}
+
+                        {step === 'success' && (
+                            <div className="space-y-4 pt-4 text-center">
+                                <div className="w-14 h-14 rounded-full bg-lime-500/20 flex items-center justify-center mx-auto">
+                                    <CheckCircle className="w-8 h-8 text-lime-500" />
+                                </div>
+                                <p className="text-foreground font-medium">
+                                    Your payment of ₹{orderAmountRupees.toLocaleString()} was successful.
+                                </p>
+                                <p className="text-muted-foreground text-sm">
+                                    Invoice will appear in your payment history.
+                                </p>
                                 <Button
-                                    variant="outline"
-                                    className="flex-1 border-border text-foreground"
+                                    className="w-full bg-lime-500 text-primary-foreground hover:bg-lime-400"
                                     onClick={() => handleOpenPayDialog(false)}
                                 >
-                                    Cancel
-                                </Button>
-                                <Button
-                                    className="flex-1 bg-lime-500 text-primary-foreground hover:bg-lime-400"
-                                    disabled={submitting}
-                                    onClick={handleProceedToPay}
-                                >
-                                    {submitting ? 'Creating order...' : 'Proceed to Pay'}
+                                    Done
                                 </Button>
                             </div>
-                        </div>
-                    )}
-
-                    {step === 'checkout' && (
-                        <div className="space-y-4 pt-4">
-                            <div className="p-4 rounded-xl bg-muted/50 border border-border">
-                                <p className="text-muted-foreground text-sm">
-                                    {selectedProduct?.name ?? 'Product'}
-                                </p>
-                                <p className="font-display text-2xl font-bold text-foreground mt-1">
-                                    ₹{orderAmountRupees.toLocaleString()}
-                                </p>
-                                <p className="text-muted-foreground text-xs mt-1">product</p>
-                            </div>
-                            <p className="text-muted-foreground text-xs flex items-center gap-1">
-                                <Lock className="w-3 h-3" />
-                                Secure payment (auto-approved in test mode; Razorpay will be used for live payments)
-                            </p>
-                            {verifyError && (
-                                <p className="text-sm text-red-500 bg-red-500/10 px-3 py-2 rounded-lg">{verifyError}</p>
-                            )}
-                            <div className="flex gap-2">
-                                <Button
-                                    variant="outline"
-                                    className="flex-1 border-border text-foreground"
-                                    onClick={() => setStep('confirm')}
-                                    disabled={submitting}
-                                >
-                                    <ArrowLeft className="w-4 h-4 mr-2" />
-                                    Back
-                                </Button>
-                                <Button
-                                    className="flex-1 bg-lime-500 text-primary-foreground hover:bg-lime-400"
-                                    disabled={submitting}
-                                    onClick={handleConfirmPay}
-                                >
-                                    {submitting ? 'Processing...' : `Pay ₹${orderAmountRupees.toLocaleString()}`}
-                                </Button>
-                            </div>
-                        </div>
-                    )}
-
-                    {step === 'success' && (
-                        <div className="space-y-4 pt-4 text-center">
-                            <div className="w-14 h-14 rounded-full bg-lime-500/20 flex items-center justify-center mx-auto">
-                                <CheckCircle className="w-8 h-8 text-lime-500" />
-                            </div>
-                            <p className="text-foreground font-medium">
-                                Your payment of ₹{orderAmountRupees.toLocaleString()} was successful.
-                            </p>
-                            <p className="text-muted-foreground text-sm">
-                                Invoice will appear in your payment history.
-                            </p>
-                            <Button
-                                className="w-full bg-lime-500 text-primary-foreground hover:bg-lime-400"
-                                onClick={() => handleOpenPayDialog(false)}
-                            >
-                                Done
-                            </Button>
-                        </div>
-                    )}
+                        )}
                     </div>
                 </DialogContent>
             </Dialog>

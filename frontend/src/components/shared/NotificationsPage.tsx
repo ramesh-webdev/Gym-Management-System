@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Bell, Check, Trash2, AlertTriangle, Info } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import {
   listNotifications,
@@ -130,11 +131,10 @@ export function NotificationsPage({ backPath, backLabel = 'Dashboard' }: Notific
           <button
             key={f}
             onClick={() => setFilter(f)}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              filter === f
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${filter === f
                 ? 'bg-gradient-to-r from-ko-500 to-ko-600 text-primary-foreground'
                 : 'bg-muted/50 text-muted-foreground hover:bg-muted'
-            }`}
+              }`}
           >
             {f.charAt(0).toUpperCase() + f.slice(1)}
             {f === 'unread' && unreadCount > 0 && (
@@ -148,17 +148,33 @@ export function NotificationsPage({ backPath, backLabel = 'Dashboard' }: Notific
 
       <div className="space-y-3">
         {loading ? (
-          <div className="text-center py-12 text-muted-foreground">Loading...</div>
+          Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="p-4 rounded-xl border border-border bg-card/30">
+              <div className="flex items-start gap-4">
+                <Skeleton className="w-10 h-10 rounded-lg flex-shrink-0" />
+                <div className="flex-1 space-y-2">
+                  <div className="flex justify-between">
+                    <Skeleton className="h-5 w-48" />
+                    <div className="flex gap-2">
+                      <Skeleton className="w-8 h-8 rounded-md" />
+                      <Skeleton className="w-8 h-8 rounded-md" />
+                    </div>
+                  </div>
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-3 w-24" />
+                </div>
+              </div>
+            </div>
+          ))
         ) : (
           <>
             {filteredNotifications.map((notification) => (
               <div
                 key={notification.id}
-                className={`p-4 rounded-xl border transition-colors ${
-                  notification.isRead
+                className={`p-4 rounded-xl border transition-colors ${notification.isRead
                     ? 'bg-card/30 border-border'
                     : 'bg-ko-500/5 border-ko-500/20'
-                }`}
+                  }`}
               >
                 <div className="flex items-start gap-4">
                   <div className="w-10 h-10 rounded-lg bg-muted/50 flex items-center justify-center flex-shrink-0">

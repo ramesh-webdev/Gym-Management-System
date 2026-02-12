@@ -11,6 +11,7 @@ import {
   CheckCircle,
   Dumbbell,
 } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -103,8 +104,8 @@ export function MemberMembership() {
   const daysUntilExpiry =
     membershipExpiry != null
       ? Math.ceil(
-          (membershipExpiry.getTime() - Date.now()) / (1000 * 60 * 60 * 24)
-        )
+        (membershipExpiry.getTime() - Date.now()) / (1000 * 60 * 60 * 24)
+      )
       : null;
 
   const monthlyPlans = plans.filter((p) => !p.isAddOn);
@@ -235,8 +236,58 @@ export function MemberMembership() {
 
   if (loading) {
     return (
-      <div className="p-6">
-        <p className="text-muted-foreground">Loading your membership...</p>
+      <div className="p-6 space-y-6">
+        <div className="space-y-2">
+          <Skeleton className="h-10 w-64" />
+          <Skeleton className="h-4 w-48" />
+        </div>
+
+        <div className="p-8 rounded-2xl bg-card/50 border border-border flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+          <div className="space-y-6 flex-1">
+            <div className="flex items-center gap-4">
+              <Skeleton className="w-14 h-14 rounded-xl" />
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-10 w-48" />
+              </div>
+            </div>
+            <div className="flex gap-4">
+              <Skeleton className="h-5 w-32" />
+              <Skeleton className="h-5 w-48" />
+            </div>
+            <Skeleton className="h-4 w-full max-w-lg" />
+          </div>
+          <div className="flex flex-col items-end gap-4">
+            <div className="text-right space-y-2">
+              <Skeleton className="h-4 w-32" />
+              <Skeleton className="h-14 w-24" />
+            </div>
+            <Skeleton className="h-10 w-48" />
+          </div>
+        </div>
+
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="p-4 rounded-xl bg-card/50 border border-border flex items-center gap-3">
+              <Skeleton className="w-8 h-8 rounded-lg" />
+              <Skeleton className="h-4 flex-1" />
+            </div>
+          ))}
+        </div>
+
+        <div className="p-6 rounded-xl bg-card/50 border border-border space-y-4">
+          <Skeleton className="h-6 w-48" />
+          <div className="space-y-3">
+            <div className="flex items-center gap-4 p-4 rounded-lg bg-muted/50">
+              <Skeleton className="w-10 h-10 rounded-full" />
+              <div className="flex-1 space-y-2">
+                <Skeleton className="h-4 w-32" />
+                <Skeleton className="h-3 w-48" />
+              </div>
+              <Skeleton className="h-6 w-24 rounded-full" />
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
@@ -334,9 +385,8 @@ export function MemberMembership() {
               <div className="text-left lg:text-right">
                 <p className="text-muted-foreground text-sm mb-1">Days Remaining</p>
                 <p
-                  className={`font-display text-5xl font-bold ${
-                    daysUntilExpiry < 30 ? 'text-red-400' : 'text-lime-500'
-                  }`}
+                  className={`font-display text-5xl font-bold ${daysUntilExpiry < 30 ? 'text-red-400' : 'text-lime-500'
+                    }`}
                 >
                   {daysUntilExpiry}
                 </p>
@@ -375,11 +425,10 @@ export function MemberMembership() {
                       monthlyPlans.map((plan) => (
                         <div
                           key={plan.id}
-                          className={`p-4 rounded-xl border ${
-                            selectedPlan?.id === plan.id
+                          className={`p-4 rounded-xl border ${selectedPlan?.id === plan.id
                               ? 'bg-lime-500/10 border-lime-500/30'
                               : 'bg-muted/50 border-border hover:border-border'
-                          }`}
+                            }`}
                         >
                           <div className="flex items-center justify-between">
                             <div>
@@ -419,11 +468,10 @@ export function MemberMembership() {
                           </ul>
                           <Button
                             variant={selectedPlan?.id === plan.id ? 'default' : 'outline'}
-                            className={`w-full mt-4 ${
-                              selectedPlan?.id === plan.id
+                            className={`w-full mt-4 ${selectedPlan?.id === plan.id
                                 ? 'bg-lime-500 text-primary-foreground hover:bg-lime-400'
                                 : 'border-border text-foreground'
-                            }`}
+                              }`}
                             onClick={() => handleSelectPlanToPay(plan)}
                           >
                             {plan.name === membershipType
@@ -472,9 +520,8 @@ export function MemberMembership() {
                       <button
                         type="button"
                         onClick={() => setAddPersonalTraining(true)}
-                        className={`p-4 rounded-xl border-2 text-left transition-colors ${
-                          addPersonalTraining ? 'border-lime-500 bg-lime-500/10' : 'border-border hover:bg-muted/50'
-                        }`}
+                        className={`p-4 rounded-xl border-2 text-left transition-colors ${addPersonalTraining ? 'border-lime-500 bg-lime-500/10' : 'border-border hover:bg-muted/50'
+                          }`}
                       >
                         <Dumbbell className="w-6 h-6 text-lime-500 mb-2" />
                         <p className="font-medium text-foreground">Yes, add personal training</p>
@@ -483,9 +530,8 @@ export function MemberMembership() {
                       <button
                         type="button"
                         onClick={() => setAddPersonalTraining(false)}
-                        className={`p-4 rounded-xl border-2 text-left transition-colors ${
-                          !addPersonalTraining ? 'border-lime-500 bg-lime-500/10' : 'border-border hover:bg-muted/50'
-                        }`}
+                        className={`p-4 rounded-xl border-2 text-left transition-colors ${!addPersonalTraining ? 'border-lime-500 bg-lime-500/10' : 'border-border hover:bg-muted/50'
+                          }`}
                       >
                         <Check className="w-6 h-6 text-muted-foreground mb-2" />
                         <p className="font-medium text-foreground">No, just the plan</p>

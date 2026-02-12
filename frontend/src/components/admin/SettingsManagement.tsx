@@ -12,6 +12,7 @@ import {
   Eye,
   EyeOff,
 } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -262,6 +263,14 @@ export function SettingsManagement({ isSuperAdmin }: SettingsManagementProps) {
   const [isSaving, setIsSaving] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [personalTrainingPrice, setPersonalTrainingPrice] = useState(500);
+  const [gymLoading, setGymLoading] = useState(true);
+
+  useEffect(() => {
+    if (activeTab === 'gym') {
+      setGymLoading(true);
+      setTimeout(() => setGymLoading(false), 1000);
+    }
+  }, [activeTab]);
 
   const [staffUsers, setStaffUsers] = useState<User[]>([]);
   const [staffLoading, setStaffLoading] = useState(false);
@@ -294,7 +303,7 @@ export function SettingsManagement({ isSuperAdmin }: SettingsManagementProps) {
     if (activeTab === 'gym') {
       getSettings()
         .then((s) => setPersonalTrainingPrice(s.personalTrainingPrice ?? 500))
-        .catch(() => {});
+        .catch(() => { });
     }
   }, [activeTab]);
 
@@ -367,68 +376,100 @@ export function SettingsManagement({ isSuperAdmin }: SettingsManagementProps) {
 
             {/* Logo Upload */}
             <div className="flex items-center gap-6 mb-6">
-              <div className="w-24 h-24 rounded-xl bg-muted/50 border border-border flex items-center justify-center">
-                <Camera className="w-8 h-8 text-muted-foreground" />
-              </div>
+              {gymLoading ? (
+                <Skeleton className="w-24 h-24 rounded-xl" />
+              ) : (
+                <div className="w-24 h-24 rounded-xl bg-muted/50 border border-border flex items-center justify-center">
+                  <Camera className="w-8 h-8 text-muted-foreground" />
+                </div>
+              )}
               <div>
-                <Button variant="outline" className="border-border text-foreground hover:bg-muted/50 mb-2">
-                  <Upload className="w-4 h-4 mr-2" />
-                  Upload Logo
-                </Button>
-                <p className="text-muted-foreground text-sm">Recommended size: 200x200px</p>
+                {gymLoading ? (
+                  <div className="space-y-2">
+                    <Skeleton className="h-10 w-32" />
+                    <Skeleton className="h-4 w-48" />
+                  </div>
+                ) : (
+                  <>
+                    <Button variant="outline" className="border-border text-foreground hover:bg-muted/50 mb-2">
+                      <Upload className="w-4 h-4 mr-2" />
+                      Upload Logo
+                    </Button>
+                    <p className="text-muted-foreground text-sm">Recommended size: 200x200px</p>
+                  </>
+                )}
               </div>
             </div>
 
-            <div className="grid sm:grid-cols-2 gap-6">
-              <div>
-                <label className="text-sm text-muted-foreground mb-2 block">Gym Name</label>
-                <Input
-                  defaultValue="KO Fitness"
-                  className="bg-muted/50 border-border text-foreground"
-                />
+            {gymLoading ? (
+              <div className="grid sm:grid-cols-2 gap-6">
+                {[1, 2, 3, 4].map((i) => (
+                  <div key={i} className="space-y-2">
+                    <Skeleton className="h-4 w-24" />
+                    <Skeleton className="h-10 w-full" />
+                  </div>
+                ))}
+                <div className="sm:col-span-2 space-y-2">
+                  <Skeleton className="h-4 w-24" />
+                  <Skeleton className="h-24 w-full" />
+                </div>
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-32" />
+                  <Skeleton className="h-10 w-full" />
+                </div>
               </div>
-              <div>
-                <label className="text-sm text-muted-foreground mb-2 block">Email</label>
-                <Input
-                  type="email"
-                  defaultValue="info@kofitness.com"
-                  className="bg-muted/50 border-border text-foreground"
-                />
+            ) : (
+              <div className="grid sm:grid-cols-2 gap-6">
+                <div>
+                  <label className="text-sm text-muted-foreground mb-2 block">Gym Name</label>
+                  <Input
+                    defaultValue="KO Fitness"
+                    className="bg-muted/50 border-border text-foreground"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm text-muted-foreground mb-2 block">Email</label>
+                  <Input
+                    type="email"
+                    defaultValue="info@kofitness.com"
+                    className="bg-muted/50 border-border text-foreground"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm text-muted-foreground mb-2 block">Phone</label>
+                  <Input
+                    defaultValue="+1 (555) 123-4567"
+                    className="bg-muted/50 border-border text-foreground"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm text-muted-foreground mb-2 block">Website</label>
+                  <Input
+                    defaultValue="www.gymflow.com"
+                    className="bg-muted/50 border-border text-foreground"
+                  />
+                </div>
+                <div className="sm:col-span-2">
+                  <label className="text-sm text-muted-foreground mb-2 block">Address</label>
+                  <Textarea
+                    defaultValue="123 Fitness Street, Gym City, GC 12345"
+                    className="bg-muted/50 border-border text-foreground resize-none"
+                    rows={3}
+                  />
+                </div>
+                <div>
+                  <label className="text-sm text-muted-foreground mb-2 block">Personal training add-on price (₹)</label>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={personalTrainingPrice}
+                    onChange={(e) => setPersonalTrainingPrice(Math.max(0, Number(e.target.value) || 0))}
+                    className="bg-muted/50 border-border text-foreground"
+                  />
+                  <p className="text-muted-foreground text-xs mt-1">Per member add-on (not part of any plan). Used when members add PT from Membership or Payments.</p>
+                </div>
               </div>
-              <div>
-                <label className="text-sm text-muted-foreground mb-2 block">Phone</label>
-                <Input
-                  defaultValue="+1 (555) 123-4567"
-                  className="bg-muted/50 border-border text-foreground"
-                />
-              </div>
-              <div>
-                <label className="text-sm text-muted-foreground mb-2 block">Website</label>
-                <Input
-                  defaultValue="www.gymflow.com"
-                  className="bg-muted/50 border-border text-foreground"
-                />
-              </div>
-              <div className="sm:col-span-2">
-                <label className="text-sm text-muted-foreground mb-2 block">Address</label>
-                <Textarea
-                  defaultValue="123 Fitness Street, Gym City, GC 12345"
-                  className="bg-muted/50 border-border text-foreground resize-none"
-                  rows={3}
-                />
-              </div>
-              <div>
-                <label className="text-sm text-muted-foreground mb-2 block">Personal training add-on price (₹)</label>
-                <Input
-                  type="number"
-                  min={0}
-                  value={personalTrainingPrice}
-                  onChange={(e) => setPersonalTrainingPrice(Math.max(0, Number(e.target.value) || 0))}
-                  className="bg-muted/50 border-border text-foreground"
-                />
-                <p className="text-muted-foreground text-xs mt-1">Per member add-on (not part of any plan). Used when members add PT from Membership or Payments.</p>
-              </div>
-            </div>
+            )}
           </div>
 
           {/* Working Hours */}
@@ -563,7 +604,26 @@ export function SettingsManagement({ isSuperAdmin }: SettingsManagementProps) {
                 </div>
 
                 {staffLoading ? (
-                  <p className="text-muted-foreground py-8">Loading staff...</p>
+                  <div className="space-y-4">
+                    {Array.from({ length: 3 }).map((_, i) => (
+                      <div key={i} className="flex items-center justify-between p-4 rounded-lg bg-muted/50 border border-border">
+                        <div className="flex items-center gap-4">
+                          <Skeleton className="w-10 h-10 rounded-full" />
+                          <div className="space-y-2">
+                            <Skeleton className="h-4 w-32" />
+                            <Skeleton className="h-3 w-48" />
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-6">
+                          <div className="space-y-2 text-right">
+                            <Skeleton className="h-4 w-24 ml-auto" />
+                            <Skeleton className="h-3 w-16 ml-auto" />
+                          </div>
+                          <Skeleton className="h-8 w-8 rounded-md" />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 ) : (
                   <div className="space-y-4">
                     {staffUsers.map((staff) => (
