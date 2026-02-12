@@ -13,6 +13,7 @@ import {
   Ruler,
   User as UserIcon,
   Trash2,
+  Download,
 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
@@ -39,6 +40,15 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from '@/components/ui/pagination';
 import { Badge } from '@/components/ui/badge';
 import { getMembers, createMember, updateMember, deleteMember } from '@/api/members';
 import { getMembershipPlans } from '@/api/membership-plans';
@@ -80,6 +90,8 @@ export function MembersManagement() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [planFilter, setPlanFilter] = useState<string>('all');
   const [ptFilter, setPtFilter] = useState<string>('all');
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [newMemberData, setNewMemberData] = useState({
     firstName: '',
@@ -173,6 +185,17 @@ export function MembersManagement() {
     return matchesSearch && matchesStatus && matchesPlan && matchesPT;
   });
 
+  const totalPages = Math.ceil(filteredMembers.length / itemsPerPage);
+  const paginatedMembers = filteredMembers.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
+  // Reset to first page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, statusFilter, planFilter, ptFilter]);
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'active':
@@ -186,6 +209,65 @@ export function MembersManagement() {
     }
   };
 
+  const handleExport = () => {
+    const headers = [
+      'Member ID',
+      'Name',
+      'Mobile',
+      'Status',
+      'Membership Plan',
+      'Plan Expiry',
+      'Personal Training',
+      'Assigned Trainer',
+      'Weight (kg)',
+      'Height (cm)',
+      'Age',
+      'Fitness Goals',
+      'Emergency Contact Name',
+      'Emergency Contact Phone',
+      'Joined Date'
+    ];
+
+    const escapeCSV = (val: any) => {
+      if (val === null || val === undefined) return '';
+      const s = String(val);
+      if (s.includes(',') || s.includes('"') || s.includes('\n')) {
+        return `"${s.replace(/"/g, '""')}"`;
+      }
+      return s;
+    };
+
+    const rows = filteredMembers.map((member) => {
+      return [
+        member.membershipId,
+        member.name,
+        member.phone,
+        member.status,
+        member.membershipType || 'None',
+        member.membershipExpiry ? formatDate(member.membershipExpiry) : '—',
+        member.hasPersonalTraining ? 'Yes' : 'No',
+        member.assignedTrainer?.name || '—',
+        member.onboardingData?.weight || '—',
+        member.onboardingData?.height || '—',
+        member.onboardingData?.age || '—',
+        member.onboardingData?.fitnessGoals?.join('; ') || '—',
+        member.onboardingData?.emergencyContact?.name || '—',
+        member.onboardingData?.emergencyContact?.phone || '—',
+        member.createdAt ? formatDate(member.createdAt) : '—'
+      ].map(escapeCSV);
+    });
+
+    const csvContent = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `ko_fitness_members_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
@@ -194,156 +276,27 @@ export function MembersManagement() {
           <h1 className="font-display text-3xl font-bold text-foreground">Members</h1>
           <p className="text-muted-foreground">Manage gym members and their memberships</p>
         </div>
-        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="bg-gradient-to-r from-ko-500 to-ko-600 text-primary-foreground hover:from-ko-600 hover:to-ko-700">
-              <Plus className="w-4 h-4 mr-2" />
-              Add Member
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="bg-card border-border text-foreground max-w-lg max-h-[90vh] flex flex-col p-4 sm:p-6">
-            <DialogHeader className="shrink-0">
-              <DialogTitle className="font-display text-2xl">Add New Member</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4 pt-4 overflow-y-auto flex-1 min-h-0 pr-1">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm text-muted-foreground mb-2 block">First Name</label>
-                  <Input
-                    className="bg-muted/50 border-border text-foreground"
-                    placeholder="John"
-                    value={newMemberData.firstName}
-                    onChange={(e) => setNewMemberData({ ...newMemberData, firstName: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <label className="text-sm text-muted-foreground mb-2 block">Last Name</label>
-                  <Input
-                    className="bg-muted/50 border-border text-foreground"
-                    placeholder="Doe"
-                    value={newMemberData.lastName}
-                    onChange={(e) => setNewMemberData({ ...newMemberData, lastName: e.target.value })}
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="text-sm text-muted-foreground mb-2 block">Mobile Number</label>
-                <Input
-                  className="bg-muted/50 border-border text-foreground"
-                  placeholder="9876543210"
-                  value={newMemberData.mobile}
-                  onChange={(e) => setNewMemberData({ ...newMemberData, mobile: e.target.value })}
-                  pattern="[0-9]{10}"
-                  maxLength={10}
-                />
-              </div>
-              <div>
-                <label className="text-sm text-muted-foreground mb-2 block">Password</label>
-                <Input
-                  type="password"
-                  className="bg-muted/50 border-border text-foreground"
-                  placeholder="••••••••"
-                  value={newMemberData.password}
-                  onChange={(e) => setNewMemberData({ ...newMemberData, password: e.target.value })}
-                />
-              </div>
-              <div>
-                <label className="text-sm text-muted-foreground mb-2 block">Membership Plan</label>
-                <select
-                  className="w-full h-10 px-3 rounded-md bg-muted/50 border border-border text-foreground"
-                  value={newMemberData.membershipPlan}
-                  onChange={(e) => setNewMemberData({ ...newMemberData, membershipPlan: e.target.value })}
-                >
-                  <option value="">Select a plan (optional)</option>
-                  {plans.filter(p => p.isActive && !p.isAddOn).map((plan) => (
-                    <option key={plan.id} value={plan.id}>{plan.name} - ₹{plan.price}/{plan.duration === 1 ? 'mo' : `${plan.duration}mo`}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="flex items-center gap-3 p-4 rounded-lg bg-muted/50 border border-border">
-                <input
-                  type="checkbox"
-                  id="hasPT"
-                  checked={newMemberData.hasPersonalTraining}
-                  onChange={(e) => setNewMemberData({ ...newMemberData, hasPersonalTraining: e.target.checked, assignedTrainerId: e.target.checked ? newMemberData.assignedTrainerId : '' })}
-                  className="w-4 h-4 rounded border-border accent-ko-500"
-                />
-                <label htmlFor="hasPT" className="text-sm text-foreground cursor-pointer flex items-center gap-2">
-                  <Dumbbell className="w-4 h-4 text-ko-500" />
-                  Has Personal Training
-                </label>
-              </div>
-              {newMemberData.hasPersonalTraining && (
-                <div>
-                  <label className="text-sm text-muted-foreground mb-2 block">Assign Trainer</label>
-                  <select
-                    className="w-full h-10 px-3 rounded-md bg-muted/50 border border-border text-foreground"
-                    value={newMemberData.assignedTrainerId}
-                    onChange={(e) => setNewMemberData({ ...newMemberData, assignedTrainerId: e.target.value })}
-                  >
-                    <option value="">Select a trainer (optional)</option>
-                    {trainers.map((trainer) => (
-                      <option key={trainer.id} value={trainer.id}>
-                        {trainer.name} {trainer.specialization.length > 0 ? `- ${trainer.specialization[0]}` : ''}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
-              <Button
-                className="w-full bg-gradient-to-r from-ko-500 to-ko-600 text-primary-foreground hover:from-ko-600 hover:to-ko-700"
-                disabled={saving}
-                onClick={async () => {
-                  if (!newMemberData.firstName || !newMemberData.lastName || !newMemberData.mobile || !newMemberData.password) {
-                    toast.error('Please fill all required fields');
-                    return;
-                  }
-                  if (newMemberData.password.length < 6) {
-                    toast.error('Password must be at least 6 characters');
-                    return;
-                  }
-                  setSaving(true);
-                  try {
-                    await createMember({
-                      name: `${newMemberData.firstName} ${newMemberData.lastName}`,
-                      phone: newMemberData.mobile,
-                      password: newMemberData.password,
-                      membershipPlanId: newMemberData.membershipPlan || undefined,
-                      hasPersonalTraining: newMemberData.hasPersonalTraining,
-                      assignedTrainerId: newMemberData.hasPersonalTraining && newMemberData.assignedTrainerId ? newMemberData.assignedTrainerId : undefined,
-                    });
-                    toast.success('Member created successfully');
-                    setIsAddDialogOpen(false);
-                    setNewMemberData({
-                      firstName: '',
-                      lastName: '',
-                      mobile: '',
-                      password: '',
-                      membershipPlan: '',
-                      hasPersonalTraining: false,
-                      assignedTrainerId: '',
-                    });
-                    loadMembers();
-                  } catch (err: unknown) {
-                    toast.error(err instanceof Error ? err.message : 'Failed to create member');
-                  } finally {
-                    setSaving(false);
-                  }
-                }}
-              >
-                {saving ? 'Creating...' : 'Create Member'}
+        <div className="flex gap-3">
+          <Button
+            variant="outline"
+            className="border-border text-foreground hover:bg-muted/50"
+            onClick={handleExport}
+            disabled={filteredMembers.length === 0}
+          >
+            <Download className="w-4 h-4 mr-2" />
+            Export
+          </Button>
+          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+            <DialogTrigger asChild>
+              <Button className="bg-gradient-to-r from-ko-500 to-ko-600 text-primary-foreground hover:from-ko-600 hover:to-ko-700">
+                <Plus className="w-4 h-4 mr-2" />
+                Add Member
               </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
-
-        {/* Edit Member Dialog */}
-        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-          <DialogContent className="bg-card border-border text-foreground max-w-lg max-h-[90vh] flex flex-col p-4 sm:p-6">
-            <DialogHeader className="shrink-0">
-              <DialogTitle className="font-display text-2xl">Edit Member</DialogTitle>
-            </DialogHeader>
-            {editingMember && (
+            </DialogTrigger>
+            <DialogContent className="bg-card border-border text-foreground max-w-lg max-h-[90vh] flex flex-col p-4 sm:p-6">
+              <DialogHeader className="shrink-0">
+                <DialogTitle className="font-display text-2xl">Add New Member</DialogTitle>
+              </DialogHeader>
               <div className="space-y-4 pt-4 overflow-y-auto flex-1 min-h-0 pr-1">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
@@ -351,8 +304,8 @@ export function MembersManagement() {
                     <Input
                       className="bg-muted/50 border-border text-foreground"
                       placeholder="John"
-                      value={editingMember.firstName}
-                      onChange={(e) => setEditingMember({ ...editingMember, firstName: e.target.value })}
+                      value={newMemberData.firstName}
+                      onChange={(e) => setNewMemberData({ ...newMemberData, firstName: e.target.value })}
                     />
                   </div>
                   <div>
@@ -360,8 +313,8 @@ export function MembersManagement() {
                     <Input
                       className="bg-muted/50 border-border text-foreground"
                       placeholder="Doe"
-                      value={editingMember.lastName}
-                      onChange={(e) => setEditingMember({ ...editingMember, lastName: e.target.value })}
+                      value={newMemberData.lastName}
+                      onChange={(e) => setNewMemberData({ ...newMemberData, lastName: e.target.value })}
                     />
                   </div>
                 </div>
@@ -370,30 +323,30 @@ export function MembersManagement() {
                   <Input
                     className="bg-muted/50 border-border text-foreground"
                     placeholder="9876543210"
-                    value={editingMember.mobile}
-                    onChange={(e) => setEditingMember({ ...editingMember, mobile: e.target.value })}
+                    value={newMemberData.mobile}
+                    onChange={(e) => setNewMemberData({ ...newMemberData, mobile: e.target.value })}
+                    pattern="[0-9]{10}"
+                    maxLength={10}
                   />
                 </div>
                 <div>
-                  <label className="text-sm text-muted-foreground mb-2 block">Status</label>
-                  <select
-                    className="w-full h-10 px-3 rounded-md bg-muted/50 border border-border text-foreground"
-                    value={editingMember.status}
-                    onChange={(e) => setEditingMember({ ...editingMember, status: e.target.value as Member['status'] })}
-                  >
-                    <option value="active">Active</option>
-                    <option value="inactive">Inactive</option>
-                    <option value="suspended">Suspended</option>
-                  </select>
+                  <label className="text-sm text-muted-foreground mb-2 block">Password</label>
+                  <Input
+                    type="password"
+                    className="bg-muted/50 border-border text-foreground"
+                    placeholder="••••••••"
+                    value={newMemberData.password}
+                    onChange={(e) => setNewMemberData({ ...newMemberData, password: e.target.value })}
+                  />
                 </div>
                 <div>
                   <label className="text-sm text-muted-foreground mb-2 block">Membership Plan</label>
                   <select
                     className="w-full h-10 px-3 rounded-md bg-muted/50 border border-border text-foreground"
-                    value={editingMember.membershipPlanId || ''}
-                    onChange={(e) => setEditingMember({ ...editingMember, membershipPlanId: e.target.value })}
+                    value={newMemberData.membershipPlan}
+                    onChange={(e) => setNewMemberData({ ...newMemberData, membershipPlan: e.target.value })}
                   >
-                    <option value="">No plan</option>
+                    <option value="">Select a plan (optional)</option>
                     {plans.filter(p => p.isActive && !p.isAddOn).map((plan) => (
                       <option key={plan.id} value={plan.id}>{plan.name} - ₹{plan.price}/{plan.duration === 1 ? 'mo' : `${plan.duration}mo`}</option>
                     ))}
@@ -402,25 +355,25 @@ export function MembersManagement() {
                 <div className="flex items-center gap-3 p-4 rounded-lg bg-muted/50 border border-border">
                   <input
                     type="checkbox"
-                    id="edit-hasPT"
-                    checked={editingMember.hasPersonalTraining}
-                    onChange={(e) => setEditingMember({ ...editingMember, hasPersonalTraining: e.target.checked, assignedTrainerId: e.target.checked ? editingMember.assignedTrainerId : '' })}
+                    id="hasPT"
+                    checked={newMemberData.hasPersonalTraining}
+                    onChange={(e) => setNewMemberData({ ...newMemberData, hasPersonalTraining: e.target.checked, assignedTrainerId: e.target.checked ? newMemberData.assignedTrainerId : '' })}
                     className="w-4 h-4 rounded border-border accent-ko-500"
                   />
-                  <label htmlFor="edit-hasPT" className="text-sm text-foreground cursor-pointer flex items-center gap-2">
+                  <label htmlFor="hasPT" className="text-sm text-foreground cursor-pointer flex items-center gap-2">
                     <Dumbbell className="w-4 h-4 text-ko-500" />
                     Has Personal Training
                   </label>
                 </div>
-                {editingMember.hasPersonalTraining && (
+                {newMemberData.hasPersonalTraining && (
                   <div>
                     <label className="text-sm text-muted-foreground mb-2 block">Assign Trainer</label>
                     <select
                       className="w-full h-10 px-3 rounded-md bg-muted/50 border border-border text-foreground"
-                      value={editingMember.assignedTrainerId || ''}
-                      onChange={(e) => setEditingMember({ ...editingMember, assignedTrainerId: e.target.value })}
+                      value={newMemberData.assignedTrainerId}
+                      onChange={(e) => setNewMemberData({ ...newMemberData, assignedTrainerId: e.target.value })}
                     >
-                      <option value="">No trainer assigned</option>
+                      <option value="">Select a trainer (optional)</option>
                       {trainers.map((trainer) => (
                         <option key={trainer.id} value={trainer.id}>
                           {trainer.name} {trainer.specialization.length > 0 ? `- ${trainer.specialization[0]}` : ''}
@@ -433,109 +386,249 @@ export function MembersManagement() {
                   className="w-full bg-gradient-to-r from-ko-500 to-ko-600 text-primary-foreground hover:from-ko-600 hover:to-ko-700"
                   disabled={saving}
                   onClick={async () => {
-                    if (!editingMember) return;
-                    if (!editingMember.firstName || !editingMember.lastName || !editingMember.mobile) {
+                    if (!newMemberData.firstName || !newMemberData.lastName || !newMemberData.mobile || !newMemberData.password) {
                       toast.error('Please fill all required fields');
+                      return;
+                    }
+                    if (newMemberData.password.length < 6) {
+                      toast.error('Password must be at least 6 characters');
                       return;
                     }
                     setSaving(true);
                     try {
-                      await updateMember(editingMember.id, {
-                        name: `${editingMember.firstName} ${editingMember.lastName}`,
-                        phone: editingMember.mobile,
-                        status: editingMember.status,
-                        membershipPlanId: editingMember.membershipPlanId || null,
-                        hasPersonalTraining: editingMember.hasPersonalTraining,
-                        assignedTrainerId: editingMember.hasPersonalTraining && editingMember.assignedTrainerId ? editingMember.assignedTrainerId : null,
+                      await createMember({
+                        name: `${newMemberData.firstName} ${newMemberData.lastName}`,
+                        phone: newMemberData.mobile,
+                        password: newMemberData.password,
+                        membershipPlanId: newMemberData.membershipPlan || undefined,
+                        hasPersonalTraining: newMemberData.hasPersonalTraining,
+                        assignedTrainerId: newMemberData.hasPersonalTraining && newMemberData.assignedTrainerId ? newMemberData.assignedTrainerId : undefined,
                       });
-                      toast.success('Member updated successfully');
-                      setIsEditDialogOpen(false);
+                      toast.success('Member created successfully');
+                      setIsAddDialogOpen(false);
+                      setNewMemberData({
+                        firstName: '',
+                        lastName: '',
+                        mobile: '',
+                        password: '',
+                        membershipPlan: '',
+                        hasPersonalTraining: false,
+                        assignedTrainerId: '',
+                      });
                       loadMembers();
                     } catch (err: unknown) {
-                      toast.error(err instanceof Error ? err.message : 'Failed to update member');
+                      toast.error(err instanceof Error ? err.message : 'Failed to create member');
                     } finally {
                       setSaving(false);
                     }
                   }}
                 >
-                  {saving ? 'Saving...' : 'Save Changes'}
+                  {saving ? 'Creating...' : 'Create Member'}
                 </Button>
               </div>
-            )}
-          </DialogContent>
-        </Dialog>
+            </DialogContent>
+          </Dialog>
+        </div>
+      </div>
 
-        {/* Member Details / Metrics Dialog */}
-        <Dialog open={isDetailsDialogOpen} onOpenChange={setIsDetailsDialogOpen}>
-          <DialogContent className="bg-card border-border text-foreground max-w-lg max-h-[90vh] flex flex-col p-4 sm:p-6">
-            <DialogHeader className="shrink-0">
-              <DialogTitle className="font-display text-2xl">Member Metrics</DialogTitle>
-            </DialogHeader>
-            {selectedMemberForDetails && (
-              <div className="space-y-6 pt-4 overflow-y-auto flex-1 min-h-0 pr-1">
-                <div className="flex items-center gap-4 p-4 rounded-xl bg-muted/30 border border-border">
-                  <div className="w-12 h-12 rounded-full bg-ko-500/10 flex items-center justify-center text-ko-500 font-bold text-xl">
-                    {selectedMemberForDetails.name.charAt(0)}
+      {/* Edit Member Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="bg-card border-border text-foreground max-w-lg max-h-[90vh] flex flex-col p-4 sm:p-6">
+          <DialogHeader className="shrink-0">
+            <DialogTitle className="font-display text-2xl">Edit Member</DialogTitle>
+          </DialogHeader>
+          {editingMember && (
+            <div className="space-y-4 pt-4 overflow-y-auto flex-1 min-h-0 pr-1">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm text-muted-foreground mb-2 block">First Name</label>
+                  <Input
+                    className="bg-muted/50 border-border text-foreground"
+                    placeholder="John"
+                    value={editingMember.firstName}
+                    onChange={(e) => setEditingMember({ ...editingMember, firstName: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className="text-sm text-muted-foreground mb-2 block">Last Name</label>
+                  <Input
+                    className="bg-muted/50 border-border text-foreground"
+                    placeholder="Doe"
+                    value={editingMember.lastName}
+                    onChange={(e) => setEditingMember({ ...editingMember, lastName: e.target.value })}
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="text-sm text-muted-foreground mb-2 block">Mobile Number</label>
+                <Input
+                  className="bg-muted/50 border-border text-foreground"
+                  placeholder="9876543210"
+                  value={editingMember.mobile}
+                  onChange={(e) => setEditingMember({ ...editingMember, mobile: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="text-sm text-muted-foreground mb-2 block">Status</label>
+                <select
+                  className="w-full h-10 px-3 rounded-md bg-muted/50 border border-border text-foreground"
+                  value={editingMember.status}
+                  onChange={(e) => setEditingMember({ ...editingMember, status: e.target.value as Member['status'] })}
+                >
+                  <option value="active">Active</option>
+                  <option value="inactive">Inactive</option>
+                  <option value="suspended">Suspended</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-sm text-muted-foreground mb-2 block">Membership Plan</label>
+                <select
+                  className="w-full h-10 px-3 rounded-md bg-muted/50 border border-border text-foreground"
+                  value={editingMember.membershipPlanId || ''}
+                  onChange={(e) => setEditingMember({ ...editingMember, membershipPlanId: e.target.value })}
+                >
+                  <option value="">No plan</option>
+                  {plans.filter(p => p.isActive && !p.isAddOn).map((plan) => (
+                    <option key={plan.id} value={plan.id}>{plan.name} - ₹{plan.price}/{plan.duration === 1 ? 'mo' : `${plan.duration}mo`}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex items-center gap-3 p-4 rounded-lg bg-muted/50 border border-border">
+                <input
+                  type="checkbox"
+                  id="edit-hasPT"
+                  checked={editingMember.hasPersonalTraining}
+                  onChange={(e) => setEditingMember({ ...editingMember, hasPersonalTraining: e.target.checked, assignedTrainerId: e.target.checked ? editingMember.assignedTrainerId : '' })}
+                  className="w-4 h-4 rounded border-border accent-ko-500"
+                />
+                <label htmlFor="edit-hasPT" className="text-sm text-foreground cursor-pointer flex items-center gap-2">
+                  <Dumbbell className="w-4 h-4 text-ko-500" />
+                  Has Personal Training
+                </label>
+              </div>
+              {editingMember.hasPersonalTraining && (
+                <div>
+                  <label className="text-sm text-muted-foreground mb-2 block">Assign Trainer</label>
+                  <select
+                    className="w-full h-10 px-3 rounded-md bg-muted/50 border border-border text-foreground"
+                    value={editingMember.assignedTrainerId || ''}
+                    onChange={(e) => setEditingMember({ ...editingMember, assignedTrainerId: e.target.value })}
+                  >
+                    <option value="">No trainer assigned</option>
+                    {trainers.map((trainer) => (
+                      <option key={trainer.id} value={trainer.id}>
+                        {trainer.name} {trainer.specialization.length > 0 ? `- ${trainer.specialization[0]}` : ''}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+              <Button
+                className="w-full bg-gradient-to-r from-ko-500 to-ko-600 text-primary-foreground hover:from-ko-600 hover:to-ko-700"
+                disabled={saving}
+                onClick={async () => {
+                  if (!editingMember) return;
+                  if (!editingMember.firstName || !editingMember.lastName || !editingMember.mobile) {
+                    toast.error('Please fill all required fields');
+                    return;
+                  }
+                  setSaving(true);
+                  try {
+                    await updateMember(editingMember.id, {
+                      name: `${editingMember.firstName} ${editingMember.lastName}`,
+                      phone: editingMember.mobile,
+                      status: editingMember.status,
+                      membershipPlanId: editingMember.membershipPlanId || null,
+                      hasPersonalTraining: editingMember.hasPersonalTraining,
+                      assignedTrainerId: editingMember.hasPersonalTraining && editingMember.assignedTrainerId ? editingMember.assignedTrainerId : null,
+                    });
+                    toast.success('Member updated successfully');
+                    setIsEditDialogOpen(false);
+                    loadMembers();
+                  } catch (err: unknown) {
+                    toast.error(err instanceof Error ? err.message : 'Failed to update member');
+                  } finally {
+                    setSaving(false);
+                  }
+                }}
+              >
+                {saving ? 'Saving...' : 'Save Changes'}
+              </Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Member Details / Metrics Dialog */}
+      <Dialog open={isDetailsDialogOpen} onOpenChange={setIsDetailsDialogOpen}>
+        <DialogContent className="bg-card border-border text-foreground max-w-lg max-h-[90vh] flex flex-col p-4 sm:p-6">
+          <DialogHeader className="shrink-0">
+            <DialogTitle className="font-display text-2xl">Member Metrics</DialogTitle>
+          </DialogHeader>
+          {selectedMemberForDetails && (
+            <div className="space-y-6 pt-4 overflow-y-auto flex-1 min-h-0 pr-1">
+              <div className="flex items-center gap-4 p-4 rounded-xl bg-muted/30 border border-border">
+                <div className="w-12 h-12 rounded-full bg-ko-500/10 flex items-center justify-center text-ko-500 font-bold text-xl">
+                  {selectedMemberForDetails.name.charAt(0)}
+                </div>
+                <div>
+                  <h3 className="font-bold text-lg">{selectedMemberForDetails.name}</h3>
+                  <p className="text-sm text-muted-foreground">{selectedMemberForDetails.membershipId} • {selectedMemberForDetails.membershipType} Plan</p>
+                </div>
+              </div>
+
+              {selectedMemberForDetails.onboardingData ? (
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="p-4 rounded-xl bg-muted/50 border border-border space-y-1">
+                    <div className="flex items-center gap-2 text-muted-foreground text-xs uppercase tracking-wider font-semibold">
+                      <Scale className="w-3 h-3 text-ko-500" /> Weight
+                    </div>
+                    <p className="text-xl font-bold">{selectedMemberForDetails.onboardingData.weight} <span className="text-sm font-normal text-muted-foreground">kg</span></p>
                   </div>
-                  <div>
-                    <h3 className="font-bold text-lg">{selectedMemberForDetails.name}</h3>
-                    <p className="text-sm text-muted-foreground">{selectedMemberForDetails.membershipId} • {selectedMemberForDetails.membershipType} Plan</p>
+                  <div className="p-4 rounded-xl bg-muted/50 border border-border space-y-1">
+                    <div className="flex items-center gap-2 text-muted-foreground text-xs uppercase tracking-wider font-semibold">
+                      <Ruler className="w-3 h-3 text-ko-500" /> Height
+                    </div>
+                    <p className="text-xl font-bold">{selectedMemberForDetails.onboardingData.height} <span className="text-sm font-normal text-muted-foreground">cm</span></p>
+                  </div>
+                  <div className="p-4 rounded-xl bg-muted/50 border border-border space-y-1">
+                    <div className="flex items-center gap-2 text-muted-foreground text-xs uppercase tracking-wider font-semibold">
+                      <UserIcon className="w-3 h-3 text-ko-500" /> Age
+                    </div>
+                    <p className="text-xl font-bold">{selectedMemberForDetails.onboardingData.age} <span className="text-sm font-normal text-muted-foreground">years</span></p>
+                  </div>
+                  <div className="p-4 rounded-xl bg-muted/50 border border-border space-y-1">
+                    <div className="flex items-center gap-2 text-muted-foreground text-xs uppercase tracking-wider font-semibold">
+                      <Activity className="w-3 h-3 text-ko-500" /> Goals
+                    </div>
+                    <div className="flex flex-wrap gap-1">
+                      {selectedMemberForDetails.onboardingData.fitnessGoals?.map((goal: string) => (
+                        <Badge key={goal} variant="secondary" className="text-[10px] px-1.5 py-0">
+                          {goal}
+                        </Badge>
+                      ))}
+                    </div>
                   </div>
                 </div>
+              ) : (
+                <div className="p-8 text-center border-2 border-dashed border-border rounded-2xl">
+                  <p className="text-muted-foreground italic">Onboarding incomplete for this member.</p>
+                </div>
+              )}
 
-                {selectedMemberForDetails.onboardingData ? (
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="p-4 rounded-xl bg-muted/50 border border-border space-y-1">
-                      <div className="flex items-center gap-2 text-muted-foreground text-xs uppercase tracking-wider font-semibold">
-                        <Scale className="w-3 h-3 text-ko-500" /> Weight
-                      </div>
-                      <p className="text-xl font-bold">{selectedMemberForDetails.onboardingData.weight} <span className="text-sm font-normal text-muted-foreground">kg</span></p>
-                    </div>
-                    <div className="p-4 rounded-xl bg-muted/50 border border-border space-y-1">
-                      <div className="flex items-center gap-2 text-muted-foreground text-xs uppercase tracking-wider font-semibold">
-                        <Ruler className="w-3 h-3 text-ko-500" /> Height
-                      </div>
-                      <p className="text-xl font-bold">{selectedMemberForDetails.onboardingData.height} <span className="text-sm font-normal text-muted-foreground">cm</span></p>
-                    </div>
-                    <div className="p-4 rounded-xl bg-muted/50 border border-border space-y-1">
-                      <div className="flex items-center gap-2 text-muted-foreground text-xs uppercase tracking-wider font-semibold">
-                        <UserIcon className="w-3 h-3 text-ko-500" /> Age
-                      </div>
-                      <p className="text-xl font-bold">{selectedMemberForDetails.onboardingData.age} <span className="text-sm font-normal text-muted-foreground">years</span></p>
-                    </div>
-                    <div className="p-4 rounded-xl bg-muted/50 border border-border space-y-1">
-                      <div className="flex items-center gap-2 text-muted-foreground text-xs uppercase tracking-wider font-semibold">
-                        <Activity className="w-3 h-3 text-ko-500" /> Goals
-                      </div>
-                      <div className="flex flex-wrap gap-1">
-                        {selectedMemberForDetails.onboardingData.fitnessGoals?.map((goal: string) => (
-                          <Badge key={goal} variant="secondary" className="text-[10px] px-1.5 py-0">
-                            {goal}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
+              {selectedMemberForDetails.onboardingData?.emergencyContact && (
+                <div className="space-y-3">
+                  <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Emergency Contact</h4>
+                  <div className="p-4 rounded-xl bg-red-500/5 border border-red-500/10">
+                    <p className="font-bold text-foreground">{selectedMemberForDetails.onboardingData.emergencyContact.name}</p>
+                    <p className="text-sm text-muted-foreground">+91 {selectedMemberForDetails.onboardingData.emergencyContact.phone}</p>
                   </div>
-                ) : (
-                  <div className="p-8 text-center border-2 border-dashed border-border rounded-2xl">
-                    <p className="text-muted-foreground italic">Onboarding incomplete for this member.</p>
-                  </div>
-                )}
-
-                {selectedMemberForDetails.onboardingData?.emergencyContact && (
-                  <div className="space-y-3">
-                    <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Emergency Contact</h4>
-                    <div className="p-4 rounded-xl bg-red-500/5 border border-red-500/10">
-                      <p className="font-bold text-foreground">{selectedMemberForDetails.onboardingData.emergencyContact.name}</p>
-                      <p className="text-sm text-muted-foreground">+91 {selectedMemberForDetails.onboardingData.emergencyContact.phone}</p>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-          </DialogContent>
-        </Dialog>
-      </div>
+                </div>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-4">
@@ -566,9 +659,9 @@ export function MembersManagement() {
             className="h-10 px-4 rounded-lg bg-muted/50 border border-border text-foreground text-sm"
           >
             <option value="all">All Plans</option>
-            <option value="Basic">Basic</option>
-            <option value="Pro">Pro</option>
-            <option value="Elite">Elite</option>
+            {plans.filter(p => p.isActive && !p.isAddOn).map((plan) => (
+              <option key={plan.id} value={plan.name}>{plan.name}</option>
+            ))}
           </select>
           <select
             value={ptFilter}
@@ -600,7 +693,7 @@ export function MembersManagement() {
             {loading ? (
               Array.from({ length: 5 }).map((_, i) => <RowSkeleton key={i} />)
             ) : (
-              filteredMembers.map((member) => (
+              paginatedMembers.map((member) => (
                 <TableRow key={member.id} className="border-border hover:bg-muted/50">
                   <TableCell>
                     <div className="flex items-center gap-3">
@@ -696,19 +789,74 @@ export function MembersManagement() {
       </div>
 
       {/* Pagination */}
-      <div className="flex items-center justify-between">
-        <p className="text-muted-foreground text-sm">
-          Showing {filteredMembers.length} of {members.length} members
-        </p>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" className="border-border text-muted-foreground" disabled>
-            Previous
-          </Button>
-          <Button variant="outline" size="sm" className="border-border text-muted-foreground" disabled>
-            Next
-          </Button>
-        </div>
-      </div>
-    </div>
+      {
+        totalPages > 1 && (
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+            <p className="text-muted-foreground text-sm">
+              Showing {(currentPage - 1) * itemsPerPage + 1} to {Math.min(currentPage * itemsPerPage, filteredMembers.length)} of {filteredMembers.length} members
+            </p>
+            <Pagination className="w-auto mx-0">
+              <PaginationContent>
+                <PaginationItem>
+                  <PaginationPrevious
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      if (currentPage > 1) setCurrentPage(currentPage - 1);
+                    }}
+                    className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                  />
+                </PaginationItem>
+
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
+                  if (
+                    page === 1 ||
+                    page === totalPages ||
+                    (page >= currentPage - 1 && page <= currentPage + 1)
+                  ) {
+                    return (
+                      <PaginationItem key={page}>
+                        <PaginationLink
+                          href="#"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            setCurrentPage(page);
+                          }}
+                          isActive={currentPage === page}
+                          className="cursor-pointer"
+                        >
+                          {page}
+                        </PaginationLink>
+                      </PaginationItem>
+                    );
+                  } else if (
+                    (page === 2 && currentPage > 3) ||
+                    (page === totalPages - 1 && currentPage < totalPages - 2)
+                  ) {
+                    return (
+                      <PaginationItem key={page}>
+                        <PaginationEllipsis />
+                      </PaginationItem>
+                    );
+                  }
+                  return null;
+                })}
+
+                <PaginationItem>
+                  <PaginationNext
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      if (currentPage < totalPages) setCurrentPage(currentPage + 1);
+                    }}
+                    className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
+          </div>
+        )
+      }
+    </div >
   );
 }

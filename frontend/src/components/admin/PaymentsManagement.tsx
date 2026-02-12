@@ -12,6 +12,7 @@ import {
   Receipt,
   Info,
   Wallet,
+  Calendar,
 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
@@ -30,6 +31,15 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from '@/components/ui/pagination';
 import {
   Dialog,
   DialogContent,
@@ -113,9 +123,15 @@ export function PaymentsManagement() {
   const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [viewPayment, setViewPayment] = useState<Payment | null>(null);
+  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
+
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [dateFilter, setDateFilter] = useState('all');
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   const [formMemberId, setFormMemberId] = useState('');
   const [formAmount, setFormAmount] = useState('');
@@ -157,68 +173,163 @@ export function PaymentsManagement() {
       p.memberName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       p.invoiceNumber.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = statusFilter === 'all' || p.status === statusFilter;
-    return matchesSearch && matchesStatus;
+
+    let matchesDate = true;
+    if (dateFilter !== 'all' && p.date) {
+      const d = new Date(p.date);
+      const now = new Date();
+      const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+      switch (dateFilter) {
+        case 'today':
+          matchesDate = d >= startOfToday;
+          break;
+        case 'yesterday': {
+          const startOfYesterday = new Date(startOfToday);
+          startOfYesterday.setDate(startOfYesterday.getDate() - 1);
+          matchesDate = d >= startOfYesterday && d < startOfToday;
+          break;
+        }
+        case 'this_week': {
+          const startOfWeek = new Date(startOfToday);
+          startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
+          matchesDate = d >= startOfWeek;
+          break;
+        }
+        case 'last_week': {
+          const startOfThisWeek = new Date(startOfToday);
+          startOfThisWeek.setDate(startOfThisWeek.getDate() - startOfThisWeek.getDay());
+          const startOfLastWeek = new Date(startOfThisWeek);
+          startOfLastWeek.setDate(startOfLastWeek.getDate() - 7);
+          matchesDate = d >= startOfLastWeek && d < startOfThisWeek;
+          break;
+        }
+        case 'this_month': {
+          const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+          matchesDate = d >= startOfMonth;
+          break;
+        }
+        case 'last_month': {
+          const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+          const startOfThisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+          matchesDate = d >= startOfLastMonth && d < startOfThisMonth;
+          break;
+        }
+        case 'this_year': {
+          const startOfYear = new Date(now.getFullYear(), 0, 1);
+          matchesDate = d >= startOfYear;
+          break;
+        }
+      }
+    } else if (dateFilter !== 'all' && !p.date) {
+      matchesDate = false;
+    }
+
+    return matchesSearch && matchesStatus && matchesDate;
   });
 
-  const totalRevenue = payments.filter((p) => p.status === 'paid').reduce((sum, p) => sum + p.amount, 0);
-  const pendingAmount = payments.filter((p) => p.status === 'pending').reduce((sum, p) => sum + p.amount, 0);
-  const overdueAmount = payments.filter((p) => p.status === 'overdue').reduce((sum, p) => sum + p.amount, 0);
-  const now = new Date();
-  const thisMonthRevenue = payments
-    .filter((p) => {
-      if (p.status !== 'paid' || !p.date) return false;
-      const d = new Date(p.date);
-      return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-    })
-    .reduce((sum, p) => sum + p.amount, 0);
+  const totalPages = Math.ceil(filteredPayments.length / itemsPerPage);
+  const paginatedPayments = filteredPayments.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
 
-  const monthlyRevenueMap: Record<string, number> = {};
-  payments
-    .filter((p) => p.status === 'paid' && p.date)
-    .forEach((p) => {
+  // Reset to first page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, statusFilter, dateFilter]);
+
+  // Filter payments for aggregated stats based ONLY on Date
+  const statFilteredPayments = payments.filter((p) => {
+    let matchesDate = true;
+    if (dateFilter !== 'all' && p.date) {
       const d = new Date(p.date);
-      const key = `${d.getFullYear()}-${d.getMonth()}`;
-      monthlyRevenueMap[key] = (monthlyRevenueMap[key] || 0) + p.amount;
-    });
-  const last6Months = Array.from({ length: 6 }, (_, i) => {
-    const d = new Date(now.getFullYear(), now.getMonth() - 5 + i, 1);
-    const key = `${d.getFullYear()}-${d.getMonth()}`;
-    return {
-      month: MONTHS[d.getMonth()],
-      revenue: monthlyRevenueMap[key] || 0,
-    };
+      const now = new Date();
+      const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+      switch (dateFilter) {
+        case 'today':
+          matchesDate = d >= startOfToday;
+          break;
+        case 'yesterday': {
+          const startOfYesterday = new Date(startOfToday);
+          startOfYesterday.setDate(startOfYesterday.getDate() - 1);
+          matchesDate = d >= startOfYesterday && d < startOfToday;
+          break;
+        }
+        case 'this_week': {
+          const startOfWeek = new Date(startOfToday);
+          startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
+          matchesDate = d >= startOfWeek;
+          break;
+        }
+        case 'last_week': {
+          const startOfThisWeek = new Date(startOfToday);
+          startOfThisWeek.setDate(startOfThisWeek.getDate() - startOfThisWeek.getDay());
+          const startOfLastWeek = new Date(startOfThisWeek);
+          startOfLastWeek.setDate(startOfLastWeek.getDate() - 7);
+          matchesDate = d >= startOfLastWeek && d < startOfThisWeek;
+          break;
+        }
+        case 'this_month': {
+          const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+          matchesDate = d >= startOfMonth;
+          break;
+        }
+        case 'last_month': {
+          const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+          const startOfThisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+          matchesDate = d >= startOfLastMonth && d < startOfThisMonth;
+          break;
+        }
+        case 'this_year': {
+          const startOfYear = new Date(now.getFullYear(), 0, 1);
+          matchesDate = d >= startOfYear;
+          break;
+        }
+      }
+    } else if (dateFilter !== 'all' && !p.date) {
+      matchesDate = false;
+    }
+
+    return matchesDate;
   });
 
-  const paidCount = payments.filter((p) => p.status === 'paid').length;
-  const pendingCount = payments.filter((p) => p.status === 'pending').length;
-  const overdueCount = payments.filter((p) => p.status === 'overdue').length;
-  const last7DaysRevenue = payments
-    .filter((p) => {
-      if (p.status !== 'paid' || !p.date) return false;
-      const d = new Date(p.date);
-      const weekAgo = new Date(now);
-      weekAgo.setDate(weekAgo.getDate() - 7);
-      return d >= weekAgo;
-    })
-    .reduce((sum, p) => sum + p.amount, 0);
-  const lastMonthRevenue = payments
-    .filter((p) => {
-      if (p.status !== 'paid' || !p.date) return false;
-      const d = new Date(p.date);
-      const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-      const endLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
-      return d >= lastMonth && d <= endLastMonth;
-    })
-    .reduce((sum, p) => sum + p.amount, 0);
+  const totalRevenue = statFilteredPayments.filter((p) => p.status === 'paid').reduce((sum, p) => sum + p.amount, 0);
+  const pendingAmount = statFilteredPayments.filter((p) => p.status === 'pending').reduce((sum, p) => sum + p.amount, 0);
+  const overdueAmount = statFilteredPayments.filter((p) => p.status === 'overdue').reduce((sum, p) => sum + p.amount, 0);
+  const cancelledAmount = statFilteredPayments.filter((p) => p.status === 'cancelled').reduce((sum, p) => sum + p.amount, 0);
+
+  const paidCount = statFilteredPayments.filter((p) => p.status === 'paid').length;
+  const pendingCount = statFilteredPayments.filter((p) => p.status === 'pending').length;
+  const overdueCount = statFilteredPayments.filter((p) => p.status === 'overdue').length;
+  const cancelledCount = statFilteredPayments.filter((p) => p.status === 'cancelled').length;
+
   const avgPayment = paidCount > 0 ? Math.round(totalRevenue / paidCount) : 0;
+
   const paymentStatusChartData = [
     { name: 'Paid', value: paidCount, color: '#a3ff00' },
     { name: 'Pending', value: pendingCount, color: '#fbbf24' },
     { name: 'Overdue', value: overdueCount, color: '#ef4444' },
+    { name: 'Cancelled', value: cancelledCount, color: '#6b7280' },
   ].filter((d) => d.value > 0);
+
   if (paymentStatusChartData.length === 0) {
     paymentStatusChartData.push({ name: 'No data', value: 1, color: 'hsl(var(--muted))' });
   }
+
+  const getDateLabel = () => {
+    switch (dateFilter) {
+      case 'today': return 'Today';
+      case 'yesterday': return 'Yesterday';
+      case 'this_week': return 'This Week';
+      case 'last_week': return 'Last Week';
+      case 'this_month': return 'This Month';
+      case 'last_month': return 'Last Month';
+      case 'this_year': return 'This Year';
+      default: return 'Lifetime';
+    }
+  };
 
   const handleCreatePayment = async () => {
     const member = activeMembers.find((m) => m.id === formMemberId);
@@ -274,15 +385,90 @@ export function PaymentsManagement() {
     }
   }, [formMemberId, formType, selectedMember, selectedMemberHasPlan]);
 
+  const handleExport = () => {
+    const headers = [
+      'Invoice Number',
+      'Member Name',
+      'Member ID',
+      'Type',
+      'Plan Name',
+      'Product Name',
+      'Personal Training Add-on',
+      'Amount (₹)',
+      'Date',
+      'Due Date',
+      'Status',
+      'Created At'
+    ];
+
+    const escapeCSV = (val: any) => {
+      if (val === null || val === undefined) return '';
+      const s = String(val);
+      if (s.includes(',') || s.includes('"') || s.includes('\n')) {
+        return `"${s.replace(/"/g, '""')}"`;
+      }
+      return s;
+    };
+
+    const rows = filteredPayments.map((p) => {
+      return [
+        p.invoiceNumber,
+        p.memberName,
+        p.memberId,
+        p.type,
+        p.planName || '—',
+        p.productName || '—',
+        p.addPersonalTraining ? 'Yes' : 'No',
+        p.amount,
+        p.date ? formatDate(p.date) : '—',
+        p.dueDate ? formatDate(p.dueDate) : '—',
+        p.status,
+        p.createdAt ? formatDate(p.createdAt) : '—'
+      ].map(escapeCSV);
+    });
+
+    const csvContent = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `ko_fitness_payments_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className="p-6 space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="font-display text-3xl font-bold text-foreground">Payments</h1>
-          <p className="text-muted-foreground">Manage invoices and track payments (automatic flow; Razorpay later)</p>
+          <p className="text-muted-foreground">Manage invoices and track payments (Razorpay online; record offline here)</p>
         </div>
-        <div className="flex gap-3">
-          <Button variant="outline" className="border-border text-foreground hover:bg-muted/50" disabled>
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-2 bg-card/50 border border-border rounded-lg px-3 h-10">
+            <Calendar className="w-4 h-4 text-muted-foreground" />
+            <select
+              value={dateFilter}
+              onChange={(e) => setDateFilter(e.target.value)}
+              className="bg-transparent border-none text-foreground text-sm focus:outline-none cursor-pointer pr-2"
+            >
+              <option value="all" className="bg-card">All Time</option>
+              <option value="today" className="bg-card">Today</option>
+              <option value="yesterday" className="bg-card">Yesterday</option>
+              <option value="this_week" className="bg-card">This Week</option>
+              <option value="last_week" className="bg-card">Last Week</option>
+              <option value="this_month" className="bg-card">This Month</option>
+              <option value="last_month" className="bg-card">Last Month</option>
+              <option value="this_year" className="bg-card">This Year</option>
+            </select>
+          </div>
+          <Button
+            variant="outline"
+            className="border-border text-foreground hover:bg-muted/50"
+            onClick={handleExport}
+            disabled={filteredPayments.length === 0}
+          >
             <Download className="w-4 h-4 mr-2" />
             Export
           </Button>
@@ -446,19 +632,19 @@ export function PaymentsManagement() {
             <div className="p-5 rounded-xl bg-gradient-to-br from-lime-500/15 to-lime-500/5 border border-lime-500/30">
               <div className="flex items-center justify-between mb-2">
                 <CreditCard className="w-5 h-5 text-lime-500" />
-                <span className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Lifetime</span>
+                <span className="text-xs text-muted-foreground font-medium uppercase tracking-wide">{getDateLabel()} Revenue</span>
               </div>
               <p className="font-display text-2xl lg:text-3xl font-bold text-foreground">₹{totalRevenue.toLocaleString()}</p>
               <p className="text-xs text-muted-foreground mt-1">{paidCount} paid transaction{paidCount !== 1 ? 's' : ''}</p>
             </div>
             <div className="p-5 rounded-xl bg-card/50 border border-border">
               <div className="flex items-center justify-between mb-2">
-                <TrendingUp className="w-5 h-5 text-blue-500" />
-                <span className="text-xs text-muted-foreground font-medium uppercase tracking-wide">This month</span>
+                <Receipt className="w-5 h-5 text-koBlue-500" />
+                <span className="text-xs text-muted-foreground font-medium uppercase tracking-wide">{getDateLabel()} Avg</span>
               </div>
-              <p className="font-display text-2xl lg:text-3xl font-bold text-foreground">₹{thisMonthRevenue.toLocaleString()}</p>
+              <p className="font-display text-2xl lg:text-3xl font-bold text-foreground">₹{avgPayment.toLocaleString()}</p>
               <p className="text-xs text-muted-foreground mt-1">
-                Last month: ₹{lastMonthRevenue.toLocaleString()}
+                Across {paidCount} payment{paidCount !== 1 ? 's' : ''}
               </p>
             </div>
             <div className="p-5 rounded-xl bg-card/50 border border-amber-500/30">
@@ -467,7 +653,7 @@ export function PaymentsManagement() {
                 <span className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Pending</span>
               </div>
               <p className="font-display text-2xl lg:text-3xl font-bold text-foreground">₹{pendingAmount.toLocaleString()}</p>
-              <p className="text-xs text-muted-foreground mt-1">{pendingCount} invoice{pendingCount !== 1 ? 's' : ''} awaiting payment</p>
+              <p className="text-xs text-muted-foreground mt-1">{pendingCount} invoice{pendingCount !== 1 ? 's' : ''} {dateFilter === 'all' ? 'total' : 'in period'}</p>
             </div>
             <div className="p-5 rounded-xl bg-card/50 border border-red-500/30">
               <div className="flex items-center justify-between mb-2">
@@ -475,16 +661,16 @@ export function PaymentsManagement() {
                 <span className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Overdue</span>
               </div>
               <p className="font-display text-2xl lg:text-3xl font-bold text-foreground">₹{overdueAmount.toLocaleString()}</p>
-              <p className="text-xs text-muted-foreground mt-1">{overdueCount} past due</p>
+              <p className="text-xs text-muted-foreground mt-1">{overdueCount} past due {dateFilter === 'all' ? '' : 'in period'}</p>
             </div>
             <div className="p-5 rounded-xl bg-card/50 border border-border">
               <div className="flex items-center justify-between mb-2">
-                <Receipt className="w-5 h-5 text-muted-foreground" />
-                <span className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Last 7 days</span>
+                <XCircle className="w-5 h-5 text-muted-foreground" />
+                <span className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Cancelled</span>
               </div>
-              <p className="font-display text-2xl lg:text-3xl font-bold text-foreground">₹{last7DaysRevenue.toLocaleString()}</p>
+              <p className="font-display text-2xl lg:text-3xl font-bold text-foreground">₹{cancelledAmount.toLocaleString()}</p>
               <p className="text-xs text-muted-foreground mt-1">
-                Avg ₹{avgPayment.toLocaleString()} per payment
+                {cancelledCount} transaction{cancelledCount !== 1 ? 's' : ''}
               </p>
             </div>
           </>
@@ -494,23 +680,64 @@ export function PaymentsManagement() {
       {/* Charts */}
       <div className="grid lg:grid-cols-2 gap-6">
         <div className="p-6 rounded-xl bg-card/50 border border-border">
-          <h3 className="font-display text-lg font-bold text-foreground mb-4">Monthly Revenue (last 6 months)</h3>
+          <h3 className="font-display text-lg font-bold text-foreground mb-4">Revenue Trend ({getDateLabel()})</h3>
           <div className="h-48">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={last6Months}>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                <XAxis dataKey="month" stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
+              <BarChart data={(() => {
+                const now = new Date();
+                const chartData: { label: string; revenue: number }[] = [];
+
+                if (dateFilter === 'this_year' || dateFilter === 'all') {
+                  // Show monthly for this year
+                  MONTHS.forEach((m, i) => {
+                    const rev = statFilteredPayments
+                      .filter(p => p.status === 'paid' && p.date && new Date(p.date).getMonth() === i && new Date(p.date).getFullYear() === now.getFullYear())
+                      .reduce((s, p) => s + p.amount, 0);
+                    chartData.push({ label: m, revenue: rev });
+                  });
+                } else if (dateFilter === 'this_month' || dateFilter === 'last_month') {
+                  // Show daily for the month
+                  const targetMonth = dateFilter === 'this_month' ? now.getMonth() : now.getMonth() - 1;
+                  const targetYear = now.getFullYear();
+                  const daysInMonth = new Date(targetYear, targetMonth + 1, 0).getDate();
+                  for (let i = 1; i <= daysInMonth; i++) {
+                    const rev = statFilteredPayments
+                      .filter(p => {
+                        if (p.status !== 'paid' || !p.date) return false;
+                        const d = new Date(p.date);
+                        return d.getDate() === i && d.getMonth() === targetMonth && d.getFullYear() === targetYear;
+                      })
+                      .reduce((s, p) => s + p.amount, 0);
+                    chartData.push({ label: i.toString(), revenue: rev });
+                  }
+                } else {
+                  // Default to last 6 months trend
+                  for (let i = 5; i >= 0; i--) {
+                    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+                    const rev = payments // use all payments for the 6 month trend to keep context
+                      .filter(p => p.status === 'paid' && p.date && new Date(p.date).getMonth() === d.getMonth() && new Date(p.date).getFullYear() === d.getFullYear())
+                      .reduce((s, p) => s + p.amount, 0);
+                    chartData.push({ label: MONTHS[d.getMonth()], revenue: rev });
+                  }
+                }
+                return chartData;
+              })()}>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+                <XAxis dataKey="label" stroke="hsl(var(--muted-foreground))" fontSize={11} tickLine={false} axisLine={false} />
+                <YAxis stroke="hsl(var(--muted-foreground))" fontSize={11} tickLine={false} axisLine={false} tickFormatter={(v) => `₹${v >= 1000 ? (v / 1000) + 'k' : v}`} />
                 <Tooltip
                   contentStyle={{
                     backgroundColor: 'hsl(var(--card))',
                     border: '1px solid hsl(var(--border))',
                     borderRadius: '8px',
+                    fontSize: '12px'
                   }}
-                  labelStyle={{ color: 'hsl(var(--foreground))' }}
+                  cursor={{ fill: 'hsl(var(--muted)/0.2)' }}
+                  labelStyle={{ color: 'hsl(var(--foreground))', fontWeight: 'bold', marginBottom: '4px' }}
                   itemStyle={{ color: '#a3ff00' }}
+                  formatter={(value: number) => [`₹${value.toLocaleString()}`, 'Revenue']}
                 />
-                <Bar dataKey="revenue" fill="#a3ff00" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="revenue" fill="#a3ff00" radius={[4, 4, 0, 0]} barSize={dateFilter.includes('month') ? 8 : 30} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -554,30 +781,33 @@ export function PaymentsManagement() {
         </div>
       </div>
 
-      {/* Table */}
-      <div className="space-y-4">
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input
-              type="text"
-              placeholder="Search payments..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="bg-muted/50 border-border text-foreground placeholder:text-muted-foreground pl-10"
-            />
+      {/* Table Section */}
+      <div className="space-y-4 pt-10 border-t border-border mt-10">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-2">
+          <h2 className="font-display text-xl font-bold text-foreground">Transaction Details</h2>
+          <div className="flex flex-wrap items-center gap-4">
+            <div className="relative w-full sm:w-64">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                type="text"
+                placeholder="Search member or invoice..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="bg-muted/50 border-border text-foreground placeholder:text-muted-foreground pl-10 h-9 text-sm"
+              />
+            </div>
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="h-9 px-3 rounded-lg bg-muted/50 border border-border text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-lime-500/50 cursor-pointer"
+            >
+              <option value="all">All Status</option>
+              <option value="paid">Paid</option>
+              <option value="pending">Pending</option>
+              <option value="overdue">Overdue</option>
+              <option value="cancelled">Cancelled</option>
+            </select>
           </div>
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="h-10 px-4 rounded-lg bg-muted/50 border border-border text-foreground text-sm"
-          >
-            <option value="all">All Status</option>
-            <option value="paid">Paid</option>
-            <option value="pending">Pending</option>
-            <option value="overdue">Overdue</option>
-            <option value="cancelled">Cancelled</option>
-          </select>
         </div>
 
         <div className="rounded-xl bg-card/50 border border-border overflow-hidden">
@@ -597,14 +827,14 @@ export function PaymentsManagement() {
             <TableBody>
               {loading ? (
                 Array.from({ length: 5 }).map((_, i) => <PaymentRowSkeleton key={i} />)
-              ) : filteredPayments.length === 0 ? (
+              ) : paginatedPayments.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
                     No payments found
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredPayments.map((payment) => (
+                paginatedPayments.map((payment) => (
                   <TableRow key={payment.id} className="border-border hover:bg-muted/50">
                     <TableCell className="text-foreground font-medium">{payment.invoiceNumber}</TableCell>
                     <TableCell className="text-muted-foreground">{payment.memberName}</TableCell>
@@ -631,10 +861,10 @@ export function PaymentsManagement() {
                         {getStatusIcon(payment.status)}
                         <span
                           className={`capitalize ${payment.status === 'paid'
-                              ? 'text-lime-500'
-                              : payment.status === 'pending'
-                                ? 'text-yellow-500'
-                                : 'text-red-400'
+                            ? 'text-lime-500'
+                            : payment.status === 'pending'
+                              ? 'text-yellow-500'
+                              : 'text-red-400'
                             }`}
                         >
                           {payment.status}
@@ -649,6 +879,17 @@ export function PaymentsManagement() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="bg-card border-border">
+                          <DropdownMenuItem
+                            className="text-foreground hover:bg-muted/50 cursor-pointer"
+                            onClick={() => {
+                              setViewPayment(payment);
+                              setIsViewDialogOpen(true);
+                            }}
+                          >
+                            <Info className="w-4 h-4 mr-2" />
+                            View Details
+                          </DropdownMenuItem>
+                          <div className="h-px bg-border my-1" />
                           {PAYMENT_STATUSES.map((s) => (
                             <DropdownMenuItem
                               key={s}
@@ -667,6 +908,149 @@ export function PaymentsManagement() {
             </TableBody>
           </Table>
         </div>
+
+        {/* Pagination UI */}
+        {totalPages > 1 && (
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-2">
+            <p className="text-sm text-muted-foreground">
+              Showing {(currentPage - 1) * itemsPerPage + 1} to {Math.min(currentPage * itemsPerPage, filteredPayments.length)} of {filteredPayments.length} payments
+            </p>
+            <Pagination className="w-auto mx-0">
+              <PaginationContent>
+                <PaginationItem>
+                  <PaginationPrevious
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      if (currentPage > 1) setCurrentPage(currentPage - 1);
+                    }}
+                    className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                  />
+                </PaginationItem>
+
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
+                  // Logic to show limited page numbers if totalPages is large
+                  if (
+                    page === 1 ||
+                    page === totalPages ||
+                    (page >= currentPage - 1 && page <= currentPage + 1)
+                  ) {
+                    return (
+                      <PaginationItem key={page}>
+                        <PaginationLink
+                          href="#"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            setCurrentPage(page);
+                          }}
+                          isActive={currentPage === page}
+                          className="cursor-pointer"
+                        >
+                          {page}
+                        </PaginationLink>
+                      </PaginationItem>
+                    );
+                  } else if (
+                    (page === 2 && currentPage > 3) ||
+                    (page === totalPages - 1 && currentPage < totalPages - 2)
+                  ) {
+                    return (
+                      <PaginationItem key={page}>
+                        <PaginationEllipsis />
+                      </PaginationItem>
+                    );
+                  }
+                  return null;
+                })}
+
+                <PaginationItem>
+                  <PaginationNext
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      if (currentPage < totalPages) setCurrentPage(currentPage + 1);
+                    }}
+                    className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
+          </div>
+        )}
+        <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
+          <DialogContent className="bg-card border-border text-foreground max-w-md">
+            <DialogHeader>
+              <DialogTitle className="font-display text-2xl flex items-center gap-2">
+                <Receipt className="w-6 h-6 text-lime-500" />
+                Payment Details
+              </DialogTitle>
+            </DialogHeader>
+            {viewPayment && (
+              <div className="space-y-6 pt-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-xs text-muted-foreground uppercase tracking-wider">Invoice Number</label>
+                    <p className="text-foreground font-semibold">{viewPayment.invoiceNumber}</p>
+                  </div>
+                  <div>
+                    <label className="text-xs text-muted-foreground uppercase tracking-wider">Status</label>
+                    <div className="flex items-center gap-1.5 mt-0.5">
+                      {getStatusIcon(viewPayment.status)}
+                      <span className="capitalize font-medium">{viewPayment.status}</span>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-xs text-muted-foreground uppercase tracking-wider">Member</label>
+                    <p className="text-foreground">{viewPayment.memberName}</p>
+                    <p className="text-xs text-muted-foreground">ID: {viewPayment.memberId}</p>
+                  </div>
+                  <div>
+                    <label className="text-xs text-muted-foreground uppercase tracking-wider">Amount</label>
+                    <p className="text-foreground font-bold text-lg">₹{viewPayment.amount.toLocaleString()}</p>
+                  </div>
+                  <div>
+                    <label className="text-xs text-muted-foreground uppercase tracking-wider">Type</label>
+                    <p className="capitalize text-foreground">{viewPayment.type.replace('_', ' ')}</p>
+                  </div>
+                  <div>
+                    <label className="text-xs text-muted-foreground uppercase tracking-wider">For</label>
+                    <p className="text-foreground">
+                      {viewPayment.type === 'membership' && (viewPayment.planName
+                        ? `${viewPayment.planName}${viewPayment.addPersonalTraining ? ' + PT' : ''}`
+                        : viewPayment.addPersonalTraining ? 'Membership + PT' : 'Membership')
+                      }
+                      {viewPayment.type === 'product' && (viewPayment.productName || 'Product')}
+                      {viewPayment.type === 'personal_training' && 'Personal Training'}
+                      {viewPayment.type === 'other' && 'Miscellaneous'}
+                    </p>
+                  </div>
+                  <div>
+                    <label className="text-xs text-muted-foreground uppercase tracking-wider">Payment Date</label>
+                    <p className="text-foreground">{formatDate(viewPayment.date)}</p>
+                  </div>
+                  <div>
+                    <label className="text-xs text-muted-foreground uppercase tracking-wider">Due Date</label>
+                    <p className="text-foreground">{formatDate(viewPayment.dueDate)}</p>
+                  </div>
+                </div>
+
+                <div className="pt-4 border-t border-border">
+                  <div className="flex justify-between items-center text-xs text-muted-foreground">
+                    <span>Recorded on: {viewPayment.createdAt ? formatDate(viewPayment.createdAt) : '—'}</span>
+                    <span>ID: {viewPayment.id}</span>
+                  </div>
+                </div>
+
+                <Button
+                  className="w-full bg-muted hover:bg-muted/80 text-foreground"
+                  onClick={() => setIsViewDialogOpen(false)}
+                >
+                  Close
+                </Button>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );

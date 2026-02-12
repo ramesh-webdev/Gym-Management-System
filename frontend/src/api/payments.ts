@@ -68,3 +68,8 @@ export interface VerifyPaymentResponse {
 export function verifyPayment(body: VerifyPaymentBody): Promise<VerifyPaymentResponse> {
   return api.post<VerifyPaymentResponse>('/payments/verify', body);
 }
+
+/** Cancel a pending order (e.g. user closed Razorpay without paying). */
+export function cancelOrder(orderId: string): Promise<{ success: boolean; message: string }> {
+  return api.post<{ success: boolean; message: string }>('/payments/cancel-order', { orderId });
+}

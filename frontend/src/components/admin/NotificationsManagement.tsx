@@ -28,6 +28,15 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from '@/components/ui/pagination';
+import {
   listNotifications,
   markNotificationRead,
   markAllNotificationsRead,
@@ -100,6 +109,9 @@ export function NotificationsManagement() {
   const [message, setMessage] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 8;
+
   const fetchNotifications = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -111,7 +123,7 @@ export function NotificationsManagement() {
         kind: filterKind || undefined,
         type: filterType || undefined,
       });
-      setNotifications(data);
+      setNotifications(data || []);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load notifications');
       setNotifications([]);
@@ -130,6 +142,17 @@ export function NotificationsManagement() {
     return true;
   });
 
+  const totalPages = Math.ceil(filteredNotifications.length / itemsPerPage);
+  const paginatedNotifications = filteredNotifications.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
+  // Reset to first page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filter, filterKind, filterType]);
+
   const isOwnNotification = (n: Notification) => n.userId === currentUserId;
 
   const markAsRead = async (id: string) => {
@@ -139,7 +162,7 @@ export function NotificationsManagement() {
         prev.map((n) => (n.id === id ? { ...n, isRead: true } : n))
       );
     } catch {
-      // keep UI unchanged on error
+      // ignore
     }
   };
 
@@ -148,18 +171,18 @@ export function NotificationsManagement() {
       await deleteNotificationApi(id);
       setNotifications((prev) => prev.filter((n) => n.id !== id));
     } catch {
-      // keep UI unchanged on error
+      // ignore
     }
   };
 
   const markAllAsRead = async () => {
     try {
-      await markAllNotificationsRead(); // only marks current user's
+      await markAllNotificationsRead();
       setNotifications((prev) =>
         prev.map((n) => (n.userId === currentUserId ? { ...n, isRead: true } : n))
       );
     } catch {
-      // keep UI unchanged on error
+      // ignore
     }
   };
 
@@ -213,7 +236,6 @@ export function NotificationsManagement() {
 
   return (
     <div className="p-6 space-y-6">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="font-display text-3xl font-bold text-foreground">Notifications</h1>
@@ -355,8 +377,8 @@ export function NotificationsManagement() {
             <div
               key={index}
               className={`p-4 rounded-xl border ${stat.highlight
-                  ? 'bg-ko-500/5 border-ko-500/20'
-                  : 'bg-card/50 border-border'
+                ? 'bg-ko-500/5 border-ko-500/20'
+                : 'bg-card/50 border-border'
                 }`}
             >
               <div className="flex items-center gap-3 mb-2">
@@ -371,7 +393,6 @@ export function NotificationsManagement() {
         )}
       </div>
 
-      {/* Filter: Read status */}
       <div className="flex flex-wrap items-center gap-3">
         <span className="text-sm font-medium text-muted-foreground">Status:</span>
         {(['all', 'unread', 'read'] as const).map((f) => (
@@ -379,8 +400,8 @@ export function NotificationsManagement() {
             key={f}
             onClick={() => setFilter(f)}
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${filter === f
-                ? 'bg-gradient-to-r from-ko-500 to-ko-600 text-primary-foreground'
-                : 'bg-muted/50 text-muted-foreground hover:bg-muted'
+              ? 'bg-gradient-to-r from-ko-500 to-ko-600 text-primary-foreground'
+              : 'bg-muted/50 text-muted-foreground hover:bg-muted'
               }`}
           >
             {f.charAt(0).toUpperCase() + f.slice(1)}
@@ -393,7 +414,6 @@ export function NotificationsManagement() {
         ))}
       </div>
 
-      {/* Admin filters: Kind, Type */}
       <div className="flex flex-wrap items-center gap-4 p-4 rounded-xl border bg-card/50 border-border">
         <div className="flex items-center gap-2">
           <label className="text-sm font-medium text-muted-foreground whitespace-nowrap">Kind</label>
@@ -425,13 +445,12 @@ export function NotificationsManagement() {
         </div>
       </div>
 
-      {/* Notifications List */}
       <div className="space-y-3">
         {loading ? (
           Array.from({ length: 5 }).map((_, i) => <NotificationSkeleton key={i} />)
         ) : (
           <>
-            {filteredNotifications.map((notification) => {
+            {paginatedNotifications.map((notification) => {
               const own = isOwnNotification(notification);
               const recipientLabel = notification.recipientName
                 ? `${notification.recipientName}${notification.recipientRole ? ` (${notification.recipientRole})` : ''}`
@@ -440,8 +459,8 @@ export function NotificationsManagement() {
                 <div
                   key={notification.id}
                   className={`p-4 rounded-xl border transition-colors ${notification.isRead
-                      ? 'bg-card/30 border-border'
-                      : 'bg-ko-500/5 border-ko-500/20'
+                    ? 'bg-card/30 border-border'
+                    : 'bg-ko-500/5 border-ko-500/20'
                     }`}
                 >
                   <div className="flex items-start gap-4">
@@ -505,6 +524,74 @@ export function NotificationsManagement() {
               <div className="text-center py-12">
                 <Bell className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
                 <p className="text-muted-foreground">No notifications found</p>
+              </div>
+            )}
+
+            {/* Pagination UI */}
+            {totalPages > 1 && (
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-border">
+                <p className="text-sm text-muted-foreground">
+                  Showing {(currentPage - 1) * itemsPerPage + 1} to {Math.min(currentPage * itemsPerPage, filteredNotifications.length)} of {filteredNotifications.length} notifications
+                </p>
+                <Pagination className="w-auto mx-0">
+                  <PaginationContent>
+                    <PaginationItem>
+                      <PaginationPrevious
+                        href="#"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          if (currentPage > 1) setCurrentPage(currentPage - 1);
+                        }}
+                        className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                      />
+                    </PaginationItem>
+
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
+                      if (
+                        page === 1 ||
+                        page === totalPages ||
+                        (page >= currentPage - 1 && page <= currentPage + 1)
+                      ) {
+                        return (
+                          <PaginationItem key={page}>
+                            <PaginationLink
+                              href="#"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                setCurrentPage(page);
+                              }}
+                              isActive={currentPage === page}
+                              className="cursor-pointer"
+                            >
+                              {page}
+                            </PaginationLink>
+                          </PaginationItem>
+                        );
+                      } else if (
+                        (page === 2 && currentPage > 3) ||
+                        (page === totalPages - 1 && currentPage < totalPages - 2)
+                      ) {
+                        return (
+                          <PaginationItem key={page}>
+                            <PaginationEllipsis />
+                          </PaginationItem>
+                        );
+                      }
+                      return null;
+                    })}
+
+                    <PaginationItem>
+                      <PaginationNext
+                        href="#"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          if (currentPage < totalPages) setCurrentPage(currentPage + 1);
+                        }}
+                        className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                      />
+                    </PaginationItem>
+                  </PaginationContent>
+                </Pagination>
               </div>
             )}
           </>

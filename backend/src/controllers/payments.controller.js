@@ -1,8 +1,11 @@
+const crypto = require('crypto');
 const Payment = require('../models/Payment');
 const User = require('../models/User');
 const MembershipPlan = require('../models/MembershipPlan');
+const GymSettings = require('../models/GymSettings');
 const { getNextValue } = require('../models/Counter');
 const notificationService = require('../services/notification.service');
+const config = require('../config/env');
 
 /** Run when a payment is marked paid: extend membership if type=membership (and plan is not add-on), send notifications. */
 async function applyPaymentSuccess(payment) {
@@ -163,6 +166,7 @@ async function update(req, res, next) {
     const wasPaid = payment.status === 'paid';
     if (status && ['paid', 'pending', 'overdue', 'cancelled'].includes(status)) {
       payment.status = status;
+      if (status === 'paid') payment.date = new Date();
     }
     await payment.save();
     const becamePaid = payment.status === 'paid' && !wasPaid;
@@ -188,19 +192,19 @@ async function update(req, res, next) {
 }
 
 /**
- * Create order for Razorpay-style checkout. Member only (pays for self).
- * Body: { amount, type, membershipPlanId?, addPersonalTraining? } — addPersonalTraining = add PT add-on (member-level) when type=membership.
- * Returns { orderId, amount, currency } for frontend to open checkout.
- * Payment is created with status 'pending'; verify will mark it paid (auto-approve for now).
+ * Create order for Razorpay checkout. Member only (pays for self).
+ * Body: { amount, type, membershipPlanId?, addPersonalTraining?, productId? }.
+ * Amount is server-computed when type is membership (plan/renewal), product, or personal_training;
+ * for type 'other' client amount is used. Prevents underpayment by trusting plan/product/settings.
  */
 async function createOrder(req, res, next) {
   try {
     if (req.user.role !== 'member') {
       return res.status(403).json({ message: 'Only members can create payment orders for self' });
     }
-    const { amount, type, membershipPlanId, addPersonalTraining, productId } = req.body;
-    if (amount == null || Number(amount) <= 0 || !type) {
-      return res.status(400).json({ message: 'amount (positive) and type are required' });
+    const { amount: clientAmount, type, membershipPlanId, addPersonalTraining, productId } = req.body;
+    if (!type) {
+      return res.status(400).json({ message: 'type is required' });
     }
     const validTypes = ['membership', 'personal_training', 'product', 'other'];
     if (!validTypes.includes(type)) {
@@ -210,26 +214,79 @@ async function createOrder(req, res, next) {
     if (!member || member.role !== 'member') {
       return res.status(400).json({ message: 'Member not found' });
     }
-    if (type === 'membership' && membershipPlanId) {
-      const plan = await MembershipPlan.findById(membershipPlanId);
-      if (!plan || !plan.isActive) {
-        return res.status(400).json({ message: 'Invalid or inactive membership plan' });
+
+    let amountRupees;
+    if (type === 'membership') {
+      let plan = null;
+      if (membershipPlanId) {
+        plan = await MembershipPlan.findById(membershipPlanId).lean();
+        if (!plan || !plan.isActive) {
+          return res.status(400).json({ message: 'Invalid or inactive membership plan' });
+        }
+      } else {
+        const populated = await User.findById(req.user.id).populate('membershipPlan').lean();
+        plan = populated?.membershipPlan || null;
       }
-    }
-    if (type === 'product' && productId) {
+      if (!plan) {
+        return res.status(400).json({ message: 'Membership plan required for membership payment' });
+      }
+      amountRupees = plan.price || 0;
+      if (addPersonalTraining === true) {
+        const settings = await GymSettings.findOne().lean();
+        const ptPrice = settings?.personalTrainingPrice ?? 500;
+        amountRupees += ptPrice;
+      }
+    } else if (type === 'product') {
+      if (!productId) {
+        return res.status(400).json({ message: 'productId is required for product payment' });
+      }
       const Product = require('../models/Product');
-      const product = await Product.findById(productId);
+      const product = await Product.findById(productId).lean();
       if (!product) {
         return res.status(400).json({ message: 'Product not found' });
       }
+      amountRupees = Number(product.price) || 0;
+    } else if (type === 'personal_training') {
+      const settings = await GymSettings.findOne().lean();
+      amountRupees = settings?.personalTrainingPrice ?? 500;
+    } else {
+      if (clientAmount == null || Number(clientAmount) <= 0) {
+        return res.status(400).json({ message: 'amount (positive) is required for type "other"' });
+      }
+      amountRupees = Number(clientAmount);
     }
+
+    if (amountRupees <= 0) {
+      return res.status(400).json({ message: 'Computed amount must be positive' });
+    }
+
     const num = await getNextValue('paymentInvoice');
     const invoiceNumber = `INV-${new Date().getFullYear()}-${String(num).padStart(5, '0')}`;
-    const orderId = `ord_${Date.now()}_${num}`;
+    const amountPaise = Math.round(amountRupees * 100);
+
+    let orderId;
+    const useRazorpay = config.razorpayKeyId && config.razorpayKeySecret;
+
+    if (useRazorpay) {
+      const Razorpay = require('razorpay');
+      const razorpay = new Razorpay({
+        key_id: config.razorpayKeyId,
+        key_secret: config.razorpayKeySecret,
+      });
+      const order = await razorpay.orders.create({
+        amount: amountPaise,
+        currency: 'INR',
+        receipt: invoiceNumber,
+      });
+      orderId = order.id;
+    } else {
+      orderId = `ord_${Date.now()}_${num}`;
+    }
+
     const payment = await Payment.create({
       member: req.user.id,
       memberName: member.name,
-      amount: Number(amount),
+      amount: amountRupees,
       type,
       status: 'pending',
       invoiceNumber,
@@ -238,12 +295,13 @@ async function createOrder(req, res, next) {
       ...(type === 'membership' && addPersonalTraining === true ? { addPersonalTraining: true } : {}),
       ...(type === 'product' && productId ? { product: productId } : {}),
     });
+
     res.status(201).json({
       orderId,
       paymentId: payment._id.toString(),
-      amount: payment.amount * 100, // Razorpay expects amount in paise
+      amount: amountPaise,
       currency: 'INR',
-      key: process.env.RAZORPAY_KEY_ID || 'rzp_auto', // placeholder until real key
+      key: config.razorpayKeyId || '',
     });
   } catch (err) {
     next(err);
@@ -251,40 +309,69 @@ async function createOrder(req, res, next) {
 }
 
 /**
- * Verify payment after checkout. Razorpay sends payment_id, order_id, signature.
- * For auto-approve: we do not verify signature; we mark the payment paid and run success logic.
- * When switching to real Razorpay, verify signature here and then mark paid.
+ * Verify payment after Razorpay checkout.
+ * Body: orderId, razorpayPaymentId, razorpaySignature (from Razorpay success handler).
+ * Verifies signature when Razorpay key secret is set; otherwise allows test mode (no signature).
  */
+function verifyRazorpaySignature(orderId, paymentId, signature) {
+  if (!config.razorpayKeySecret || !paymentId || !signature) return false;
+  const body = `${orderId}|${paymentId}`;
+  const expected = crypto.createHmac('sha256', config.razorpayKeySecret).update(body).digest('hex');
+  return expected === signature;
+}
+
 async function verify(req, res, next) {
   try {
     const { orderId, razorpayPaymentId, razorpaySignature } = req.body;
     if (!orderId) {
       return res.status(400).json({ message: 'orderId is required' });
     }
-    const payment = await Payment.findOne({ orderId });
+    const payment = await Payment.findOne({ orderId }).lean();
     if (!payment) {
       return res.status(404).json({ message: 'Order not found' });
     }
     if (payment.status === 'paid') {
       return res.status(400).json({ message: 'Payment already completed' });
     }
-    // Auto-approve: skip real Razorpay signature verification; mark as paid
-    payment.status = 'paid';
-    if (razorpayPaymentId) payment.razorpayPaymentId = razorpayPaymentId;
-    if (razorpaySignature) payment.razorpaySignature = razorpaySignature;
-    await payment.save();
-    await applyPaymentSuccess(payment);
+    if (payment.member.toString() !== req.user.id) {
+      return res.status(403).json({ message: 'You can only verify your own payment' });
+    }
+    const useRazorpay = !!config.razorpayKeySecret;
+    if (useRazorpay) {
+      if (!razorpayPaymentId || !razorpaySignature) {
+        return res.status(400).json({ message: 'razorpayPaymentId and razorpaySignature are required' });
+      }
+      if (!verifyRazorpaySignature(orderId, razorpayPaymentId, razorpaySignature)) {
+        return res.status(400).json({ message: 'Payment verification failed' });
+      }
+    }
+    const updated = await Payment.findOneAndUpdate(
+      { orderId, status: 'pending' },
+      {
+        $set: {
+          status: 'paid',
+          date: new Date(),
+          ...(razorpayPaymentId && { razorpayPaymentId }),
+          ...(razorpaySignature && { razorpaySignature }),
+        },
+      },
+      { new: true }
+    );
+    if (!updated) {
+      return res.status(400).json({ message: 'Payment already completed or order not found' });
+    }
+    await applyPaymentSuccess(updated);
     const out = {
-      id: payment._id.toString(),
-      memberId: payment.member.toString(),
-      memberName: payment.memberName,
-      amount: payment.amount,
-      type: payment.type,
-      status: payment.status,
-      date: payment.date ? payment.date.toISOString() : null,
-      dueDate: payment.dueDate ? payment.dueDate.toISOString() : null,
-      invoiceNumber: payment.invoiceNumber,
-      createdAt: payment.createdAt ? payment.createdAt.toISOString() : null,
+      id: updated._id.toString(),
+      memberId: updated.member.toString(),
+      memberName: updated.memberName,
+      amount: updated.amount,
+      type: updated.type,
+      status: updated.status,
+      date: updated.date ? updated.date.toISOString() : null,
+      dueDate: updated.dueDate ? updated.dueDate.toISOString() : null,
+      invoiceNumber: updated.invoiceNumber,
+      createdAt: updated.createdAt ? updated.createdAt.toISOString() : null,
     };
     res.json({ success: true, payment: out });
   } catch (err) {
@@ -292,4 +379,38 @@ async function verify(req, res, next) {
   }
 }
 
-module.exports = { list, create, update, createOrder, verify };
+/**
+ * Cancel a pending order (e.g. user opened Razorpay and closed without paying).
+ * Body: { orderId }. Member only; only the payment owner can cancel; only pending payments.
+ */
+async function cancelOrder(req, res, next) {
+  try {
+    if (req.user.role !== 'member') {
+      return res.status(403).json({ message: 'Only members can cancel their own orders' });
+    }
+    const { orderId } = req.body;
+    if (!orderId) {
+      return res.status(400).json({ message: 'orderId is required' });
+    }
+    const updated = await Payment.findOneAndUpdate(
+      { orderId, status: 'pending', member: req.user.id },
+      { $set: { status: 'cancelled' } },
+      { new: true }
+    );
+    if (!updated) {
+      return res.status(404).json({
+        message: 'Order not found, already completed, or you do not own this order',
+      });
+    }
+    res.json({
+      success: true,
+      message: 'Order cancelled',
+      paymentId: updated._id.toString(),
+      status: updated.status,
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = { list, create, update, createOrder, verify, cancelOrder };

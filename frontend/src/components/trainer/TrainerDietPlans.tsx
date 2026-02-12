@@ -25,6 +25,15 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from '@/components/ui/pagination';
 import { toast } from 'sonner';
 import { getDietPlans, createDietPlan, updateDietPlan, deleteDietPlan } from '@/api/diet-plans';
 import { getMyClients } from '@/api/trainers';
@@ -44,6 +53,9 @@ export function TrainerDietPlans() {
   const [copyFromExisting, setCopyFromExisting] = useState(false);
   const [selectedPlanToCopy, setSelectedPlanToCopy] = useState<string>('');
   const [formRef, setFormRef] = useState<HTMLFormElement | null>(null);
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 6;
 
   useEffect(() => {
     loadDietPlans();
@@ -81,6 +93,16 @@ export function TrainerDietPlans() {
       memberName.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesSearch;
   });
+
+  const totalPages = Math.ceil(filteredPlans.length / itemsPerPage);
+  const paginatedPlans = filteredPlans.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery]);
 
   const handleAddPlan = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -474,65 +496,135 @@ export function TrainerDietPlans() {
           <p className="text-muted-foreground">No diet plans found. Create your first diet plan!</p>
         </div>
       ) : (
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredPlans.map((plan) => (
-            <div
-              key={plan.id}
-              className="p-6 rounded-xl bg-card/50 border border-border hover:border-border transition-colors"
-            >
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex-1">
-                  <h3 className="font-display text-xl font-bold text-foreground mb-1">{plan.name}</h3>
-                  <p className="text-sm text-muted-foreground">Client: {getMemberName(plan)}</p>
+        <>
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {paginatedPlans.map((plan) => (
+              <div
+                key={plan.id}
+                className="p-6 rounded-xl bg-card/50 border border-border hover:border-border transition-colors"
+              >
+                <div className="flex items-start justify-between mb-4">
+                  <div className="flex-1">
+                    <h3 className="font-display text-xl font-bold text-foreground mb-1">{plan.name}</h3>
+                    <p className="text-sm text-muted-foreground">Client: {getMemberName(plan)}</p>
+                  </div>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground">
+                        <MoreHorizontal className="w-4 h-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="bg-card border-border">
+                      <DropdownMenuItem
+                        className="text-foreground hover:bg-muted cursor-pointer"
+                        onClick={() => handleEditClick(plan)}
+                      >
+                        <Edit className="w-4 h-4 mr-2" />
+                        Edit
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        className="text-red-400 hover:bg-red-500/10 cursor-pointer"
+                        onClick={() => handleDeletePlan(plan.id)}
+                      >
+                        <Trash2 className="w-4 h-4 mr-2" />
+                        Delete
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground">
-                      <MoreHorizontal className="w-4 h-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="bg-card border-border">
-                    <DropdownMenuItem
-                      className="text-foreground hover:bg-muted cursor-pointer"
-                      onClick={() => handleEditClick(plan)}
-                    >
-                      <Edit className="w-4 h-4 mr-2" />
-                      Edit
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      className="text-red-400 hover:bg-red-500/10 cursor-pointer"
-                      onClick={() => handleDeletePlan(plan.id)}
-                    >
-                      <Trash2 className="w-4 h-4 mr-2" />
-                      Delete
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                <div className="flex items-center gap-2 text-sm text-muted-foreground mb-3">
+                  <Flame className="w-4 h-4 text-ko-500" />
+                  <span>{plan.dailyCalories} kcal/day</span>
+                </div>
+                <div className="grid grid-cols-3 gap-2 p-3 rounded-lg bg-muted/30">
+                  <div className="text-center">
+                    <p className="text-xs text-muted-foreground">P</p>
+                    <p className="text-sm font-medium text-foreground">{plan.macros.protein}g</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-xs text-muted-foreground">C</p>
+                    <p className="text-sm font-medium text-foreground">{plan.macros.carbs}g</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-xs text-muted-foreground">F</p>
+                    <p className="text-sm font-medium text-foreground">{plan.macros.fats}g</p>
+                  </div>
+                </div>
+                {plan.meals?.length > 0 && (
+                  <p className="text-xs text-muted-foreground mt-2">{plan.meals.length} meal(s)</p>
+                )}
               </div>
-              <div className="flex items-center gap-2 text-sm text-muted-foreground mb-3">
-                <Flame className="w-4 h-4 text-ko-500" />
-                <span>{plan.dailyCalories} kcal/day</span>
-              </div>
-              <div className="grid grid-cols-3 gap-2 p-3 rounded-lg bg-muted/30">
-                <div className="text-center">
-                  <p className="text-xs text-muted-foreground">P</p>
-                  <p className="text-sm font-medium text-foreground">{plan.macros.protein}g</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-xs text-muted-foreground">C</p>
-                  <p className="text-sm font-medium text-foreground">{plan.macros.carbs}g</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-xs text-muted-foreground">F</p>
-                  <p className="text-sm font-medium text-foreground">{plan.macros.fats}g</p>
-                </div>
-              </div>
-              {plan.meals?.length > 0 && (
-                <p className="text-xs text-muted-foreground mt-2">{plan.meals.length} meal(s)</p>
-              )}
+            ))}
+          </div>
+
+          {/* Pagination UI */}
+          {totalPages > 1 && (
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-border mt-2">
+              <p className="text-sm text-muted-foreground">
+                Showing {(currentPage - 1) * itemsPerPage + 1} to {Math.min(currentPage * itemsPerPage, filteredPlans.length)} of {filteredPlans.length} diet plans
+              </p>
+              <Pagination className="w-auto mx-0">
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious
+                      href="#"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        if (currentPage > 1) setCurrentPage(currentPage - 1);
+                      }}
+                      className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                    />
+                  </PaginationItem>
+
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
+                    if (
+                      page === 1 ||
+                      page === totalPages ||
+                      (page >= currentPage - 1 && page <= currentPage + 1)
+                    ) {
+                      return (
+                        <PaginationItem key={page}>
+                          <PaginationLink
+                            href="#"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              setCurrentPage(page);
+                            }}
+                            isActive={currentPage === page}
+                            className="cursor-pointer"
+                          >
+                            {page}
+                          </PaginationLink>
+                        </PaginationItem>
+                      );
+                    } else if (
+                      (page === 2 && currentPage > 3) ||
+                      (page === totalPages - 1 && currentPage < totalPages - 2)
+                    ) {
+                      return (
+                        <PaginationItem key={page}>
+                          <PaginationEllipsis />
+                        </PaginationItem>
+                      );
+                    }
+                    return null;
+                  })}
+
+                  <PaginationItem>
+                    <PaginationNext
+                      href="#"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        if (currentPage < totalPages) setCurrentPage(currentPage + 1);
+                      }}
+                      className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
             </div>
-          ))}
-        </div>
+          )}
+        </>
       )}
 
       {/* Edit Dialog */}

@@ -18,6 +18,15 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from '@/components/ui/pagination';
 import { getRecipes } from '@/api/recipes';
 import type { Recipe } from '@/types';
 
@@ -28,6 +37,9 @@ export function Recipes() {
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 9;
 
   useEffect(() => {
     loadRecipes();
@@ -55,6 +67,17 @@ export function Recipes() {
     const matchesCategory = categoryFilter === 'all' || recipe.category === categoryFilter;
     return matchesSearch && matchesCategory;
   });
+
+  const totalPages = Math.ceil(filteredRecipes.length / itemsPerPage);
+  const paginatedRecipes = filteredRecipes.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
+  // Reset to first page when search or category changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, categoryFilter]);
 
   const handleRecipeClick = (recipe: Recipe) => {
     setSelectedRecipe(recipe);
@@ -119,8 +142,8 @@ export function Recipes() {
                 size="sm"
                 onClick={() => setCategoryFilter(cat)}
                 className={`flex items-center gap-2 ${categoryFilter === cat
-                    ? 'bg-gradient-to-r from-ko-500 to-ko-600 text-primary-foreground'
-                    : ''
+                  ? 'bg-gradient-to-r from-ko-500 to-ko-600 text-primary-foreground'
+                  : ''
                   }`}
               >
                 <Icon className="w-4 h-4" />
@@ -134,7 +157,7 @@ export function Recipes() {
       {/* Recipes Grid */}
       {loading ? (
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {Array.from({ length: 6 }).map((_, i) => (
+          {Array.from({ length: 9 }).map((_, i) => (
             <div key={i} className="p-6 rounded-xl bg-card/50 border border-border space-y-4">
               <Skeleton className="w-full h-48 rounded-lg" />
               <div className="space-y-3">
@@ -161,94 +184,166 @@ export function Recipes() {
           <p className="text-muted-foreground">No recipes found. Try adjusting your search or filters.</p>
         </div>
       ) : (
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredRecipes.map((recipe) => {
-            const Icon = categoryIcons[recipe.category] || Utensils;
-            return (
-              <div
-                key={recipe.id}
-                onClick={() => handleRecipeClick(recipe)}
-                className="p-6 rounded-xl bg-card/50 border border-border hover:border-ko-500/50 transition-all cursor-pointer group"
-              >
-                {/* Image */}
-                {recipe.image ? (
-                  <div className="w-full h-48 rounded-lg bg-muted mb-4 overflow-hidden">
-                    <img
-                      src={recipe.image}
-                      alt={recipe.name}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                    />
-                  </div>
-                ) : (
-                  <div className="w-full h-48 rounded-lg bg-gradient-to-br from-ko-500/20 to-koBlue-500/20 mb-4 flex items-center justify-center">
-                    <Icon className="w-16 h-16 text-ko-500/50" />
-                  </div>
-                )}
+        <div className="space-y-6">
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {paginatedRecipes.map((recipe) => {
+              const Icon = categoryIcons[recipe.category] || Utensils;
+              return (
+                <div
+                  key={recipe.id}
+                  onClick={() => handleRecipeClick(recipe)}
+                  className="p-6 rounded-xl bg-card/50 border border-border hover:border-ko-500/50 transition-all cursor-pointer group flex flex-col h-full"
+                >
+                  {/* Image */}
+                  {recipe.image ? (
+                    <div className="w-full h-48 rounded-lg bg-muted mb-4 overflow-hidden shrink-0">
+                      <img
+                        src={recipe.image}
+                        alt={recipe.name}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                      />
+                    </div>
+                  ) : (
+                    <div className="w-full h-48 rounded-lg bg-gradient-to-br from-ko-500/20 to-koBlue-500/20 mb-4 flex items-center justify-center shrink-0">
+                      <Icon className="w-16 h-16 text-ko-500/50" />
+                    </div>
+                  )}
 
-                {/* Header */}
-                <div className="mb-3">
-                  <div className="flex items-center justify-between mb-2">
-                    <h3 className="font-display text-xl font-bold text-foreground group-hover:text-ko-500 transition-colors">
-                      {recipe.name}
-                    </h3>
-                    <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-ko-500 transition-colors" />
+                  {/* Header */}
+                  <div className="mb-3 shrink-0">
+                    <div className="flex items-center justify-between mb-2">
+                      <h3 className="font-display text-xl font-bold text-foreground group-hover:text-ko-500 transition-colors line-clamp-1">
+                        {recipe.name}
+                      </h3>
+                      <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-ko-500 transition-colors shrink-0" />
+                    </div>
+                    <Badge className={`${categoryColors[recipe.category] || 'bg-muted text-muted-foreground'} text-xs`}>
+                      {recipe.category}
+                    </Badge>
                   </div>
-                  <Badge className={`${categoryColors[recipe.category] || 'bg-muted text-muted-foreground'} text-xs`}>
-                    {recipe.category}
-                  </Badge>
-                </div>
 
-                {/* Description */}
-                <p className="text-muted-foreground text-sm mb-4 line-clamp-2">{recipe.description}</p>
+                  {/* Description */}
+                  <p className="text-muted-foreground text-sm mb-4 line-clamp-2 overflow-hidden">{recipe.description}</p>
 
-                {/* Stats */}
-                <div className="grid grid-cols-3 gap-3 mb-4">
-                  <div className="flex items-center gap-2 text-sm">
-                    <Clock className="w-4 h-4 text-muted-foreground" />
-                    <span className="text-muted-foreground">{recipe.prepTime + recipe.cookTime} min</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-sm">
-                    <Users className="w-4 h-4 text-muted-foreground" />
-                    <span className="text-muted-foreground">{recipe.servings}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-sm">
-                    <Flame className="w-4 h-4 text-ko-500" />
-                    <span className="text-foreground font-medium">{recipe.calories} kcal</span>
-                  </div>
-                </div>
+                  <div className="mt-auto space-y-4">
+                    {/* Stats */}
+                    <div className="grid grid-cols-3 gap-3">
+                      <div className="flex items-center gap-1.5 text-sm overflow-hidden">
+                        <Clock className="w-4 h-4 text-muted-foreground shrink-0" />
+                        <span className="text-muted-foreground truncate">{recipe.prepTime + recipe.cookTime} m</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 text-sm overflow-hidden">
+                        <Users className="w-4 h-4 text-muted-foreground shrink-0" />
+                        <span className="text-muted-foreground truncate">{recipe.servings} s</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 text-sm overflow-hidden">
+                        <Flame className="w-4 h-4 text-ko-500 shrink-0" />
+                        <span className="text-foreground font-medium truncate">{recipe.calories} k</span>
+                      </div>
+                    </div>
 
-                {/* Macros */}
-                <div className="grid grid-cols-3 gap-2 p-3 rounded-lg bg-muted/30">
-                  <div className="text-center">
-                    <p className="text-xs text-muted-foreground">Protein</p>
-                    <p className="text-sm font-medium text-foreground">{recipe.macros.protein}g</p>
-                  </div>
-                  <div className="text-center">
-                    <p className="text-xs text-muted-foreground">Carbs</p>
-                    <p className="text-sm font-medium text-foreground">{recipe.macros.carbs}g</p>
-                  </div>
-                  <div className="text-center">
-                    <p className="text-xs text-muted-foreground">Fats</p>
-                    <p className="text-sm font-medium text-foreground">{recipe.macros.fats}g</p>
-                  </div>
-                </div>
+                    {/* Macros */}
+                    <div className="grid grid-cols-3 gap-2 p-3 rounded-lg bg-muted/30">
+                      <div className="text-center">
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-tight">Prot</p>
+                        <p className="text-sm font-medium text-foreground">{recipe.macros.protein}g</p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-tight">Carb</p>
+                        <p className="text-sm font-medium text-foreground">{recipe.macros.carbs}g</p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-tight">Fat</p>
+                        <p className="text-sm font-medium text-foreground">{recipe.macros.fats}g</p>
+                      </div>
+                    </div>
 
-                {/* Tags */}
-                {recipe.tags.length > 0 && (
-                  <div className="flex flex-wrap gap-2 mt-4">
-                    {recipe.tags.slice(0, 3).map((tag, index) => (
-                      <Badge key={index} variant="secondary" className="text-xs">
-                        {tag}
-                      </Badge>
-                    ))}
-                    {recipe.tags.length > 3 && (
-                      <Badge variant="secondary" className="text-xs">+{recipe.tags.length - 3}</Badge>
+                    {/* Tags */}
+                    {recipe.tags.length > 0 && (
+                      <div className="flex flex-wrap gap-2">
+                        {recipe.tags.slice(0, 2).map((tag, index) => (
+                          <Badge key={index} variant="secondary" className="text-[10px] h-5 py-0 px-2 bg-muted/50 border-none capitalize">
+                            {tag}
+                          </Badge>
+                        ))}
+                        {recipe.tags.length > 2 && (
+                          <Badge variant="secondary" className="text-[10px] h-5 py-0 px-2 bg-muted/50 border-none">+{recipe.tags.length - 2}</Badge>
+                        )}
+                      </div>
                     )}
                   </div>
-                )}
-              </div>
-            );
-          })}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Pagination UI */}
+          {totalPages > 1 && (
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-border mt-2">
+              <p className="text-sm text-muted-foreground">
+                Showing {(currentPage - 1) * itemsPerPage + 1} to {Math.min(currentPage * itemsPerPage, filteredRecipes.length)} of {filteredRecipes.length} recipes
+              </p>
+              <Pagination className="w-auto mx-0">
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious
+                      href="#"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        if (currentPage > 1) setCurrentPage(currentPage - 1);
+                      }}
+                      className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                    />
+                  </PaginationItem>
+
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
+                    if (
+                      page === 1 ||
+                      page === totalPages ||
+                      (page >= currentPage - 1 && page <= currentPage + 1)
+                    ) {
+                      return (
+                        <PaginationItem key={page}>
+                          <PaginationLink
+                            href="#"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              setCurrentPage(page);
+                            }}
+                            isActive={currentPage === page}
+                            className="cursor-pointer"
+                          >
+                            {page}
+                          </PaginationLink>
+                        </PaginationItem>
+                      );
+                    } else if (
+                      (page === 2 && currentPage > 3) ||
+                      (page === totalPages - 1 && currentPage < totalPages - 2)
+                    ) {
+                      return (
+                        <PaginationItem key={page}>
+                          <PaginationEllipsis />
+                        </PaginationItem>
+                      );
+                    }
+                    return null;
+                  })}
+
+                  <PaginationItem>
+                    <PaginationNext
+                      href="#"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        if (currentPage < totalPages) setCurrentPage(currentPage + 1);
+                      }}
+                      className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
+            </div>
+          )}
         </div>
       )}
 

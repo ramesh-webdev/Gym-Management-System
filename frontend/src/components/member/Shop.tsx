@@ -17,9 +17,19 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
+import {
+    Pagination,
+    PaginationContent,
+    PaginationEllipsis,
+    PaginationItem,
+    PaginationLink,
+    PaginationNext,
+    PaginationPrevious,
+} from '@/components/ui/pagination';
 import { getProducts } from '@/api/products';
-import { createOrder, verifyPayment } from '@/api/payments';
+import { createOrder, verifyPayment, cancelOrder } from '@/api/payments';
 import type { Product } from '@/types';
+import { openRazorpayCheckout, isRazorpayConfigured, RAZORPAY_CANCELLED_MESSAGE } from '@/utils/razorpay';
 import { toast } from 'sonner';
 
 type PayStep = 'confirm' | 'checkout' | 'success';
@@ -30,12 +40,18 @@ export function Shop() {
     const [searchQuery, setSearchQuery] = useState('');
     const [categoryFilter, setCategoryFilter] = useState('all');
 
+    // Pagination state
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 8;
+
     // Payment dialog state (same flow as MemberPayments)
     const [payDialogOpen, setPayDialogOpen] = useState(false);
     const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
     const [step, setStep] = useState<PayStep>('confirm');
     const [orderId, setOrderId] = useState<string | null>(null);
     const [orderAmountRupees, setOrderAmountRupees] = useState(0);
+    const [orderAmountPaise, setOrderAmountPaise] = useState(0);
+    const [razorpayKey, setRazorpayKey] = useState<string>('');
     const [submitting, setSubmitting] = useState(false);
     const [verifyError, setVerifyError] = useState<string | null>(null);
 
@@ -54,11 +70,24 @@ export function Shop() {
         return matchesSearch && matchesCategory && isActive;
     });
 
+    const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
+    const paginatedProducts = filteredProducts.slice(
+        (currentPage - 1) * itemsPerPage,
+        currentPage * itemsPerPage
+    );
+
+    // Reset to first page when search or filters change
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchQuery, categoryFilter]);
+
     const resetPayDialog = () => {
         setSelectedProduct(null);
         setStep('confirm');
         setOrderId(null);
         setOrderAmountRupees(0);
+        setOrderAmountPaise(0);
+        setRazorpayKey('');
         setVerifyError(null);
     };
 
@@ -72,6 +101,8 @@ export function Shop() {
         setStep('confirm');
         setOrderId(null);
         setOrderAmountRupees(0);
+        setOrderAmountPaise(0);
+        setRazorpayKey('');
         setVerifyError(null);
         setPayDialogOpen(true);
     };
@@ -84,6 +115,8 @@ export function Shop() {
             const res = await createOrder({ amount: selectedProduct.price, type: 'product', productId: selectedProduct.id });
             setOrderId(res.orderId);
             setOrderAmountRupees(res.amount / 100);
+            setOrderAmountPaise(res.amount);
+            setRazorpayKey(res.key);
             setStep('checkout');
         } catch (e) {
             setVerifyError(e instanceof Error ? e.message : 'Failed to create order');
@@ -97,22 +130,48 @@ export function Shop() {
         setSubmitting(true);
         setVerifyError(null);
         try {
-            await verifyPayment({
-                orderId,
-                razorpayPaymentId: `auto_${orderId}`,
-                razorpaySignature: 'auto_approved',
-            });
+            if (isRazorpayConfigured(razorpayKey)) {
+                const result = await openRazorpayCheckout({
+                    key: razorpayKey,
+                    orderId,
+                    amount: orderAmountPaise,
+                    name: 'KO Fitness',
+                    description: 'Product purchase',
+                });
+                await verifyPayment({
+                    orderId: result.razorpayOrderId,
+                    razorpayPaymentId: result.razorpayPaymentId,
+                    razorpaySignature: result.razorpaySignature,
+                });
+            } else {
+                await verifyPayment({
+                    orderId,
+                    razorpayPaymentId: `auto_${orderId}`,
+                    razorpaySignature: 'auto_approved',
+                });
+            }
             setStep('success');
             toast.success('Payment successful!');
         } catch (e) {
-            setVerifyError(e instanceof Error ? e.message : 'Payment failed');
+            const msg = e instanceof Error ? e.message : 'Payment failed';
+            if (msg === RAZORPAY_CANCELLED_MESSAGE && orderId) {
+                try {
+                    await cancelOrder(orderId);
+                } catch {
+                    // ignore cancel API errors
+                }
+                toast.info('Payment cancelled');
+                setVerifyError(null);
+            } else {
+                setVerifyError(msg);
+            }
         } finally {
             setSubmitting(false);
         }
     };
 
     return (
-        <div className="space-y-6">
+        <div className="p-6 space-y-6">
             {/* Header */}
             <div>
                 <h1 className="font-display text-3xl font-bold text-foreground">Shop</h1>
@@ -150,71 +209,141 @@ export function Shop() {
             </div>
 
             {/* Product Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                {productsLoading ? (
-                    Array.from({ length: 8 }).map((_, i) => (
-                        <div key={i} className="bg-card/50 border border-border rounded-xl overflow-hidden flex flex-col space-y-4 p-4">
-                            <Skeleton className="aspect-square w-full rounded-lg" />
-                            <div className="space-y-2 flex-1">
-                                <Skeleton className="h-6 w-3/4" />
-                                <Skeleton className="h-4 w-full" />
-                                <Skeleton className="h-4 w-5/6" />
-                            </div>
-                            <div className="flex items-center justify-between mt-auto pt-4">
-                                <Skeleton className="h-8 w-20" />
-                                <Skeleton className="h-9 w-24 rounded-md" />
-                            </div>
-                        </div>
-                    ))
-                ) : (
-                    filteredProducts.map((product) => (
-                        <div
-                            key={product.id}
-                            className="group relative bg-card/50 border border-border rounded-xl overflow-hidden hover:border-ko-500/30 transition-all flex flex-col"
-                        >
-                            {/* Image */}
-                            <div className="aspect-square bg-muted relative overflow-hidden">
-                                <img
-                                    src={product.image}
-                                    alt={product.name}
-                                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                                />
-                                <div className="absolute top-2 right-2">
-                                    <Badge className="bg-background/80 backdrop-blur text-foreground border-none">
-                                        {product.category}
-                                    </Badge>
+            <div className="space-y-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                    {productsLoading ? (
+                        Array.from({ length: 8 }).map((_, i) => (
+                            <div key={i} className="bg-card/50 border border-border rounded-xl overflow-hidden flex flex-col space-y-4 p-4">
+                                <Skeleton className="aspect-square w-full rounded-lg" />
+                                <div className="space-y-2 flex-1">
+                                    <Skeleton className="h-6 w-3/4" />
+                                    <Skeleton className="h-4 w-full" />
+                                    <Skeleton className="h-4 w-5/6" />
+                                </div>
+                                <div className="flex items-center justify-between mt-auto pt-4">
+                                    <Skeleton className="h-8 w-20" />
+                                    <Skeleton className="h-9 w-24 rounded-md" />
                                 </div>
                             </div>
+                        ))
+                    ) : (
+                        paginatedProducts.map((product) => (
+                            <div
+                                key={product.id}
+                                className="group relative bg-card/50 border border-border rounded-xl overflow-hidden hover:border-ko-500/30 transition-all flex flex-col"
+                            >
+                                {/* Image */}
+                                <div className="aspect-square bg-muted relative overflow-hidden">
+                                    <img
+                                        src={product.image}
+                                        alt={product.name}
+                                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                    />
+                                    <div className="absolute top-2 right-2">
+                                        <Badge className="bg-background/80 backdrop-blur text-foreground border-none">
+                                            {product.category}
+                                        </Badge>
+                                    </div>
+                                </div>
 
-                            {/* Content */}
-                            <div className="p-4 flex flex-col flex-1">
-                                <h3 className="font-display font-bold text-lg text-foreground mb-1">{product.name}</h3>
-                                <p className="text-sm text-muted-foreground line-clamp-2 mb-4 flex-1">
-                                    {product.description}
-                                </p>
+                                {/* Content */}
+                                <div className="p-4 flex flex-col flex-1">
+                                    <h3 className="font-display font-bold text-lg text-foreground mb-1">{product.name}</h3>
+                                    <p className="text-sm text-muted-foreground line-clamp-2 mb-4 flex-1">
+                                        {product.description}
+                                    </p>
 
-                                <div className="flex items-center justify-between mt-auto">
-                                    <span className="font-display text-xl font-bold bg-gradient-to-r from-ko-500 to-ko-600 bg-clip-text text-transparent">
-                                        ₹{product.price}
-                                    </span>
-                                    <Button
-                                        size="sm"
-                                        className="bg-gradient-to-r from-ko-500 to-ko-600 text-primary-foreground hover:from-ko-600 hover:to-ko-700"
-                                        onClick={() => handleBuyNow(product)}
-                                        disabled={product.stock === 0}
-                                    >
-                                        <ShoppingBag className="w-4 h-4 mr-2" />
-                                        {product.stock > 0 ? 'Buy Now' : 'Out of Stock'}
-                                    </Button>
+                                    <div className="flex items-center justify-between mt-auto">
+                                        <span className="font-display text-xl font-bold bg-gradient-to-r from-ko-500 to-ko-600 bg-clip-text text-transparent">
+                                            ₹{product.price}
+                                        </span>
+                                        <Button
+                                            size="sm"
+                                            className="bg-gradient-to-r from-ko-500 to-ko-600 text-primary-foreground hover:from-ko-600 hover:to-ko-700"
+                                            onClick={() => handleBuyNow(product)}
+                                            disabled={product.stock === 0}
+                                        >
+                                            <ShoppingBag className="w-4 h-4 mr-2" />
+                                            {product.stock > 0 ? 'Buy Now' : 'Out of Stock'}
+                                        </Button>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    ))
-                )}
+                        ))
+                    )}
 
-                {!productsLoading && filteredProducts.length === 0 && (
-                    <div className="col-span-full py-12 text-center text-muted-foreground">
-                        No products found matching your criteria.
+                    {!productsLoading && filteredProducts.length === 0 && (
+                        <div className="col-span-full py-12 text-center text-muted-foreground">
+                            No products found matching your criteria.
+                        </div>
+                    )}
+                </div>
+
+                {/* Pagination UI */}
+                {!productsLoading && totalPages > 1 && (
+                    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-border mt-2">
+                        <p className="text-sm text-muted-foreground">
+                            Showing {(currentPage - 1) * itemsPerPage + 1} to {Math.min(currentPage * itemsPerPage, filteredProducts.length)} of {filteredProducts.length} products
+                        </p>
+                        <Pagination className="w-auto mx-0">
+                            <PaginationContent>
+                                <PaginationItem>
+                                    <PaginationPrevious
+                                        href="#"
+                                        onClick={(e) => {
+                                            e.preventDefault();
+                                            if (currentPage > 1) setCurrentPage(currentPage - 1);
+                                        }}
+                                        className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                                    />
+                                </PaginationItem>
+
+                                {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
+                                    if (
+                                        page === 1 ||
+                                        page === totalPages ||
+                                        (page >= currentPage - 1 && page <= currentPage + 1)
+                                    ) {
+                                        return (
+                                            <PaginationItem key={page}>
+                                                <PaginationLink
+                                                    href="#"
+                                                    onClick={(e) => {
+                                                        e.preventDefault();
+                                                        setCurrentPage(page);
+                                                    }}
+                                                    isActive={currentPage === page}
+                                                    className="cursor-pointer"
+                                                >
+                                                    {page}
+                                                </PaginationLink>
+                                            </PaginationItem>
+                                        );
+                                    } else if (
+                                        (page === 2 && currentPage > 3) ||
+                                        (page === totalPages - 1 && currentPage < totalPages - 2)
+                                    ) {
+                                        return (
+                                            <PaginationItem key={page}>
+                                                <PaginationEllipsis />
+                                            </PaginationItem>
+                                        );
+                                    }
+                                    return null;
+                                })}
+
+                                <PaginationItem>
+                                    <PaginationNext
+                                        href="#"
+                                        onClick={(e) => {
+                                            e.preventDefault();
+                                            if (currentPage < totalPages) setCurrentPage(currentPage + 1);
+                                        }}
+                                        className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                                    />
+                                </PaginationItem>
+                            </PaginationContent>
+                        </Pagination>
                     </div>
                 )}
             </div>
@@ -287,7 +416,7 @@ export function Shop() {
                                 </div>
                                 <p className="text-muted-foreground text-xs flex items-center gap-1">
                                     <Lock className="w-3 h-3" />
-                                    Secure payment (auto-approved in test mode; Razorpay will be used for live payments)
+                                    Secure payment via Razorpay
                                 </p>
                                 {verifyError && (
                                     <p className="text-sm text-red-500 bg-red-500/10 px-3 py-2 rounded-lg">{verifyError}</p>

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   Plus,
   Edit,
@@ -27,6 +27,15 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from '@/components/ui/pagination';
 import { toast } from 'sonner';
 import { getDietPlans, createDietPlan, updateDietPlan, deleteDietPlan } from '@/api/diet-plans';
 import { getMembers } from '@/api/members';
@@ -87,7 +96,10 @@ export function DietPlanManagement() {
   const [selectedPlanToCopy, setSelectedPlanToCopy] = useState<string>('');
   const [formRef, setFormRef] = useState<HTMLFormElement | null>(null);
 
-  const loadDietPlans = () => {
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 6;
+
+  const loadDietPlans = useCallback(() => {
     setLoading(true);
     getDietPlans()
       .then(setDietPlans)
@@ -96,20 +108,19 @@ export function DietPlanManagement() {
         setDietPlans([]);
       })
       .finally(() => setLoading(false));
-  };
+  }, []);
 
   useEffect(() => {
     loadDietPlans();
     getMembers()
       .then((allMembers) => {
-        // Filter: active members with personal training (for diet plan assignment)
         setMembers(allMembers.filter((m) => m.hasPersonalTraining && m.status === 'active'));
       })
       .catch(() => {
         toast.error('Failed to load members');
         setMembers([]);
       });
-  }, []);
+  }, [loadDietPlans]);
 
   const filteredPlans = dietPlans.filter((plan) => {
     const member = members.find((m) => m.id === plan.memberId);
@@ -119,6 +130,16 @@ export function DietPlanManagement() {
       memberName.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesSearch;
   });
+
+  const totalPages = Math.ceil(filteredPlans.length / itemsPerPage);
+  const paginatedPlans = filteredPlans.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery]);
 
   const handleAddPlan = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -241,7 +262,6 @@ export function DietPlanManagement() {
     if (planId && formRef) {
       const planToCopy = dietPlans.find((p) => p.id === planId);
       if (planToCopy) {
-        // Populate form fields
         const nameInput = formRef.querySelector('[name="name"]') as HTMLInputElement;
         const caloriesInput = formRef.querySelector('[name="dailyCalories"]') as HTMLInputElement;
         const proteinInput = formRef.querySelector('[name="protein"]') as HTMLInputElement;
@@ -254,7 +274,6 @@ export function DietPlanManagement() {
         if (carbsInput) carbsInput.value = String(planToCopy.macros.carbs);
         if (fatsInput) fatsInput.value = String(planToCopy.macros.fats);
 
-        // Populate meal fields
         planToCopy.meals.forEach((meal) => {
           const foodsInput = formRef.querySelector(`[name="${meal.type}_foods"]`) as HTMLInputElement;
           const caloriesMealInput = formRef.querySelector(`[name="${meal.type}_calories"]`) as HTMLInputElement;
@@ -280,20 +299,17 @@ export function DietPlanManagement() {
 
   return (
     <div className="p-6 space-y-6">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="font-display text-3xl font-bold text-foreground">Diet Plans</h1>
           <p className="text-muted-foreground">Create and manage personalized diet plans for members</p>
         </div>
 
-        {/* Add Plan Dialog */}
         <Dialog
           open={isAddDialogOpen}
           onOpenChange={(open) => {
             setIsAddDialogOpen(open);
             if (!open) {
-              // Reset copy state when dialog closes
               setCopyFromExisting(false);
               setSelectedPlanToCopy('');
             }
@@ -316,7 +332,6 @@ export function DietPlanManagement() {
               onSubmit={handleAddPlan}
               className="space-y-4 pt-4"
             >
-              {/* Copy from existing plan option */}
               <div className="p-4 rounded-lg bg-muted/30 border border-border">
                 <div className="flex items-center space-x-3">
                   <Checkbox
@@ -426,7 +441,6 @@ export function DietPlanManagement() {
                 </div>
               </div>
 
-              {/* Meals Section */}
               <div className="space-y-4 pt-4 border-t border-border">
                 <h3 className="font-display text-lg font-bold text-foreground">Meals</h3>
                 {['breakfast', 'lunch', 'dinner', 'snack'].map((mealType) => (
@@ -475,7 +489,6 @@ export function DietPlanManagement() {
         </Dialog>
       </div>
 
-      {/* Search */}
       <div className="relative max-w-md">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
         <Input
@@ -487,7 +500,6 @@ export function DietPlanManagement() {
         />
       </div>
 
-      {/* Diet Plans Grid */}
       {loading ? (
         <div className="grid md:grid-cols-2 gap-6">
           {Array.from({ length: 4 }).map((_, i) => <DietPlanSkeleton key={i} />)}
@@ -497,14 +509,13 @@ export function DietPlanManagement() {
           {dietPlans.length === 0 ? 'No diet plans yet. Create one to get started.' : 'No diet plans match your search.'}
         </div>
       ) : (
-        <div className="grid md:grid-cols-2 gap-6">
-          {filteredPlans.map((plan) => {
-            return (
+        <div className="space-y-6">
+          <div className="grid md:grid-cols-2 gap-6">
+            {paginatedPlans.map((plan) => (
               <div
                 key={plan.id}
                 className="p-6 rounded-xl bg-card/50 border border-border hover:border-border transition-colors"
               >
-                {/* Header */}
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex-1">
                     <h3 className="font-display text-xl font-bold text-foreground mb-1">{plan.name}</h3>
@@ -537,7 +548,6 @@ export function DietPlanManagement() {
                   </DropdownMenu>
                 </div>
 
-                {/* Calories & Macros */}
                 <div className="mb-4 p-4 rounded-lg bg-muted/30">
                   <div className="flex items-center gap-2 mb-3">
                     <Flame className="w-5 h-5 text-ko-500" />
@@ -571,7 +581,6 @@ export function DietPlanManagement() {
                   </div>
                 </div>
 
-                {/* Meals Preview */}
                 <div className="space-y-2">
                   <h4 className="text-sm font-medium text-foreground mb-2">Meals ({plan.meals.length})</h4>
                   {plan.meals.slice(0, 3).map((meal) => (
@@ -585,12 +594,78 @@ export function DietPlanManagement() {
                   )}
                 </div>
               </div>
-            );
-          })}
+            ))}
+          </div>
+
+          {totalPages > 1 && (
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-border mt-2">
+              <p className="text-sm text-muted-foreground">
+                Showing {(currentPage - 1) * itemsPerPage + 1} to {Math.min(currentPage * itemsPerPage, filteredPlans.length)} of {filteredPlans.length} plans
+              </p>
+              <Pagination className="w-auto mx-0">
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious
+                      href="#"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        if (currentPage > 1) setCurrentPage(currentPage - 1);
+                      }}
+                      className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                    />
+                  </PaginationItem>
+
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
+                    if (
+                      page === 1 ||
+                      page === totalPages ||
+                      (page >= currentPage - 1 && page <= currentPage + 1)
+                    ) {
+                      return (
+                        <PaginationItem key={page}>
+                          <PaginationLink
+                            href="#"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              setCurrentPage(page);
+                            }}
+                            isActive={currentPage === page}
+                            className="cursor-pointer"
+                          >
+                            {page}
+                          </PaginationLink>
+                        </PaginationItem>
+                      );
+                    } else if (
+                      (page === 2 && currentPage > 3) ||
+                      (page === totalPages - 1 && currentPage < totalPages - 2)
+                    ) {
+                      return (
+                        <PaginationItem key={page}>
+                          <PaginationEllipsis />
+                        </PaginationItem>
+                      );
+                    }
+                    return null;
+                  })}
+
+                  <PaginationItem>
+                    <PaginationNext
+                      href="#"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        if (currentPage < totalPages) setCurrentPage(currentPage + 1);
+                      }}
+                      className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
+            </div>
+          )}
         </div>
       )}
 
-      {/* Edit Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent className="bg-card border-border text-foreground max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
@@ -672,7 +747,6 @@ export function DietPlanManagement() {
                 </div>
               </div>
 
-              {/* Meals Section */}
               <div className="space-y-4 pt-4 border-t border-border">
                 <h3 className="font-display text-lg font-bold text-foreground">Meals</h3>
                 {['breakfast', 'lunch', 'dinner', 'snack'].map((mealType) => {

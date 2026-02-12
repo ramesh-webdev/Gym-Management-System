@@ -11,6 +11,15 @@ import {
 } from '@/api/notifications';
 import type { Notification } from '@/types';
 import { formatDateTime } from '@/utils/date';
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from '@/components/ui/pagination';
 
 interface NotificationsPageProps {
   /** Base path for back navigation (e.g. /member/dashboard or /trainer/dashboard) */
@@ -40,12 +49,15 @@ export function NotificationsPage({ backPath, backLabel = 'Dashboard' }: Notific
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 6; // 6 notifications per page
+
   const fetchNotifications = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
       const data = await listNotifications({ filter, limit: 100 });
-      setNotifications(data);
+      setNotifications(data || []);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load notifications');
       setNotifications([]);
@@ -63,6 +75,17 @@ export function NotificationsPage({ backPath, backLabel = 'Dashboard' }: Notific
     if (filter === 'read') return n.isRead;
     return true;
   });
+
+  const totalPages = Math.ceil(filteredNotifications.length / itemsPerPage);
+  const paginatedNotifications = filteredNotifications.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
+  // Reset to first page when filter changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filter]);
 
   const markAsRead = async (id: string) => {
     try {
@@ -132,8 +155,8 @@ export function NotificationsPage({ backPath, backLabel = 'Dashboard' }: Notific
             key={f}
             onClick={() => setFilter(f)}
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${filter === f
-                ? 'bg-gradient-to-r from-ko-500 to-ko-600 text-primary-foreground'
-                : 'bg-muted/50 text-muted-foreground hover:bg-muted'
+              ? 'bg-gradient-to-r from-ko-500 to-ko-600 text-primary-foreground'
+              : 'bg-muted/50 text-muted-foreground hover:bg-muted'
               }`}
           >
             {f.charAt(0).toUpperCase() + f.slice(1)}
@@ -168,12 +191,12 @@ export function NotificationsPage({ backPath, backLabel = 'Dashboard' }: Notific
           ))
         ) : (
           <>
-            {filteredNotifications.map((notification) => (
+            {paginatedNotifications.map((notification) => (
               <div
                 key={notification.id}
                 className={`p-4 rounded-xl border transition-colors ${notification.isRead
-                    ? 'bg-card/30 border-border'
-                    : 'bg-ko-500/5 border-ko-500/20'
+                  ? 'bg-card/30 border-border'
+                  : 'bg-ko-500/5 border-ko-500/20'
                   }`}
               >
                 <div className="flex items-start gap-4">
@@ -222,7 +245,75 @@ export function NotificationsPage({ backPath, backLabel = 'Dashboard' }: Notific
             {filteredNotifications.length === 0 && (
               <div className="text-center py-12">
                 <Bell className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-muted-foreground">No notifications</p>
+                <p className="text-muted-foreground">No notifications found.</p>
+              </div>
+            )}
+
+            {/* Pagination UI */}
+            {totalPages > 1 && (
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-border">
+                <p className="text-sm text-muted-foreground">
+                  Showing {(currentPage - 1) * itemsPerPage + 1} to {Math.min(currentPage * itemsPerPage, filteredNotifications.length)} of {filteredNotifications.length} notifications
+                </p>
+                <Pagination className="w-auto mx-0">
+                  <PaginationContent>
+                    <PaginationItem>
+                      <PaginationPrevious
+                        href="#"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          if (currentPage > 1) setCurrentPage(currentPage - 1);
+                        }}
+                        className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                      />
+                    </PaginationItem>
+
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
+                      if (
+                        page === 1 ||
+                        page === totalPages ||
+                        (page >= currentPage - 1 && page <= currentPage + 1)
+                      ) {
+                        return (
+                          <PaginationItem key={page}>
+                            <PaginationLink
+                              href="#"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                setCurrentPage(page);
+                              }}
+                              isActive={currentPage === page}
+                              className="cursor-pointer"
+                            >
+                              {page}
+                            </PaginationLink>
+                          </PaginationItem>
+                        );
+                      } else if (
+                        (page === 2 && currentPage > 3) ||
+                        (page === totalPages - 1 && currentPage < totalPages - 2)
+                      ) {
+                        return (
+                          <PaginationItem key={page}>
+                            <PaginationEllipsis />
+                          </PaginationItem>
+                        );
+                      }
+                      return null;
+                    })}
+
+                    <PaginationItem>
+                      <PaginationNext
+                        href="#"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          if (currentPage < totalPages) setCurrentPage(currentPage + 1);
+                        }}
+                        className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                      />
+                    </PaginationItem>
+                  </PaginationContent>
+                </Pagination>
               </div>
             )}
           </>

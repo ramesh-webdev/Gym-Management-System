@@ -23,10 +23,11 @@ import {
 import { fetchMe } from '@/api/auth';
 import { getMembershipPlans } from '@/api/membership-plans';
 import { getSettings } from '@/api/settings';
-import { createOrder, verifyPayment } from '@/api/payments';
+import { createOrder, verifyPayment, cancelOrder } from '@/api/payments';
 import type { User } from '@/types';
 import type { MembershipPlan } from '@/types';
 import { formatDate } from '@/utils/date';
+import { openRazorpayCheckout, isRazorpayConfigured } from '@/utils/razorpay';
 import { toast } from 'sonner';
 
 const USER_KEY = 'user';
@@ -47,12 +48,16 @@ export function MemberMembership() {
   const [addPersonalTraining, setAddPersonalTraining] = useState(false);
   const [orderId, setOrderId] = useState<string | null>(null);
   const [orderAmountRupees, setOrderAmountRupees] = useState(0);
+  const [orderAmountPaise, setOrderAmountPaise] = useState(0);
+  const [razorpayKey, setRazorpayKey] = useState<string>('');
   const [submitting, setSubmitting] = useState(false);
   const [verifyError, setVerifyError] = useState<string | null>(null);
 
   // Add PT only flow (ongoing membership)
   const [addPTOrderId, setAddPTOrderId] = useState<string | null>(null);
   const [addPTAmount, setAddPTAmount] = useState(0);
+  const [addPTAmountPaise, setAddPTAmountPaise] = useState(0);
+  const [addPTRazorpayKey, setAddPTRazorpayKey] = useState<string>('');
   const [addPTStep, setAddPTStep] = useState<'confirm' | 'checkout' | 'success'>('confirm');
   const [addPTSubmitting, setAddPTSubmitting] = useState(false);
   const [addPTError, setAddPTError] = useState<string | null>(null);
@@ -163,6 +168,8 @@ export function MemberMembership() {
       const res = await createOrder(body);
       setOrderId(res.orderId);
       setOrderAmountRupees(res.amount / 100);
+      setOrderAmountPaise(res.amount);
+      setRazorpayKey(res.key);
       setStep('checkout');
     } catch (e) {
       setVerifyError(e instanceof Error ? e.message : 'Failed to create order');
@@ -176,16 +183,42 @@ export function MemberMembership() {
     setSubmitting(true);
     setVerifyError(null);
     try {
-      await verifyPayment({
-        orderId,
-        razorpayPaymentId: `auto_${orderId}`,
-        razorpaySignature: 'auto_approved',
-      });
+      if (isRazorpayConfigured(razorpayKey)) {
+        const result = await openRazorpayCheckout({
+          key: razorpayKey,
+          orderId,
+          amount: orderAmountPaise,
+          name: 'KO Fitness',
+          description: 'Membership payment',
+        });
+        await verifyPayment({
+          orderId: result.razorpayOrderId,
+          razorpayPaymentId: result.razorpayPaymentId,
+          razorpaySignature: result.razorpaySignature,
+        });
+      } else {
+        await verifyPayment({
+          orderId,
+          razorpayPaymentId: `auto_${orderId}`,
+          razorpaySignature: 'auto_approved',
+        });
+      }
       setStep('success');
       toast.success('Payment successful! Your membership has been updated.');
       await loadMember();
     } catch (e) {
-      setVerifyError(e instanceof Error ? e.message : 'Payment failed');
+      const msg = e instanceof Error ? e.message : 'Payment failed';
+      if (msg === 'Payment cancelled' && orderId) {
+        try {
+          await cancelOrder(orderId);
+        } catch {
+          // ignore cancel API errors
+        }
+        toast.info('Payment cancelled');
+        setVerifyError(null);
+      } else {
+        setVerifyError(msg);
+      }
     } finally {
       setSubmitting(false);
     }
@@ -201,10 +234,14 @@ export function MemberMembership() {
         const res = await createOrder({ amount: ptAddOnPlan.price, type: 'membership', membershipPlanId: ptAddOnPlan.id });
         setAddPTOrderId(res.orderId);
         setAddPTAmount(res.amount / 100);
+        setAddPTAmountPaise(res.amount);
+        setAddPTRazorpayKey(res.key);
       } else {
         const res = await createOrder({ amount: ptPrice, type: 'personal_training' });
         setAddPTOrderId(res.orderId);
         setAddPTAmount(res.amount / 100);
+        setAddPTAmountPaise(res.amount);
+        setAddPTRazorpayKey(res.key);
       }
       setAddPTStep('checkout');
     } catch (e) {
@@ -219,16 +256,42 @@ export function MemberMembership() {
     setAddPTSubmitting(true);
     setAddPTError(null);
     try {
-      await verifyPayment({
-        orderId: addPTOrderId,
-        razorpayPaymentId: `auto_${addPTOrderId}`,
-        razorpaySignature: 'auto_approved',
-      });
+      if (isRazorpayConfigured(addPTRazorpayKey)) {
+        const result = await openRazorpayCheckout({
+          key: addPTRazorpayKey,
+          orderId: addPTOrderId,
+          amount: addPTAmountPaise,
+          name: 'KO Fitness',
+          description: 'Personal training add-on',
+        });
+        await verifyPayment({
+          orderId: result.razorpayOrderId,
+          razorpayPaymentId: result.razorpayPaymentId,
+          razorpaySignature: result.razorpaySignature,
+        });
+      } else {
+        await verifyPayment({
+          orderId: addPTOrderId,
+          razorpayPaymentId: `auto_${addPTOrderId}`,
+          razorpaySignature: 'auto_approved',
+        });
+      }
       setAddPTStep('success');
       toast.success('Personal training added to your membership!');
       await loadMember();
     } catch (e) {
-      setAddPTError(e instanceof Error ? e.message : 'Payment failed');
+      const msg = e instanceof Error ? e.message : 'Payment failed';
+      if (msg === 'Payment cancelled' && addPTOrderId) {
+        try {
+          await cancelOrder(addPTOrderId);
+        } catch {
+          // ignore cancel API errors
+        }
+        toast.info('Payment cancelled');
+        setAddPTError(null);
+      } else {
+        setAddPTError(msg);
+      }
     } finally {
       setAddPTSubmitting(false);
     }

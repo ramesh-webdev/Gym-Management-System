@@ -12,6 +12,7 @@ export interface TrainerListItem {
   rating: number;
   status: string;
   clientsCount?: number;
+  createdAt?: string;
 }
 
 export function getTrainers(status?: string): Promise<TrainerListItem[]> {

@@ -29,12 +29,22 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { listPayments, createOrder, verifyPayment } from '@/api/payments';
+import { listPayments, createOrder, verifyPayment, cancelOrder } from '@/api/payments';
 import { getProducts } from '@/api/products';
 import { getMembershipPlans } from '@/api/membership-plans';
 import { getSettings } from '@/api/settings';
 import type { Payment, Product, MembershipPlan } from '@/types';
 import { formatDate } from '@/utils/date';
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from '@/components/ui/pagination';
+import { openRazorpayCheckout, isRazorpayConfigured, RAZORPAY_CANCELLED_MESSAGE } from '@/utils/razorpay';
 import { toast } from 'sonner';
 
 type PayPurpose = 'product' | 'membership' | 'personal_training' | null;
@@ -61,8 +71,13 @@ export function MemberPayments() {
   const [payType, setPayType] = useState<Payment['type']>('membership');
   const [orderId, setOrderId] = useState<string | null>(null);
   const [orderAmountRupees, setOrderAmountRupees] = useState(0);
+  const [orderAmountPaise, setOrderAmountPaise] = useState(0);
+  const [razorpayKey, setRazorpayKey] = useState<string>('');
   const [submitting, setSubmitting] = useState(false);
   const [verifyError, setVerifyError] = useState<string | null>(null);
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   const fetchPayments = useCallback(async () => {
     setLoading(true);
@@ -82,6 +97,12 @@ export function MemberPayments() {
     fetchPayments();
   }, [fetchPayments]);
 
+  const totalPages = Math.ceil(payments.length / itemsPerPage);
+  const paginatedPayments = payments.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
   useEffect(() => {
     getSettings().then((s) => setPersonalTrainingPrice(s.personalTrainingPrice ?? 500)).catch(() => { });
   }, []);
@@ -95,6 +116,8 @@ export function MemberPayments() {
     setPayType('membership');
     setOrderId(null);
     setOrderAmountRupees(0);
+    setOrderAmountPaise(0);
+    setRazorpayKey('');
     setVerifyError(null);
   };
 
@@ -167,6 +190,8 @@ export function MemberPayments() {
       const res = await createOrder(body);
       setOrderId(res.orderId);
       setOrderAmountRupees(res.amount / 100);
+      setOrderAmountPaise(res.amount);
+      setRazorpayKey(res.key);
       setStep('checkout');
     } catch (e) {
       setVerifyError(e instanceof Error ? e.message : 'Failed to create order');
@@ -180,16 +205,42 @@ export function MemberPayments() {
     setSubmitting(true);
     setVerifyError(null);
     try {
-      await verifyPayment({
-        orderId,
-        razorpayPaymentId: `auto_${orderId}`,
-        razorpaySignature: 'auto_approved',
-      });
+      if (isRazorpayConfigured(razorpayKey)) {
+        const result = await openRazorpayCheckout({
+          key: razorpayKey,
+          orderId,
+          amount: orderAmountPaise,
+          name: 'KO Fitness',
+          description: 'Membership / Product payment',
+        });
+        await verifyPayment({
+          orderId: result.razorpayOrderId,
+          razorpayPaymentId: result.razorpayPaymentId,
+          razorpaySignature: result.razorpaySignature,
+        });
+      } else {
+        await verifyPayment({
+          orderId,
+          razorpayPaymentId: `auto_${orderId}`,
+          razorpaySignature: 'auto_approved',
+        });
+      }
       setStep('success');
       await fetchPayments();
       toast.success('Payment successful!');
     } catch (e) {
-      setVerifyError(e instanceof Error ? e.message : 'Payment failed');
+      const msg = e instanceof Error ? e.message : 'Payment failed';
+      if (msg === RAZORPAY_CANCELLED_MESSAGE && orderId) {
+        try {
+          await cancelOrder(orderId);
+        } catch {
+          // ignore cancel API errors
+        }
+        toast.info('Payment cancelled');
+        setVerifyError(null);
+      } else {
+        setVerifyError(msg);
+      }
     } finally {
       setSubmitting(false);
     }
@@ -307,8 +358,8 @@ export function MemberPayments() {
                               type="button"
                               onClick={() => handleSelectProduct(p)}
                               className={`w-full p-3 rounded-lg border text-left transition-colors ${selectedProduct?.id === p.id
-                                  ? 'border-lime-500 bg-lime-500/10'
-                                  : 'border-border hover:bg-muted/50'
+                                ? 'border-lime-500 bg-lime-500/10'
+                                : 'border-border hover:bg-muted/50'
                                 }`}
                             >
                               <div className="flex justify-between items-center">
@@ -338,8 +389,8 @@ export function MemberPayments() {
                               type="button"
                               onClick={() => handleSelectPlan(p)}
                               className={`w-full p-3 rounded-lg border text-left transition-colors ${selectedPlan?.id === p.id
-                                  ? 'border-lime-500 bg-lime-500/10'
-                                  : 'border-border hover:bg-muted/50'
+                                ? 'border-lime-500 bg-lime-500/10'
+                                : 'border-border hover:bg-muted/50'
                                 }`}
                             >
                               <div className="flex justify-between items-center">
@@ -406,7 +457,7 @@ export function MemberPayments() {
                   </div>
                   <p className="text-muted-foreground text-xs flex items-center gap-1">
                     <Lock className="w-3 h-3" />
-                    Secure payment (auto-approved in test mode; Razorpay will be used for live payments)
+                    Secure payment via Razorpay
                   </p>
                   {verifyError && (
                     <p className="text-sm text-red-500 bg-red-500/10 px-3 py-2 rounded-lg">{verifyError}</p>
@@ -529,7 +580,7 @@ export function MemberPayments() {
                   </TableCell>
                 </TableRow>
               ) : (
-                payments.map((payment) => (
+                paginatedPayments.map((payment) => (
                   <TableRow key={payment.id} className="border-border hover:bg-muted/50">
                     <TableCell className="text-foreground font-medium">{payment.invoiceNumber}</TableCell>
                     <TableCell className="text-muted-foreground capitalize">
@@ -544,10 +595,10 @@ export function MemberPayments() {
                         {getStatusIcon(payment.status)}
                         <span
                           className={`capitalize ${payment.status === 'paid'
-                              ? 'text-lime-500'
-                              : payment.status === 'pending'
-                                ? 'text-yellow-500'
-                                : 'text-red-400'
+                            ? 'text-lime-500'
+                            : payment.status === 'pending'
+                              ? 'text-yellow-500'
+                              : 'text-red-400'
                             }`}
                         >
                           {payment.status}
@@ -560,6 +611,74 @@ export function MemberPayments() {
             </TableBody>
           </Table>
         </div>
+
+        {/* Pagination UI */}
+        {totalPages > 1 && (
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-border mt-4">
+            <p className="text-sm text-muted-foreground">
+              Showing {(currentPage - 1) * itemsPerPage + 1} to {Math.min(currentPage * itemsPerPage, payments.length)} of {payments.length} payments
+            </p>
+            <Pagination className="w-auto mx-0">
+              <PaginationContent>
+                <PaginationItem>
+                  <PaginationPrevious
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      if (currentPage > 1) setCurrentPage(currentPage - 1);
+                    }}
+                    className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                  />
+                </PaginationItem>
+
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
+                  if (
+                    page === 1 ||
+                    page === totalPages ||
+                    (page >= currentPage - 1 && page <= currentPage + 1)
+                  ) {
+                    return (
+                      <PaginationItem key={page}>
+                        <PaginationLink
+                          href="#"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            setCurrentPage(page);
+                          }}
+                          isActive={currentPage === page}
+                          className="cursor-pointer"
+                        >
+                          {page}
+                        </PaginationLink>
+                      </PaginationItem>
+                    );
+                  } else if (
+                    (page === 2 && currentPage > 3) ||
+                    (page === totalPages - 1 && currentPage < totalPages - 2)
+                  ) {
+                    return (
+                      <PaginationItem key={page}>
+                        <PaginationEllipsis />
+                      </PaginationItem>
+                    );
+                  }
+                  return null;
+                })}
+
+                <PaginationItem>
+                  <PaginationNext
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      if (currentPage < totalPages) setCurrentPage(currentPage + 1);
+                    }}
+                    className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
+          </div>
+        )}
       </div>
     </div>
   );
