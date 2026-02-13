@@ -91,6 +91,8 @@ export function MembersManagement() {
   const [planFilter, setPlanFilter] = useState<string>('all');
   const [ptFilter, setPtFilter] = useState<string>('all');
   const [currentPage, setCurrentPage] = useState(1);
+  const [totalMembers, setTotalMembers] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
   const itemsPerPage = 10;
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [newMemberData, setNewMemberData] = useState({
@@ -140,25 +142,42 @@ export function MembersManagement() {
 
   const loadMembers = () => {
     setLoading(true);
-    getMembers()
-      .then(setMembers)
+    const ptParam = ptFilter === 'yes' ? 'true' : ptFilter === 'no' ? 'false' : undefined;
+    getMembers({
+      page: currentPage,
+      limit: itemsPerPage,
+      search: searchQuery.trim() || undefined,
+      status: statusFilter !== 'all' ? statusFilter : undefined,
+      planId: planFilter !== 'all' ? planFilter : undefined,
+      pt: ptParam,
+    })
+      .then((res) => {
+        setMembers(res.data);
+        setTotalMembers(res.total);
+        setTotalPages(res.totalPages);
+      })
       .catch(() => {
         toast.error('Failed to load members');
         setMembers([]);
+        setTotalMembers(0);
+        setTotalPages(1);
       })
       .finally(() => setLoading(false));
   };
 
   useEffect(() => {
     loadMembers();
+  }, [currentPage, searchQuery, statusFilter, planFilter, ptFilter]);
+
+  useEffect(() => {
     getMembershipPlans()
       .then(setPlans)
       .catch(() => {
         toast.error('Failed to load membership plans');
         setPlans([]);
       });
-    getTrainers()
-      .then(setTrainers)
+    getTrainers(undefined, { page: 1, limit: 200 })
+      .then((res) => setTrainers(res.data))
       .catch(() => {
         toast.error('Failed to load trainers');
         setTrainers([]);
@@ -170,26 +189,8 @@ export function MembersManagement() {
     setIsDetailsDialogOpen(true);
   };
 
-  const filteredMembers = members.filter((member) => {
-    const matchesSearch =
-      member.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      member.phone.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      member.membershipId.toLowerCase().includes(searchQuery.toLowerCase());
-
-    const matchesStatus = statusFilter === 'all' || member.status === statusFilter;
-    const matchesPlan = planFilter === 'all' || member.membershipType === planFilter;
-    const matchesPT = ptFilter === 'all' ||
-      (ptFilter === 'yes' && member.hasPersonalTraining) ||
-      (ptFilter === 'no' && !member.hasPersonalTraining);
-
-    return matchesSearch && matchesStatus && matchesPlan && matchesPT;
-  });
-
-  const totalPages = Math.ceil(filteredMembers.length / itemsPerPage);
-  const paginatedMembers = filteredMembers.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
+  // Server returns the current page; members is already the page slice
+  const paginatedMembers = members;
 
   // Reset to first page when filters change
   useEffect(() => {
@@ -237,7 +238,7 @@ export function MembersManagement() {
       return s;
     };
 
-    const rows = filteredMembers.map((member) => {
+    const rows = members.map((member) => {
       return [
         member.membershipId,
         member.name,
@@ -281,7 +282,7 @@ export function MembersManagement() {
             variant="outline"
             className="border-border text-foreground hover:bg-muted/50"
             onClick={handleExport}
-            disabled={filteredMembers.length === 0}
+            disabled={totalMembers === 0}
           >
             <Download className="w-4 h-4 mr-2" />
             Export
@@ -660,7 +661,7 @@ export function MembersManagement() {
           >
             <option value="all">All Plans</option>
             {plans.filter(p => p.isActive && !p.isAddOn).map((plan) => (
-              <option key={plan.id} value={plan.name}>{plan.name}</option>
+              <option key={plan.id} value={plan.id}>{plan.name}</option>
             ))}
           </select>
           <select
@@ -793,7 +794,7 @@ export function MembersManagement() {
         totalPages > 1 && (
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
             <p className="text-muted-foreground text-sm">
-              Showing {(currentPage - 1) * itemsPerPage + 1} to {Math.min(currentPage * itemsPerPage, filteredMembers.length)} of {filteredMembers.length} members
+              Showing {(currentPage - 1) * itemsPerPage + 1} to {Math.min(currentPage * itemsPerPage, totalMembers)} of {totalMembers} members
             </p>
             <Pagination className="w-auto mx-0">
               <PaginationContent>

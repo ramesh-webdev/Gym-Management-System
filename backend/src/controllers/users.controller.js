@@ -1,5 +1,6 @@
 const bcrypt = require('bcryptjs');
 const User = require('../models/User');
+const { parsePagination, sendPaginated } = require('../utils/pagination');
 
 async function getMe(req, res, next) {
   try {
@@ -94,19 +95,26 @@ async function updateMe(req, res, next) {
 
 /**
  * List all users (id, name, role) for admin only. Used e.g. for notification recipient filter.
+ * Query: page (default 1), limit (default 200, max 500).
  */
 async function listForAdmin(req, res, next) {
   try {
-    const users = await User.find({ status: 'active' })
-      .select('_id name role')
-      .sort({ role: 1, name: 1 })
-      .lean();
+    const { page, limit, skip } = parsePagination(req.query, { defaultLimit: 200, maxLimit: 500 });
+    const [users, total] = await Promise.all([
+      User.find({ status: 'active' })
+        .select('_id name role')
+        .sort({ role: 1, name: 1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      User.countDocuments({ status: 'active' }),
+    ]);
     const list = users.map((u) => ({
       id: u._id.toString(),
       name: u.name,
       role: u.role,
     }));
-    res.json(list);
+    sendPaginated(res, list, total, page, limit);
   } catch (err) {
     next(err);
   }

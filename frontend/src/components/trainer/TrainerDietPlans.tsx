@@ -59,16 +59,28 @@ export function TrainerDietPlans() {
 
   useEffect(() => {
     loadDietPlans();
+  }, [currentPage]);
+
+  useEffect(() => {
     loadClients();
   }, []);
 
+  const [totalPlans, setTotalPlans] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+
   const loadDietPlans = () => {
     setLoading(true);
-    getDietPlans()
-      .then(setDietPlans)
+    getDietPlans(undefined, { page: currentPage, limit: itemsPerPage })
+      .then((res) => {
+        setDietPlans(res.data);
+        setTotalPlans(res.total);
+        setTotalPages(res.totalPages);
+      })
       .catch(() => {
         toast.error('Failed to load diet plans');
         setDietPlans([]);
+        setTotalPlans(0);
+        setTotalPages(1);
       })
       .finally(() => setLoading(false));
   };
@@ -85,24 +97,20 @@ export function TrainerDietPlans() {
       });
   };
 
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery]);
+
   const filteredPlans = dietPlans.filter((plan) => {
     const member = clients.find((m) => m.id === plan.memberId);
     const memberName = (plan as any).memberName || member?.name || '';
     const matchesSearch =
+      !searchQuery.trim() ||
       plan.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       memberName.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesSearch;
   });
-
-  const totalPages = Math.ceil(filteredPlans.length / itemsPerPage);
-  const paginatedPlans = filteredPlans.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
-
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchQuery]);
+  const paginatedPlans = filteredPlans;
 
   const handleAddPlan = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -561,7 +569,7 @@ export function TrainerDietPlans() {
           {totalPages > 1 && (
             <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-border mt-2">
               <p className="text-sm text-muted-foreground">
-                Showing {(currentPage - 1) * itemsPerPage + 1} to {Math.min(currentPage * itemsPerPage, filteredPlans.length)} of {filteredPlans.length} diet plans
+                Showing {(currentPage - 1) * itemsPerPage + 1} to {Math.min(currentPage * itemsPerPage, totalPlans)} of {totalPlans} diet plans
               </p>
               <Pagination className="w-auto mx-0">
                 <PaginationContent>

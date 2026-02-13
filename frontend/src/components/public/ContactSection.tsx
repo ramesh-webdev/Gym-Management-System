@@ -3,6 +3,8 @@ import { MapPin, Phone, Clock, Send, ArrowDown, Mail } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { sendContactMessage } from '@/api/contact';
+import { toast } from 'sonner';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { getPublicSettings, type PublicSettingsResponse } from '@/api/settings';
@@ -62,15 +64,18 @@ export function ContactSection() {
     e.preventDefault();
     setIsSubmitting(true);
 
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1500));
-
-    setIsSubmitting(false);
-    setSubmitted(true);
-    setFormData({ name: '', phone: '', message: '' });
-
-    // Reset success message after 5 seconds
-    setTimeout(() => setSubmitted(false), 5000);
+    try {
+      await sendContactMessage(formData);
+      setSubmitted(true);
+      setFormData({ name: '', phone: '', message: '' });
+      // Reset success message after 5 seconds
+      setTimeout(() => setSubmitted(false), 5000);
+    } catch (error) {
+      console.error('Error sending message:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to send message. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const contactInfo = [
@@ -95,8 +100,8 @@ export function ContactSection() {
       content:
         publicSettings?.workingHours?.entries?.length
           ? publicSettings.workingHours.entries
-              .map((e) => `${e.days}: ${formatTime(e.open)} - ${formatTime(e.close)}`)
-              .join(' · ')
+            .map((e) => `${e.days}: ${formatTime(e.open)} - ${formatTime(e.close)}`)
+            .join(' · ')
           : 'Working hours will appear here once set in Settings.',
     },
   ];

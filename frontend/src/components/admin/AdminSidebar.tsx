@@ -17,6 +17,7 @@ import {
   X,
   Utensils,
   ChefHat,
+  MessageSquare,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
@@ -40,6 +41,7 @@ const menuItems = [
   { id: 'admin-payments', label: 'Payments', icon: Receipt, path: '/admin/payments' },
   { id: 'admin-reports', label: 'Reports', icon: BarChart3, path: '/admin/reports' },
   { id: 'admin-notifications', label: 'Notifications', icon: Bell, path: '/admin/notifications' },
+  { id: 'admin-messages', label: 'Messages', icon: MessageSquare, path: '/admin/messages' },
   { id: 'admin-settings', label: 'Settings', icon: Settings, path: '/admin/settings' },
 ];
 

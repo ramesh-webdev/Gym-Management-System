@@ -10,7 +10,9 @@ const getBaseUrl = (): string => {
   return 'http://localhost:3001/api';
 };
 
-const getToken = (): string | null => localStorage.getItem('accessToken');
+/** Token may be in localStorage (remember me) or sessionStorage (session only). */
+const getToken = (): string | null =>
+  localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken');
 
 function buildUrl(path: string): string {
   const base = getBaseUrl();
@@ -29,12 +31,19 @@ function getHeaders(includeAuth: boolean): HeadersInit {
   return headers;
 }
 
-/** Parse JSON error body or generic message */
+/** Parse JSON error body or generic message. On 401, clear auth storage and notify app. */
 async function handleError(res: Response): Promise<never> {
   const data = await res.json().catch(() => ({}));
   const message = (data?.message as string) || res.statusText || 'Request failed';
   const err = new Error(message) as Error & { status?: number };
   err.status = res.status;
+  if (res.status === 401) {
+    localStorage.removeItem('user');
+    localStorage.removeItem('accessToken');
+    sessionStorage.removeItem('user');
+    sessionStorage.removeItem('accessToken');
+    window.dispatchEvent(new CustomEvent('auth:sessionInvalid'));
+  }
   throw err;
 }
 

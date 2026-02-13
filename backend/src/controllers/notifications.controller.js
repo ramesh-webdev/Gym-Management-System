@@ -1,16 +1,18 @@
 const Notification = require('../models/Notification');
 const User = require('../models/User');
 const notificationService = require('../services/notification.service');
+const { parsePagination, sendPaginated } = require('../utils/pagination');
 
 /**
  * List notifications for the current user (default), or for a specific user / all (admin only).
  * GET /notifications?filter=all|unread|read&kind=...&userId= (admin: one user) &scope=all (admin: every notification)
+ * Query: page (default 1), limit (default 50, max 100).
  * By default everyone (including admin) sees only their own notifications.
  */
 async function list(req, res, next) {
   try {
     const isAdmin = req.user.role === 'admin';
-    const { filter = 'all', kind, limit = 50, userId, scope } = req.query;
+    const { filter = 'all', kind, userId, scope } = req.query;
 
     let query = {};
     if (scope === 'all' && isAdmin) {
@@ -28,11 +30,17 @@ async function list(req, res, next) {
     if (kind) query.kind = kind;
     if (req.query.type) query.type = req.query.type;
 
-    const notifications = await Notification.find(query)
-      .populate('user', 'name role')
-      .sort({ createdAt: -1 })
-      .limit(Math.min(Number(limit) || 50, 100))
-      .lean();
+    const { page, limit, skip } = parsePagination(req.query, { defaultLimit: 50, maxLimit: 100 });
+
+    const [notifications, total] = await Promise.all([
+      Notification.find(query)
+        .populate('user', 'name role')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      Notification.countDocuments(query),
+    ]);
 
     const list = notifications.map((n) => {
       const userObj = n.user;
@@ -54,7 +62,7 @@ async function list(req, res, next) {
       return out;
     });
 
-    res.json(list);
+    sendPaginated(res, list, total, page, limit);
   } catch (err) {
     next(err);
   }

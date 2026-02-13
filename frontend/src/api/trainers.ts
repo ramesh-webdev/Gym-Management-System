@@ -1,5 +1,5 @@
 import { api } from './client';
-import type { Trainer, Member, DietPlan } from '@/types';
+import type { Trainer, Member, DietPlan, PaginatedResponse } from '@/types';
 
 export interface TrainerListItem {
   id: string;
@@ -15,9 +15,20 @@ export interface TrainerListItem {
   createdAt?: string;
 }
 
-export function getTrainers(status?: string): Promise<TrainerListItem[]> {
-  const query = status ? `?status=${status}` : '';
-  return api.get<TrainerListItem[]>(`/trainers${query}`);
+export interface GetTrainersParams {
+  page?: number;
+  limit?: number;
+  search?: string;
+}
+
+export function getTrainers(status?: string, params?: GetTrainersParams): Promise<PaginatedResponse<TrainerListItem>> {
+  const search = new URLSearchParams();
+  if (status) search.set('status', status);
+  if (params?.page != null) search.set('page', String(params.page));
+  if (params?.limit != null) search.set('limit', String(params.limit));
+  if (params?.search?.trim()) search.set('search', params.search.trim());
+  const qs = search.toString();
+  return api.get<PaginatedResponse<TrainerListItem>>(`/trainers${qs ? `?${qs}` : ''}`);
 }
 
 export function getTrainerById(id: string): Promise<Trainer> {

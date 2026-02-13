@@ -39,8 +39,9 @@ export function Shop() {
     const [productsLoading, setProductsLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [categoryFilter, setCategoryFilter] = useState('all');
+    const [totalProducts, setTotalProducts] = useState(0);
+    const [totalPagesFromApi, setTotalPagesFromApi] = useState(1);
 
-    // Pagination state
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 8;
 
@@ -56,25 +57,32 @@ export function Shop() {
     const [verifyError, setVerifyError] = useState<string | null>(null);
 
     useEffect(() => {
-        getProducts()
-            .then(setProducts)
-            .catch(() => setProducts([]))
+        getProducts({
+            page: currentPage,
+            limit: itemsPerPage,
+            category: categoryFilter === 'all' ? undefined : categoryFilter,
+            status: 'active',
+        })
+            .then((res) => {
+                setProducts(res.data);
+                setTotalProducts(res.total);
+                setTotalPagesFromApi(res.totalPages);
+            })
+            .catch(() => {
+                setProducts([]);
+                setTotalProducts(0);
+                setTotalPagesFromApi(1);
+            })
             .finally(() => setProductsLoading(false));
-    }, []);
+    }, [currentPage, categoryFilter]);
 
-    const filteredProducts = products.filter(product => {
-        const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            (product.description || '').toLowerCase().includes(searchQuery.toLowerCase());
-        const matchesCategory = categoryFilter === 'all' || product.category === categoryFilter;
-        const isActive = product.status === 'active';
-        return matchesSearch && matchesCategory && isActive;
-    });
-
-    const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
-    const paginatedProducts = filteredProducts.slice(
-        (currentPage - 1) * itemsPerPage,
-        currentPage * itemsPerPage
+    const filteredProducts = products.filter(product =>
+        !searchQuery.trim() ||
+        product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (product.description || '').toLowerCase().includes(searchQuery.toLowerCase())
     );
+    const totalPages = totalPagesFromApi;
+    const paginatedProducts = filteredProducts;
 
     // Reset to first page when search or filters change
     useEffect(() => {
@@ -283,7 +291,7 @@ export function Shop() {
                 {!productsLoading && totalPages > 1 && (
                     <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-border mt-2">
                         <p className="text-sm text-muted-foreground">
-                            Showing {(currentPage - 1) * itemsPerPage + 1} to {Math.min(currentPage * itemsPerPage, filteredProducts.length)} of {filteredProducts.length} products
+                            Showing {(currentPage - 1) * itemsPerPage + 1} to {Math.min(currentPage * itemsPerPage, totalProducts)} of {totalProducts} products
                         </p>
                         <Pagination className="w-auto mx-0">
                             <PaginationContent>

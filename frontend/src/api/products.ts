@@ -1,8 +1,21 @@
 import { api } from './client';
-import type { Product } from '@/types';
+import type { Product, PaginatedResponse } from '@/types';
 
-export function getProducts(): Promise<Product[]> {
-  return api.get<Product[]>('/products').then((list) => (Array.isArray(list) ? list : []));
+export interface GetProductsParams {
+  page?: number;
+  limit?: number;
+  category?: string;
+  status?: string;
+}
+
+export function getProducts(params?: GetProductsParams): Promise<PaginatedResponse<Product>> {
+  const search = new URLSearchParams();
+  if (params?.page != null) search.set('page', String(params.page));
+  if (params?.limit != null) search.set('limit', String(params.limit));
+  if (params?.category && params.category !== 'all') search.set('category', params.category);
+  if (params?.status && params.status !== 'all') search.set('status', params.status);
+  const qs = search.toString();
+  return api.get<PaginatedResponse<Product>>(`/products${qs ? `?${qs}` : ''}`);
 }
 
 export function getProductById(id: string): Promise<Product> {

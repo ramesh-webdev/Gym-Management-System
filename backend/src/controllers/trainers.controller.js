@@ -1,22 +1,36 @@
 const bcrypt = require('bcryptjs');
 const User = require('../models/User');
 const DietPlan = require('../models/DietPlan');
+const { parsePagination, sendPaginated } = require('../utils/pagination');
 
 /**
  * List all trainers. Admin only.
- * Query params: status? (default: all)
+ * Query params: status? (default: all), page (default 1), limit (default 20, max 100).
  */
 async function list(req, res, next) {
   try {
-    const { status } = req.query;
+    const { status, search } = req.query;
     const filter = { role: 'trainer' };
     if (status && status !== 'all') {
       filter.status = status;
     }
-    const trainers = await User.find(filter)
-      .select('name phone avatar specialization experience bio rating status clients')
-      .sort({ createdAt: -1 })
-      .lean();
+    if (search && typeof search === 'string' && search.trim()) {
+      const term = search.trim();
+      filter.$or = [
+        { name: { $regex: term, $options: 'i' } },
+        { phone: { $regex: term, $options: 'i' } },
+      ];
+    }
+    const { page, limit, skip } = parsePagination(req.query, { defaultLimit: 20, maxLimit: 100 });
+    const [trainers, total] = await Promise.all([
+      User.find(filter)
+        .select('name phone avatar specialization experience bio rating status clients')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      User.countDocuments(filter),
+    ]);
     const list = trainers.map((t) => {
       const { _id, clients, ...rest } = t;
       return {
@@ -25,7 +39,7 @@ async function list(req, res, next) {
         clientsCount: clients ? clients.length : 0,
       };
     });
-    res.json(list);
+    sendPaginated(res, list, total, page, limit);
   } catch (err) {
     next(err);
   }

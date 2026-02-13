@@ -1,5 +1,5 @@
 import { api } from './client';
-import type { Notification } from '@/types';
+import type { Notification, PaginatedResponse } from '@/types';
 
 export type NotificationFilter = 'all' | 'unread' | 'read';
 
@@ -9,19 +9,21 @@ export interface ListNotificationsParams {
   type?: string; // info | success | warning | error | payment
   userId?: string; // admin only: one user's notifications
   scope?: 'all'; // admin only: every notification in the system (Management page)
+  page?: number;
   limit?: number;
 }
 
-export function listNotifications(params?: ListNotificationsParams): Promise<Notification[]> {
+export function listNotifications(params?: ListNotificationsParams): Promise<PaginatedResponse<Notification>> {
   const search = new URLSearchParams();
   if (params?.filter) search.set('filter', params.filter);
   if (params?.kind) search.set('kind', params.kind);
   if (params?.type) search.set('type', params.type);
   if (params?.userId) search.set('userId', params.userId);
   if (params?.scope === 'all') search.set('scope', 'all');
+  if (params?.page != null) search.set('page', String(params.page));
   if (params?.limit != null) search.set('limit', String(params.limit));
   const qs = search.toString();
-  return api.get<Notification[]>(`/notifications${qs ? `?${qs}` : ''}`);
+  return api.get<PaginatedResponse<Notification>>(`/notifications${qs ? `?${qs}` : ''}`);
 }
 
 export function getUnreadCount(userId?: string): Promise<{ count: number }> {

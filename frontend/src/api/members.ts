@@ -1,8 +1,27 @@
 import { api } from './client';
-import type { Member } from '@/types';
+import type { Member, PaginatedResponse } from '@/types';
 
-export function getMembers(): Promise<Member[]> {
-  return api.get<Member[]>('/members').then((list) => (Array.isArray(list) ? list : []));
+export interface GetMembersParams {
+  page?: number;
+  limit?: number;
+  /** Search by name or phone */
+  search?: string;
+  status?: string;
+  planId?: string;
+  /** Filter by hasPersonalTraining: 'true' | 'false' */
+  pt?: string;
+}
+
+export function getMembers(params?: GetMembersParams): Promise<PaginatedResponse<Member>> {
+  const search = new URLSearchParams();
+  if (params?.page != null) search.set('page', String(params.page));
+  if (params?.limit != null) search.set('limit', String(params.limit));
+  if (params?.search?.trim()) search.set('search', params.search.trim());
+  if (params?.status && params.status !== 'all') search.set('status', params.status);
+  if (params?.planId && params.planId !== 'all') search.set('planId', params.planId);
+  if (params?.pt === 'true' || params?.pt === 'false') search.set('pt', params.pt);
+  const qs = search.toString();
+  return api.get<PaginatedResponse<Member>>(`/members${qs ? `?${qs}` : ''}`);
 }
 
 export function getMemberById(id: string): Promise<Member> {

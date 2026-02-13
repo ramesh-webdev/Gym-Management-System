@@ -1,13 +1,24 @@
 import { api } from './client';
-import type { Recipe } from '@/types';
+import type { Recipe, PaginatedResponse } from '@/types';
 
-export function getRecipes(category?: Recipe['category'], isActive?: boolean): Promise<Recipe[]> {
-  const params = new URLSearchParams();
-  if (category) params.append('category', category);
-  if (isActive !== undefined) params.append('isActive', String(isActive));
-  const query = params.toString();
-  const url = query ? `/recipes?${query}` : '/recipes';
-  return api.get<Recipe[]>(url).then((list) => (Array.isArray(list) ? list : []));
+export interface GetRecipesParams {
+  page?: number;
+  limit?: number;
+}
+
+export function getRecipes(
+  category?: Recipe['category'],
+  isActive?: boolean,
+  params?: GetRecipesParams
+): Promise<PaginatedResponse<Recipe>> {
+  const search = new URLSearchParams();
+  if (category) search.set('category', category);
+  if (isActive !== undefined) search.set('isActive', String(isActive));
+  if (params?.page != null) search.set('page', String(params.page));
+  if (params?.limit != null) search.set('limit', String(params.limit));
+  const qs = search.toString();
+  const url = qs ? `/recipes?${qs}` : '/recipes';
+  return api.get<PaginatedResponse<Recipe>>(url);
 }
 
 export function getRecipeById(id: string): Promise<Recipe> {

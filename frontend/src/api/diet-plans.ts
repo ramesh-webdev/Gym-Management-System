@@ -1,9 +1,19 @@
 import { api } from './client';
-import type { DietPlan } from '@/types';
+import type { DietPlan, PaginatedResponse } from '@/types';
 
-export function getDietPlans(memberId?: string): Promise<DietPlan[]> {
-  const url = memberId ? `/diet-plans?memberId=${memberId}` : '/diet-plans';
-  return api.get<DietPlan[]>(url).then((list) => (Array.isArray(list) ? list : []));
+export interface GetDietPlansParams {
+  page?: number;
+  limit?: number;
+}
+
+export function getDietPlans(memberId?: string, params?: GetDietPlansParams): Promise<PaginatedResponse<DietPlan>> {
+  const search = new URLSearchParams();
+  if (memberId) search.set('memberId', memberId);
+  if (params?.page != null) search.set('page', String(params.page));
+  if (params?.limit != null) search.set('limit', String(params.limit));
+  const qs = search.toString();
+  const url = qs ? `/diet-plans?${qs}` : '/diet-plans';
+  return api.get<PaginatedResponse<DietPlan>>(url);
 }
 
 export function getDietPlanById(id: string): Promise<DietPlan> {

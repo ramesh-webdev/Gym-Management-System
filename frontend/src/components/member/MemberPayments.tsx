@@ -77,31 +77,37 @@ export function MemberPayments() {
   const [verifyError, setVerifyError] = useState<string | null>(null);
 
   const [currentPage, setCurrentPage] = useState(1);
+  const [totalPayments, setTotalPayments] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
   const itemsPerPage = 10;
 
   const fetchPayments = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const data = await listPayments();
-      setPayments(data);
+      const res = await listPayments({ page: currentPage, limit: itemsPerPage });
+      setPayments(res.data);
+      setTotalPayments(res.total);
+      setTotalPages(res.totalPages);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load payments');
       setPayments([]);
+      setTotalPayments(0);
+      setTotalPages(1);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [currentPage]);
 
   useEffect(() => {
     fetchPayments();
   }, [fetchPayments]);
 
-  const totalPages = Math.ceil(payments.length / itemsPerPage);
-  const paginatedPayments = payments.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
+  useEffect(() => {
+    setCurrentPage(1);
+  }, []);
+
+  const paginatedPayments = payments;
 
   useEffect(() => {
     getSettings().then((s) => setPersonalTrainingPrice(s.personalTrainingPrice ?? 500)).catch(() => { });
@@ -130,8 +136,8 @@ export function MemberPayments() {
     if (!payDialogOpen) return;
     if (purpose === 'product') {
       setProductsLoading(true);
-      getProducts()
-        .then((list) => setProducts((list || []).filter((p) => p.status === 'active')))
+      getProducts({ page: 1, limit: 200 })
+        .then((res) => setProducts((res.data || []).filter((p) => p.status === 'active')))
         .catch(() => setProducts([]))
         .finally(() => setProductsLoading(false));
     } else if (purpose === 'membership') {
@@ -616,7 +622,7 @@ export function MemberPayments() {
         {totalPages > 1 && (
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-border mt-4">
             <p className="text-sm text-muted-foreground">
-              Showing {(currentPage - 1) * itemsPerPage + 1} to {Math.min(currentPage * itemsPerPage, payments.length)} of {payments.length} payments
+              Showing {(currentPage - 1) * itemsPerPage + 1} to {Math.min(currentPage * itemsPerPage, totalPayments)} of {totalPayments} payments
             </p>
             <Pagination className="w-auto mx-0">
               <PaginationContent>

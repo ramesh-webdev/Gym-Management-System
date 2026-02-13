@@ -25,6 +25,7 @@ import { ProductManagement } from '@/components/admin/ProductManagement';
 import { PaymentsManagement } from '@/components/admin/PaymentsManagement';
 import { ReportsAnalytics } from '@/components/admin/ReportsAnalytics';
 import { NotificationsManagement } from '@/components/admin/NotificationsManagement';
+import { MessagesManagement } from '@/components/admin/MessagesManagement';
 import { SettingsManagement } from '@/components/admin/SettingsManagement';
 import { DietPlanManagement } from '@/components/admin/DietPlanManagement';
 import { RecipeManagement } from '@/components/admin/RecipeManagement';
@@ -73,6 +74,16 @@ function App() {
     window.addEventListener('storage', onStorage);
     return () => window.removeEventListener('storage', onStorage);
   }, []);
+
+  // On 401 (expired/invalid token), API client clears storage and fires this; sync state and go home
+  useEffect(() => {
+    const onSessionInvalid = () => {
+      setUser(null);
+      navigate('/', { replace: true });
+    };
+    window.addEventListener('auth:sessionInvalid', onSessionInvalid);
+    return () => window.removeEventListener('auth:sessionInvalid', onSessionInvalid);
+  }, [navigate]);
 
   // Scroll to top on route change
   useEffect(() => {
@@ -131,7 +142,7 @@ function App() {
   // Public Website Layout
   const PublicLayout = () => (
     <div className="min-h-screen bg-background">
-      <Navbar />
+      <Navbar user={user} onLogout={handleLogout} />
       <main>
         <Routes>
           <Route
@@ -198,6 +209,7 @@ function App() {
               <Route path="payments" element={<PaymentsManagement />} />
               <Route path="reports" element={<ReportsAnalytics />} />
               <Route path="notifications" element={<NotificationsManagement />} />
+              <Route path="messages" element={<MessagesManagement />} />
               <Route path="diet-plans" element={<DietPlanManagement />} />
               <Route path="recipes" element={<RecipeManagement />} />
               <Route path="settings" element={<SettingsManagement isSuperAdmin={isSuperAdmin} />} />
@@ -233,13 +245,13 @@ function App() {
           />
         )}
         <div className={cn("flex-1", user.isOnboarded && "lg:ml-64")}>
-            {user.isOnboarded && (
-              <MemberHeader
-                userName={user.name}
-                notificationsPath="/member/notifications"
-              />
-            )}
-            <main className="min-h-screen pt-0">
+          {user.isOnboarded && (
+            <MemberHeader
+              userName={user.name}
+              notificationsPath="/member/notifications"
+            />
+          )}
+          <main className="min-h-screen pt-0">
             <Routes>
               <Route path="onboarding" element={<MemberOnboarding onComplete={handleOnboardingComplete} user={user} />} />
               <Route path="dashboard" element={<MemberDashboard />} />
@@ -302,25 +314,25 @@ function App() {
   return (
     <ThemeProvider>
       <ConfirmDialogProvider>
-      <Routes>
-        {/* Auth Routes */}
-        <Route path="/login" element={<LoginForm onLogin={handleLogin} />} />
-        <Route path="/forgot-password" element={<ForgotPasswordForm />} />
+        <Routes>
+          {/* Auth Routes */}
+          <Route path="/login" element={<LoginForm onLogin={handleLogin} />} />
+          <Route path="/forgot-password" element={<ForgotPasswordForm />} />
 
-        {/* Admin Routes */}
-        <Route path="/admin/*" element={<AdminLayout />} />
+          {/* Admin Routes */}
+          <Route path="/admin/*" element={<AdminLayout />} />
 
-        {/* Member Routes */}
-        <Route path="/member/*" element={<MemberLayout />} />
+          {/* Member Routes */}
+          <Route path="/member/*" element={<MemberLayout />} />
 
-        {/* Trainer Routes */}
-        <Route path="/trainer/*" element={<TrainerLayout />} />
+          {/* Trainer Routes */}
+          <Route path="/trainer/*" element={<TrainerLayout />} />
 
-        {/* Public Routes - must be last */}
-        <Route path="/*" element={<PublicLayout />} />
-      </Routes>
-      <ScrollToTop />
-      <Toaster />
+          {/* Public Routes - must be last */}
+          <Route path="/*" element={<PublicLayout />} />
+        </Routes>
+        <ScrollToTop />
+        <Toaster />
       </ConfirmDialogProvider>
     </ThemeProvider>
   );

@@ -86,6 +86,8 @@ export function TrainersManagement() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [currentPage, setCurrentPage] = useState(1);
+  const [totalTrainers, setTotalTrainers] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
   const itemsPerPage = 9;
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -102,22 +104,30 @@ export function TrainersManagement() {
     bio: '',
   });
 
-  useEffect(() => {
-    loadTrainers();
-  }, [statusFilter]);
-
   const loadTrainers = async () => {
     try {
       setLoading(true);
-      const data = await getTrainers(statusFilter === 'all' ? undefined : statusFilter);
-      setTrainers(data || []);
+      const res = await getTrainers(statusFilter === 'all' ? undefined : statusFilter, {
+        page: currentPage,
+        limit: itemsPerPage,
+        search: searchQuery.trim() || undefined,
+      });
+      setTrainers(res.data || []);
+      setTotalTrainers(res.total);
+      setTotalPages(res.totalPages);
     } catch (error: any) {
       toast.error(error?.message || 'Failed to load trainers');
       setTrainers([]);
+      setTotalTrainers(0);
+      setTotalPages(1);
     } finally {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    loadTrainers();
+  }, [statusFilter, currentPage, searchQuery]);
 
   const handleEdit = (trainer: TrainerListItem) => {
     const [firstName, ...lastNameParts] = trainer.name.split(' ');
@@ -225,19 +235,8 @@ export function TrainersManagement() {
     }
   };
 
-  const filteredTrainers = trainers.filter((trainer) =>
-    trainer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    trainer.phone.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    trainer.specialization.some((s) => s.toLowerCase().includes(searchQuery.toLowerCase()))
-  );
+  const paginatedTrainers = trainers;
 
-  const totalPages = Math.ceil(filteredTrainers.length / itemsPerPage);
-  const paginatedTrainers = filteredTrainers.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
-
-  // Reset to first page when filters change
   useEffect(() => {
     setCurrentPage(1);
   }, [searchQuery, statusFilter]);
@@ -265,7 +264,7 @@ export function TrainersManagement() {
       return s;
     };
 
-    const rows = filteredTrainers.map((trainer) => {
+    const rows = trainers.map((trainer) => {
       return [
         trainer.id,
         trainer.name,
@@ -304,7 +303,7 @@ export function TrainersManagement() {
             variant="outline"
             className="border-border text-foreground hover:bg-muted/50"
             onClick={handleExport}
-            disabled={filteredTrainers.length === 0}
+            disabled={totalTrainers === 0}
           >
             <Download className="w-4 h-4 mr-2" />
             Export
@@ -449,7 +448,7 @@ export function TrainersManagement() {
           <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-6">
             {Array.from({ length: 6 }).map((_, i) => <TrainerSkeleton key={i} />)}
           </div>
-        ) : filteredTrainers.length === 0 ? (
+        ) : trainers.length === 0 ? (
           <div className="text-center py-12">
             <Users className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
             <p className="text-muted-foreground">No trainers found. Create your first trainer!</p>
@@ -554,7 +553,7 @@ export function TrainersManagement() {
             {totalPages > 1 && (
               <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-border">
                 <p className="text-sm text-muted-foreground">
-                  Showing {(currentPage - 1) * itemsPerPage + 1} to {Math.min(currentPage * itemsPerPage, filteredTrainers.length)} of {filteredTrainers.length} trainers
+                  Showing {(currentPage - 1) * itemsPerPage + 1} to {Math.min(currentPage * itemsPerPage, totalTrainers)} of {totalTrainers} trainers
                 </p>
                 <Pagination className="w-auto mx-0">
                   <PaginationContent>

@@ -47,7 +47,7 @@ export function LoginForm({ onLogin }: LoginFormProps) {
         const user = await apiRegister(name, mobile, password);
         onLogin(user);
       } else {
-        const user = await apiLogin(mobile, password);
+        const user = await apiLogin(mobile, password, rememberMe);
         onLogin(user);
       }
     } catch (err: unknown) {

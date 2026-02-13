@@ -95,39 +95,42 @@ export function ProductManagement() {
   const [isUploading, setIsUploading] = useState(false);
 
   const [currentPage, setCurrentPage] = useState(1);
+  const [totalProducts, setTotalProducts] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
   const itemsPerPage = 10;
 
   const loadProducts = () => {
     setLoading(true);
-    getProducts()
-      .then(setProducts)
+    getProducts({ page: currentPage, limit: itemsPerPage })
+      .then((res) => {
+        setProducts(res.data);
+        setTotalProducts(res.total);
+        setTotalPages(res.totalPages);
+      })
       .catch(() => {
         toast.error("Failed to load products");
         setProducts([]);
+        setTotalProducts(0);
+        setTotalPages(1);
       })
       .finally(() => setLoading(false));
   };
 
   useEffect(() => {
     loadProducts();
-  }, []);
+  }, [currentPage]);
 
-  const filteredProducts = products.filter(
-    (product) =>
-      product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      product.category.toLowerCase().includes(searchQuery.toLowerCase()),
-  );
-
-  const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
-  const paginatedProducts = filteredProducts.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
-
-  // Reset to first page when search changes
   useEffect(() => {
     setCurrentPage(1);
   }, [searchQuery]);
+
+  const filteredProducts = products.filter(
+    (product) =>
+      !searchQuery.trim() ||
+      product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      product.category.toLowerCase().includes(searchQuery.toLowerCase()),
+  );
+  const paginatedProducts = filteredProducts;
 
   const handleAddProduct = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -505,7 +508,7 @@ export function ProductManagement() {
         {totalPages > 1 && (
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-6 border-t border-border mt-4">
             <p className="text-sm text-muted-foreground">
-              Showing {(currentPage - 1) * itemsPerPage + 1} to {Math.min(currentPage * itemsPerPage, filteredProducts.length)} of {filteredProducts.length} products
+              Showing {(currentPage - 1) * itemsPerPage + 1} to {Math.min(currentPage * itemsPerPage, totalProducts)} of {totalProducts} products
             </p>
             <Pagination className="w-auto mx-0">
               <PaginationContent>
@@ -570,7 +573,7 @@ export function ProductManagement() {
         )}
       </div>
 
-      {filteredProducts.length === 0 && (
+      {products.length === 0 && !loading && (
         <p className="text-center text-muted-foreground py-12">
           {products.length === 0
             ? "No products yet. Add one to get started."

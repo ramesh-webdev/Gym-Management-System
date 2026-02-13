@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const Product = require('../models/Product');
 const cloudinary = require('../config/cloudinary');
+const { parsePagination, sendPaginated } = require('../utils/pagination');
 
 function toResponse(doc) {
   if (!doc) return null;
@@ -8,12 +9,20 @@ function toResponse(doc) {
   return { ...d, id: (d._id || doc._id).toString(), _id: undefined, __v: undefined };
 }
 
-/** GET / - List all products. */
+/** GET / - List all products. Query: page, limit, category?, status? */
 async function list(req, res, next) {
   try {
-    const products = await Product.find().sort({ name: 1 }).lean();
+    const { page, limit, skip } = parsePagination(req.query, { defaultLimit: 20, maxLimit: 100 });
+    const { category, status } = req.query;
+    const filter = {};
+    if (category && category !== 'all') filter.category = category;
+    if (status && status !== 'all') filter.status = status;
+    const [products, total] = await Promise.all([
+      Product.find(filter).sort({ name: 1 }).skip(skip).limit(limit).lean(),
+      Product.countDocuments(filter),
+    ]);
     const withIds = products.map((p) => ({ ...p, id: p._id.toString(), _id: undefined, __v: undefined }));
-    res.json(withIds);
+    sendPaginated(res, withIds, total, page, limit);
   } catch (err) {
     next(err);
   }

@@ -1,8 +1,9 @@
 const Recipe = require('../models/Recipe');
+const { parsePagination, sendPaginated } = require('../utils/pagination');
 
 /**
  * List all recipes. Public (optional auth).
- * Query params: category?, isActive? (default true for public, all for admin/trainer).
+ * Query params: category?, isActive? (default true for public, all for admin/trainer), page (default 1), limit (default 20, max 100).
  */
 async function list(req, res, next) {
   try {
@@ -15,10 +16,16 @@ async function list(req, res, next) {
     } else {
       filter.isActive = true; // Public sees only active recipes
     }
-    const recipes = await Recipe.find(filter)
-      .populate('createdBy', 'name')
-      .sort({ createdAt: -1 })
-      .lean();
+    const { page, limit, skip } = parsePagination(req.query, { defaultLimit: 20, maxLimit: 100 });
+    const [recipes, total] = await Promise.all([
+      Recipe.find(filter)
+        .populate('createdBy', 'name')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      Recipe.countDocuments(filter),
+    ]);
     const list = recipes.map((r) => {
       const { _id, createdBy, ...rest } = r;
       const item = {
@@ -31,7 +38,7 @@ async function list(req, res, next) {
       if (item.updatedAt) item.updatedAt = item.updatedAt.toISOString();
       return item;
     });
-    res.json(list);
+    sendPaginated(res, list, total, page, limit);
   } catch (err) {
     next(err);
   }

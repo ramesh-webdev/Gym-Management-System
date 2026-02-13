@@ -131,6 +131,8 @@ export function PaymentsManagement() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [dateFilter, setDateFilter] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
+  const [totalPayments, setTotalPayments] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
   const itemsPerPage = 10;
 
   const [formMemberId, setFormMemberId] = useState('');
@@ -142,24 +144,85 @@ export function PaymentsManagement() {
   const [formSubmitting, setFormSubmitting] = useState(false);
   const [plans, setPlans] = useState<MembershipPlan[]>([]);
 
+  const getDateRange = useCallback(() => {
+    if (dateFilter === 'all') return {};
+    const now = new Date();
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    let dateFrom: Date, dateTo: Date;
+    switch (dateFilter) {
+      case 'today':
+        dateFrom = startOfToday;
+        dateTo = new Date(now.getTime() + 86400000);
+        break;
+      case 'yesterday': {
+        dateFrom = new Date(startOfToday);
+        dateFrom.setDate(dateFrom.getDate() - 1);
+        dateTo = startOfToday;
+        break;
+      }
+      case 'this_week': {
+        dateFrom = new Date(startOfToday);
+        dateFrom.setDate(dateFrom.getDate() - dateFrom.getDay());
+        dateTo = new Date(now.getTime() + 86400000);
+        break;
+      }
+      case 'last_week': {
+        const startOfThisWeek = new Date(startOfToday);
+        startOfThisWeek.setDate(startOfThisWeek.getDate() - startOfThisWeek.getDay());
+        dateTo = startOfThisWeek;
+        dateFrom = new Date(startOfThisWeek);
+        dateFrom.setDate(dateFrom.getDate() - 7);
+        break;
+      }
+      case 'this_month':
+        dateFrom = new Date(now.getFullYear(), now.getMonth(), 1);
+        dateTo = new Date(now.getTime() + 86400000);
+        break;
+      case 'last_month':
+        dateFrom = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        dateTo = new Date(now.getFullYear(), now.getMonth(), 1);
+        break;
+      case 'this_year':
+        dateFrom = new Date(now.getFullYear(), 0, 1);
+        dateTo = new Date(now.getTime() + 86400000);
+        break;
+      default:
+        return {};
+    }
+    return { dateFrom: dateFrom.toISOString(), dateTo: dateTo.toISOString() };
+  }, [dateFilter]);
+
   const fetchPayments = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    const range = getDateRange();
     try {
-      const data = await listPayments();
-      setPayments(data);
+      const res = await listPayments({
+        page: currentPage,
+        limit: itemsPerPage,
+        status: statusFilter !== 'all' ? statusFilter : undefined,
+        search: searchQuery.trim() || undefined,
+        ...range,
+      });
+      setPayments(res.data);
+      setTotalPayments(res.total);
+      setTotalPages(res.totalPages);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load payments');
       setPayments([]);
+      setTotalPayments(0);
+      setTotalPages(1);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [currentPage, itemsPerPage, statusFilter, searchQuery, dateFilter, getDateRange]);
 
   useEffect(() => {
     fetchPayments();
   }, [fetchPayments]);
 
   useEffect(() => {
-    getMembers().then(setMembers).catch(() => setMembers([]));
+    getMembers({ page: 1, limit: 500 }).then((res) => setMembers(res.data)).catch(() => setMembers([]));
   }, []);
   useEffect(() => {
     getMembershipPlans().then(setPlans).catch(() => setPlans([]));
@@ -168,142 +231,37 @@ export function PaymentsManagement() {
   const membershipPlans = plans.filter((p) => p.isActive !== false && !p.isAddOn);
   const activeMembers = members.filter((m) => m.status === 'active');
 
-  const filteredPayments = payments.filter((p) => {
-    const matchesSearch =
-      p.memberName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      p.invoiceNumber.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || p.status === statusFilter;
-
-    let matchesDate = true;
-    if (dateFilter !== 'all' && p.date) {
-      const d = new Date(p.date);
-      const now = new Date();
-      const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-
-      switch (dateFilter) {
-        case 'today':
-          matchesDate = d >= startOfToday;
-          break;
-        case 'yesterday': {
-          const startOfYesterday = new Date(startOfToday);
-          startOfYesterday.setDate(startOfYesterday.getDate() - 1);
-          matchesDate = d >= startOfYesterday && d < startOfToday;
-          break;
-        }
-        case 'this_week': {
-          const startOfWeek = new Date(startOfToday);
-          startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
-          matchesDate = d >= startOfWeek;
-          break;
-        }
-        case 'last_week': {
-          const startOfThisWeek = new Date(startOfToday);
-          startOfThisWeek.setDate(startOfThisWeek.getDate() - startOfThisWeek.getDay());
-          const startOfLastWeek = new Date(startOfThisWeek);
-          startOfLastWeek.setDate(startOfLastWeek.getDate() - 7);
-          matchesDate = d >= startOfLastWeek && d < startOfThisWeek;
-          break;
-        }
-        case 'this_month': {
-          const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-          matchesDate = d >= startOfMonth;
-          break;
-        }
-        case 'last_month': {
-          const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-          const startOfThisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-          matchesDate = d >= startOfLastMonth && d < startOfThisMonth;
-          break;
-        }
-        case 'this_year': {
-          const startOfYear = new Date(now.getFullYear(), 0, 1);
-          matchesDate = d >= startOfYear;
-          break;
-        }
-      }
-    } else if (dateFilter !== 'all' && !p.date) {
-      matchesDate = false;
-    }
-
-    return matchesSearch && matchesStatus && matchesDate;
-  });
-
-  const totalPages = Math.ceil(filteredPayments.length / itemsPerPage);
-  const paginatedPayments = filteredPayments.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
+  const paginatedPayments = payments;
 
   // Reset to first page when filters change
   useEffect(() => {
     setCurrentPage(1);
   }, [searchQuery, statusFilter, dateFilter]);
 
-  // Filter payments for aggregated stats based ONLY on Date
-  const statFilteredPayments = payments.filter((p) => {
-    let matchesDate = true;
-    if (dateFilter !== 'all' && p.date) {
-      const d = new Date(p.date);
-      const now = new Date();
-      const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  // Stats: fetch a larger set for the filter to show aggregated stats (same filters as table)
+  const [statPayments, setStatPayments] = useState<Payment[]>([]);
+  useEffect(() => {
+    const range = getDateRange();
+    listPayments({
+      page: 1,
+      limit: 5000,
+      status: statusFilter !== 'all' ? statusFilter : undefined,
+      search: searchQuery.trim() || undefined,
+      ...range,
+    })
+      .then((res) => setStatPayments(res.data))
+      .catch(() => setStatPayments([]));
+  }, [statusFilter, searchQuery, dateFilter, getDateRange]);
 
-      switch (dateFilter) {
-        case 'today':
-          matchesDate = d >= startOfToday;
-          break;
-        case 'yesterday': {
-          const startOfYesterday = new Date(startOfToday);
-          startOfYesterday.setDate(startOfYesterday.getDate() - 1);
-          matchesDate = d >= startOfYesterday && d < startOfToday;
-          break;
-        }
-        case 'this_week': {
-          const startOfWeek = new Date(startOfToday);
-          startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
-          matchesDate = d >= startOfWeek;
-          break;
-        }
-        case 'last_week': {
-          const startOfThisWeek = new Date(startOfToday);
-          startOfThisWeek.setDate(startOfThisWeek.getDate() - startOfThisWeek.getDay());
-          const startOfLastWeek = new Date(startOfThisWeek);
-          startOfLastWeek.setDate(startOfLastWeek.getDate() - 7);
-          matchesDate = d >= startOfLastWeek && d < startOfThisWeek;
-          break;
-        }
-        case 'this_month': {
-          const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-          matchesDate = d >= startOfMonth;
-          break;
-        }
-        case 'last_month': {
-          const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-          const startOfThisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-          matchesDate = d >= startOfLastMonth && d < startOfThisMonth;
-          break;
-        }
-        case 'this_year': {
-          const startOfYear = new Date(now.getFullYear(), 0, 1);
-          matchesDate = d >= startOfYear;
-          break;
-        }
-      }
-    } else if (dateFilter !== 'all' && !p.date) {
-      matchesDate = false;
-    }
+  const totalRevenue = statPayments.filter((p) => p.status === 'paid').reduce((sum, p) => sum + p.amount, 0);
+  const pendingAmount = statPayments.filter((p) => p.status === 'pending').reduce((sum, p) => sum + p.amount, 0);
+  const overdueAmount = statPayments.filter((p) => p.status === 'overdue').reduce((sum, p) => sum + p.amount, 0);
+  const cancelledAmount = statPayments.filter((p) => p.status === 'cancelled').reduce((sum, p) => sum + p.amount, 0);
 
-    return matchesDate;
-  });
-
-  const totalRevenue = statFilteredPayments.filter((p) => p.status === 'paid').reduce((sum, p) => sum + p.amount, 0);
-  const pendingAmount = statFilteredPayments.filter((p) => p.status === 'pending').reduce((sum, p) => sum + p.amount, 0);
-  const overdueAmount = statFilteredPayments.filter((p) => p.status === 'overdue').reduce((sum, p) => sum + p.amount, 0);
-  const cancelledAmount = statFilteredPayments.filter((p) => p.status === 'cancelled').reduce((sum, p) => sum + p.amount, 0);
-
-  const paidCount = statFilteredPayments.filter((p) => p.status === 'paid').length;
-  const pendingCount = statFilteredPayments.filter((p) => p.status === 'pending').length;
-  const overdueCount = statFilteredPayments.filter((p) => p.status === 'overdue').length;
-  const cancelledCount = statFilteredPayments.filter((p) => p.status === 'cancelled').length;
+  const paidCount = statPayments.filter((p) => p.status === 'paid').length;
+  const pendingCount = statPayments.filter((p) => p.status === 'pending').length;
+  const overdueCount = statPayments.filter((p) => p.status === 'overdue').length;
+  const cancelledCount = statPayments.filter((p) => p.status === 'cancelled').length;
 
   const avgPayment = paidCount > 0 ? Math.round(totalRevenue / paidCount) : 0;
 
@@ -410,7 +368,7 @@ export function PaymentsManagement() {
       return s;
     };
 
-    const rows = filteredPayments.map((p) => {
+    const rows = paginatedPayments.map((p) => {
       return [
         p.invoiceNumber,
         p.memberName,
@@ -467,7 +425,7 @@ export function PaymentsManagement() {
             variant="outline"
             className="border-border text-foreground hover:bg-muted/50"
             onClick={handleExport}
-            disabled={filteredPayments.length === 0}
+            disabled={totalPayments === 0}
           >
             <Download className="w-4 h-4 mr-2" />
             Export
@@ -690,7 +648,7 @@ export function PaymentsManagement() {
                 if (dateFilter === 'this_year' || dateFilter === 'all') {
                   // Show monthly for this year
                   MONTHS.forEach((m, i) => {
-                    const rev = statFilteredPayments
+                    const rev = statPayments
                       .filter(p => p.status === 'paid' && p.date && new Date(p.date).getMonth() === i && new Date(p.date).getFullYear() === now.getFullYear())
                       .reduce((s, p) => s + p.amount, 0);
                     chartData.push({ label: m, revenue: rev });
@@ -701,7 +659,7 @@ export function PaymentsManagement() {
                   const targetYear = now.getFullYear();
                   const daysInMonth = new Date(targetYear, targetMonth + 1, 0).getDate();
                   for (let i = 1; i <= daysInMonth; i++) {
-                    const rev = statFilteredPayments
+                    const rev = statPayments
                       .filter(p => {
                         if (p.status !== 'paid' || !p.date) return false;
                         const d = new Date(p.date);
@@ -913,7 +871,7 @@ export function PaymentsManagement() {
         {totalPages > 1 && (
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-2">
             <p className="text-sm text-muted-foreground">
-              Showing {(currentPage - 1) * itemsPerPage + 1} to {Math.min(currentPage * itemsPerPage, filteredPayments.length)} of {filteredPayments.length} payments
+              Showing {(currentPage - 1) * itemsPerPage + 1} to {Math.min(currentPage * itemsPerPage, totalPayments)} of {totalPayments} payments
             </p>
             <Pagination className="w-auto mx-0">
               <PaginationContent>

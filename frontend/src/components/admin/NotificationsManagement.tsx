@@ -110,43 +110,40 @@ export function NotificationsManagement() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [currentPage, setCurrentPage] = useState(1);
+  const [totalNotifications, setTotalNotifications] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
   const itemsPerPage = 8;
 
   const fetchNotifications = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const data = await listNotifications({
+      const res = await listNotifications({
         filter,
-        limit: 100,
+        page: currentPage,
+        limit: itemsPerPage,
         scope: 'all',
         kind: filterKind || undefined,
         type: filterType || undefined,
       });
-      setNotifications(data || []);
+      setNotifications(res.data || []);
+      setTotalNotifications(res.total);
+      setTotalPages(res.totalPages);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load notifications');
       setNotifications([]);
+      setTotalNotifications(0);
+      setTotalPages(1);
     } finally {
       setLoading(false);
     }
-  }, [filter, filterKind, filterType]);
+  }, [filter, filterKind, filterType, currentPage]);
 
   useEffect(() => {
     fetchNotifications();
   }, [fetchNotifications]);
 
-  const filteredNotifications = notifications.filter((n) => {
-    if (filter === 'unread') return !n.isRead;
-    if (filter === 'read') return n.isRead;
-    return true;
-  });
-
-  const totalPages = Math.ceil(filteredNotifications.length / itemsPerPage);
-  const paginatedNotifications = filteredNotifications.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
+  const paginatedNotifications = notifications;
 
   // Reset to first page when filters change
   useEffect(() => {
@@ -520,7 +517,7 @@ export function NotificationsManagement() {
               );
             })}
 
-            {filteredNotifications.length === 0 && (
+            {notifications.length === 0 && !loading && (
               <div className="text-center py-12">
                 <Bell className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
                 <p className="text-muted-foreground">No notifications found</p>
@@ -531,7 +528,7 @@ export function NotificationsManagement() {
             {totalPages > 1 && (
               <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-border">
                 <p className="text-sm text-muted-foreground">
-                  Showing {(currentPage - 1) * itemsPerPage + 1} to {Math.min(currentPage * itemsPerPage, filteredNotifications.length)} of {filteredNotifications.length} notifications
+                  Showing {(currentPage - 1) * itemsPerPage + 1} to {Math.min(currentPage * itemsPerPage, totalNotifications)} of {totalNotifications} notifications
                 </p>
                 <Pagination className="w-auto mx-0">
                   <PaginationContent>

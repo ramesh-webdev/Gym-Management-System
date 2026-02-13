@@ -11,12 +11,15 @@ const notificationsRoutes = require('./notifications.routes');
 const paymentsRoutes = require('./payments.routes');
 const settingsRoutes = require('./settings.routes');
 const testimonialsRoutes = require('./testimonials.routes');
+const dashboardRoutes = require('./dashboard.routes');
+const contactRoutes = require('./contact.routes');
 
 const router = express.Router();
 
 router.use('/auth', authRoutes);
 router.use('/settings', settingsRoutes);
 router.use('/testimonials', testimonialsRoutes);
+router.use('/dashboard', dashboardRoutes);
 router.use('/users', usersRoutes);
 router.use('/members', membersRoutes);
 router.use('/membership-plans', membershipPlansRoutes);
@@ -26,6 +29,7 @@ router.use('/recipes', recipesRoutes);
 router.use('/trainers', trainersRoutes);
 router.use('/notifications', notificationsRoutes);
 router.use('/payments', paymentsRoutes);
+router.use('/contact', contactRoutes);
 
 router.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });

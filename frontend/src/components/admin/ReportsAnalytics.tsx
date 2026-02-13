@@ -89,16 +89,16 @@ export function ReportsAnalytics() {
     setLoading(true);
     setError(null);
     Promise.all([
-      getMembers().then((list) => (Array.isArray(list) ? list : [])),
-      listPayments().then((list) => (Array.isArray(list) ? list : [])),
-      getTrainers().then((list) => (Array.isArray(list) ? list : [])),
+      getMembers({ page: 1, limit: 2000 }).then((res) => res.data),
+      listPayments({ page: 1, limit: 2000 }).then((res) => res.data),
+      getTrainers(undefined, { page: 1, limit: 500 }).then((res) => res.data),
       getMembershipPlans().then((list) => (Array.isArray(list) ? list : [])),
     ])
       .then(([m, p, t, pl]) => {
-        setMembers(m);
-        setPayments(p);
-        setTrainers(t);
-        setPlans(pl);
+        setMembers(Array.isArray(m) ? m : []);
+        setPayments(Array.isArray(p) ? p : []);
+        setTrainers(Array.isArray(t) ? t : []);
+        setPlans(Array.isArray(pl) ? pl : []);
       })
       .catch((err) => setError(err?.message || 'Failed to load data'))
       .finally(() => setLoading(false));

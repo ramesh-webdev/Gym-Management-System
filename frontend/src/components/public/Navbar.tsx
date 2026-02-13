@@ -1,14 +1,23 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Menu, X } from 'lucide-react';
+import { Menu, X, User as UserIcon, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
+import type { User } from '@/types';
 
-export function Navbar() {
+interface NavbarProps {
+  /** When set, show Profile + Logout instead of Login / Join Now */
+  user?: User | null;
+  onLogout?: () => void;
+}
+
+export function Navbar({ user = null, onLogout }: NavbarProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  const profilePath = user?.role === 'admin' ? '/admin/dashboard' : user?.role === 'trainer' ? '/trainer/dashboard' : '/member/dashboard';
 
   useEffect(() => {
     const handleScroll = () => {
@@ -70,22 +79,45 @@ export function Navbar() {
             })}
           </nav>
 
-          {/* CTA Buttons */}
+          {/* CTA Buttons: Profile + Logout when logged in, else Login + Join Now */}
           <div className="hidden lg:flex items-center gap-4">
             <ThemeToggle className="text-muted-foreground hover:text-foreground hover:bg-muted" />
-            <Button
-              variant="outline"
-              onClick={() => navigate('/login')}
-              className="border-border text-foreground hover:bg-muted hover:text-foreground font-medium"
-            >
-              Login
-            </Button>
-            <Button
-              onClick={() => navigate('/login')}
-              className="bg-gradient-to-r from-ko-500 to-ko-600 text-primary-foreground hover:from-ko-600 hover:to-ko-700 font-semibold px-6"
-            >
-              Join Now
-            </Button>
+            {user ? (
+              <>
+                <Button
+                  variant="outline"
+                  onClick={() => navigate(profilePath)}
+                  className="border-border text-foreground hover:bg-muted hover:text-foreground font-medium gap-2"
+                >
+                  <UserIcon className="w-4 h-4" />
+                  Profile
+                </Button>
+                <Button
+                  variant="ghost"
+                  onClick={() => onLogout?.()}
+                  className="text-muted-foreground hover:text-foreground hover:bg-muted gap-2"
+                >
+                  <LogOut className="w-4 h-4" />
+                  Logout
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button
+                  variant="outline"
+                  onClick={() => navigate('/login')}
+                  className="border-border text-foreground hover:bg-muted hover:text-foreground font-medium"
+                >
+                  Login
+                </Button>
+                <Button
+                  onClick={() => navigate('/login')}
+                  className="bg-gradient-to-r from-ko-500 to-ko-600 text-primary-foreground hover:from-ko-600 hover:to-ko-700 font-semibold px-6"
+                >
+                  Join Now
+                </Button>
+              </>
+            )}
           </div>
 
           {/* Mobile Menu Button */}
@@ -122,25 +154,54 @@ export function Navbar() {
               <div className="flex justify-center py-2">
                 <ThemeToggle />
               </div>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  navigate('/login');
-                  setIsMobileMenuOpen(false);
-                }}
-                className="w-full border-border text-foreground hover:bg-muted"
-              >
-                Login
-              </Button>
-              <Button
-                onClick={() => {
-                  navigate('/login');
-                  setIsMobileMenuOpen(false);
-                }}
-                className="w-full bg-gradient-to-r from-ko-500 to-ko-600 text-primary-foreground hover:from-ko-600 hover:to-ko-700 font-semibold"
-              >
-                Join Now
-              </Button>
+              {user ? (
+                <>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      navigate(profilePath);
+                      setIsMobileMenuOpen(false);
+                    }}
+                    className="w-full border-border text-foreground hover:bg-muted gap-2"
+                  >
+                    <UserIcon className="w-4 h-4" />
+                    Profile
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    onClick={() => {
+                      onLogout?.();
+                      setIsMobileMenuOpen(false);
+                    }}
+                    className="w-full text-muted-foreground hover:text-foreground hover:bg-muted gap-2"
+                  >
+                    <LogOut className="w-4 h-4" />
+                    Logout
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      navigate('/login');
+                      setIsMobileMenuOpen(false);
+                    }}
+                    className="w-full border-border text-foreground hover:bg-muted"
+                  >
+                    Login
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      navigate('/login');
+                      setIsMobileMenuOpen(false);
+                    }}
+                    className="w-full bg-gradient-to-r from-ko-500 to-ko-600 text-primary-foreground hover:from-ko-600 hover:to-ko-700 font-semibold"
+                  >
+                    Join Now
+                  </Button>
+                </>
+              )}
             </div>
           </nav>
         </div>

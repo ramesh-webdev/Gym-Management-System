@@ -38,8 +38,8 @@ export function TrainerHeader({ userName = 'Trainer', notificationsPath }: Train
 
   const fetchNotifications = useCallback(async () => {
     try {
-      const list = await listNotifications({ limit: 10 });
-      setNotifications(list);
+      const res = await listNotifications({ page: 1, limit: 10 });
+      setNotifications(res.data);
     } catch {
       setNotifications([]);
     }

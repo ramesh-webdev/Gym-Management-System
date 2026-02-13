@@ -3,17 +3,42 @@ const User = require('../models/User');
 const MembershipPlan = require('../models/MembershipPlan');
 const { getNextValue } = require('../models/Counter');
 const notificationService = require('../services/notification.service');
+const { parsePagination, sendPaginated } = require('../utils/pagination');
 
 /**
  * List all members. Admin only.
+ * Query: page (default 1), limit (default 20, max 100), search?, status?, planId?, pt? (hasPersonalTraining: true|false).
  */
 async function list(req, res, next) {
   try {
-    const users = await User.find({ role: 'member' })
-      .populate('membershipPlan', 'name price duration')
-      .populate('assignedTrainer', 'name phone')
-      .sort({ createdAt: -1 })
-      .lean();
+    const { page, limit, skip } = parsePagination(req.query, { defaultLimit: 20, maxLimit: 100 });
+    const { search, status, planId, pt } = req.query;
+    const filter = { role: 'member' };
+    if (status && status !== 'all' && ['active', 'inactive', 'suspended'].includes(status)) {
+      filter.status = status;
+    }
+    if (planId && planId !== 'all') {
+      filter.membershipPlan = planId;
+    }
+    if (pt === 'true') filter.hasPersonalTraining = true;
+    if (pt === 'false') filter.hasPersonalTraining = false;
+    if (search && typeof search === 'string' && search.trim()) {
+      const term = search.trim();
+      filter.$or = [
+        { name: { $regex: term, $options: 'i' } },
+        { phone: { $regex: term, $options: 'i' } },
+      ];
+    }
+    const [users, total] = await Promise.all([
+      User.find(filter)
+        .populate('membershipPlan', 'name price duration')
+        .populate('assignedTrainer', 'name phone')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      User.countDocuments(filter),
+    ]);
     const list = users.map((u) => {
       const { _id, passwordHash, membershipPlan, assignedTrainer, ...rest } = u;
       const item = {
@@ -42,7 +67,7 @@ async function list(req, res, next) {
       if (item.joinDate) item.joinDate = item.joinDate.toISOString();
       return item;
     });
-    res.json(list);
+    sendPaginated(res, list, total, page, limit);
   } catch (err) {
     next(err);
   }

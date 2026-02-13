@@ -1,8 +1,25 @@
 import { api } from './client';
-import type { Payment } from '@/types';
+import type { Payment, PaginatedResponse } from '@/types';
 
-export function listPayments(): Promise<Payment[]> {
-  return api.get<Payment[]>('/payments');
+export interface ListPaymentsParams {
+  page?: number;
+  limit?: number;
+  status?: string;
+  search?: string;
+  dateFrom?: string; // ISO
+  dateTo?: string;   // ISO
+}
+
+export function listPayments(params?: ListPaymentsParams): Promise<PaginatedResponse<Payment>> {
+  const search = new URLSearchParams();
+  if (params?.page != null) search.set('page', String(params.page));
+  if (params?.limit != null) search.set('limit', String(params.limit));
+  if (params?.status && params.status !== 'all') search.set('status', params.status);
+  if (params?.search?.trim()) search.set('search', params.search.trim());
+  if (params?.dateFrom) search.set('dateFrom', params.dateFrom);
+  if (params?.dateTo) search.set('dateTo', params.dateTo);
+  const qs = search.toString();
+  return api.get<PaginatedResponse<Payment>>(`/payments${qs ? `?${qs}` : ''}`);
 }
 
 export interface CreatePaymentBody {

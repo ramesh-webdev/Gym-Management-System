@@ -1,3 +1,12 @@
+/** Standard shape for paginated list API responses. */
+export interface PaginatedResponse<T> {
+  data: T[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
 // User Types
 export interface User {
   id: string;
@@ -196,6 +205,55 @@ export interface DashboardStats {
   monthlyRevenue: number;
   pendingPayments: number;
   expiringMemberships: number;
+}
+
+// Admin dashboard overview API response
+export interface DashboardOverviewStats extends DashboardStats {
+  totalTrainers?: number;
+  revenueTrend?: number;
+  membersTrend?: number;
+  /** Set when date filter is applied */
+  periodRevenue?: number;
+  periodNewMembers?: number;
+}
+
+export interface DashboardOverviewResponse {
+  stats: DashboardOverviewStats;
+  revenueChartData: Array<{ month: string; monthKey: string; revenue: number }>;
+  recentMembers: Array<{
+    id: string;
+    name: string;
+    avatar?: string;
+    status: string;
+    membershipType: string;
+    hasPersonalTraining: boolean;
+    membershipExpiry: string | null;
+    joinDate: string | null;
+    createdAt: string | null;
+  }>;
+  recentPayments: Array<{
+    id: string;
+    memberId: string;
+    memberName: string;
+    amount: number;
+    type: string;
+    status: string;
+    date: string | null;
+    dueDate: string | null;
+    invoiceNumber: string;
+    createdAt: string | null;
+    planName: string | null;
+    productName: string | null;
+  }>;
+  expiringMembers: Array<{
+    id: string;
+    name: string;
+    membershipId?: string;
+    membershipType: string;
+    membershipExpiry: string | null;
+  }>;
+  /** Present when overview was requested with dateFrom/dateTo */
+  dateRange?: { dateFrom: string; dateTo: string };
 }
 
 // Report Types

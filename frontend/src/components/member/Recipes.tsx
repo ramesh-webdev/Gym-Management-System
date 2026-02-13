@@ -29,6 +29,7 @@ import {
 } from '@/components/ui/pagination';
 import { getRecipes } from '@/api/recipes';
 import type { Recipe } from '@/types';
+import { toast } from 'sonner';
 
 export function Recipes() {
   const [recipes, setRecipes] = useState<Recipe[]>([]);
@@ -39,45 +40,42 @@ export function Recipes() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
   const itemsPerPage = 9;
-
-  useEffect(() => {
-    loadRecipes();
-  }, []);
 
   const loadRecipes = async () => {
     try {
       setLoading(true);
-      // Get only active recipes (public view)
-      const data = await getRecipes(undefined, true);
-      setRecipes(data);
+      const categoryParam = categoryFilter === 'all' ? undefined : categoryFilter as any;
+      const res = await getRecipes(categoryParam, true, { page: currentPage, limit: itemsPerPage });
+      setRecipes(res.data);
+      setTotalPages(res.totalPages);
     } catch (error: any) {
       console.error('Failed to load recipes:', error);
-      // Don't show toast for members, just log
+      toast.error(error?.message || 'Failed to load recipes. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
-  const filteredRecipes = recipes.filter((recipe) => {
-    const matchesSearch =
-      recipe.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      recipe.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      recipe.tags.some((tag) => tag.toLowerCase().includes(searchQuery.toLowerCase()));
-    const matchesCategory = categoryFilter === 'all' || recipe.category === categoryFilter;
-    return matchesSearch && matchesCategory;
-  });
+  useEffect(() => {
+    loadRecipes();
+  }, [currentPage, categoryFilter]);
 
-  const totalPages = Math.ceil(filteredRecipes.length / itemsPerPage);
-  const paginatedRecipes = filteredRecipes.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
-
-  // Reset to first page when search or category changes
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery, categoryFilter]);
+  }, [categoryFilter]);
+
+  const filteredRecipes = recipes.filter((recipe) => {
+    if (!searchQuery.trim()) return true;
+    const q = searchQuery.toLowerCase();
+    return (
+      recipe.name.toLowerCase().includes(q) ||
+      (recipe.description || '').toLowerCase().includes(q) ||
+      recipe.tags.some((tag) => tag.toLowerCase().includes(q))
+    );
+  });
+  const paginatedRecipes = filteredRecipes;
 
   const handleRecipeClick = (recipe: Recipe) => {
     setSelectedRecipe(recipe);

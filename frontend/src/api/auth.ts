@@ -4,6 +4,15 @@ import type { User } from '@/types';
 const USER_KEY = 'user';
 const TOKEN_KEY = 'accessToken';
 
+function getStorage(rememberMe: boolean): Storage {
+  return rememberMe ? localStorage : sessionStorage;
+}
+
+/** Read from persistent (remember me) storage first, then session. */
+function getStoredUserFromStorage(): string | null {
+  return localStorage.getItem(USER_KEY) || sessionStorage.getItem(USER_KEY);
+}
+
 /** User as stored from API (dates may be strings; members have extra fields) */
 type UserFromStorage = User & {
   membershipExpiry?: Date | string;
@@ -37,27 +46,32 @@ function parseStoredUser(raw: string | null): User | null {
   } catch {
     localStorage.removeItem(USER_KEY);
     localStorage.removeItem(TOKEN_KEY);
+    sessionStorage.removeItem(USER_KEY);
+    sessionStorage.removeItem(TOKEN_KEY);
     return null;
   }
 }
 
 /**
  * Login with phone and password. Server returns the user with their actual role.
- * On success: stores user + token in localStorage and returns user.
+ * rememberMe: true = store in localStorage (persists across tabs/restarts); false = sessionStorage (cleared when tab closes).
+ * On success: stores user + token in the chosen storage and returns user.
  */
-export async function login(phone: string, password: string): Promise<User> {
-  const res = await api.post<{ user: User; accessToken: string }>('/auth/login', {
+export async function login(phone: string, password: string, rememberMe: boolean = false): Promise<User> {
+  const res = await api.post<{ user: User; accessToken: string; expiresIn?: number }>('/auth/login', {
     phone: phone.trim(),
     password,
+    rememberMe,
   });
-  localStorage.setItem(TOKEN_KEY, res.accessToken);
-  localStorage.setItem(USER_KEY, JSON.stringify(res.user));
+  const storage = getStorage(rememberMe);
+  storage.setItem(TOKEN_KEY, res.accessToken);
+  storage.setItem(USER_KEY, JSON.stringify(res.user));
   return parseStoredUser(JSON.stringify(res.user)) ?? res.user;
 }
 
 /**
  * Register a new member (self-signup).
- * On success: stores user + token in localStorage and returns user.
+ * On success: stores user + token in sessionStorage (session-only; use login with rememberMe for persistent).
  */
 export async function register(name: string, phone: string, password: string): Promise<User> {
   const res = await api.post<{ user: User; accessToken: string }>('/auth/register', {
@@ -65,14 +79,15 @@ export async function register(name: string, phone: string, password: string): P
     phone: phone.trim(),
     password,
   });
-  localStorage.setItem(TOKEN_KEY, res.accessToken);
-  localStorage.setItem(USER_KEY, JSON.stringify(res.user));
+  const storage = sessionStorage;
+  storage.setItem(TOKEN_KEY, res.accessToken);
+  storage.setItem(USER_KEY, JSON.stringify(res.user));
   return parseStoredUser(JSON.stringify(res.user)) ?? res.user;
 }
 
-/** Get current user from localStorage (for initial load / refresh). */
+/** Get current user from storage (localStorage first for remember me, then sessionStorage). */
 export function getStoredUser(): User | null {
-  return parseStoredUser(localStorage.getItem(USER_KEY));
+  return parseStoredUser(getStoredUserFromStorage());
 }
 
 /** Get current access token. */
@@ -80,10 +95,12 @@ export function getStoredToken(): string | null {
   return api.getToken();
 }
 
-/** Logout: clear token and user from localStorage. */
+/** Logout: clear token and user from both storages (no leftover session). */
 export function logout(): void {
   localStorage.removeItem(USER_KEY);
   localStorage.removeItem(TOKEN_KEY);
+  sessionStorage.removeItem(USER_KEY);
+  sessionStorage.removeItem(TOKEN_KEY);
 }
 
 /**

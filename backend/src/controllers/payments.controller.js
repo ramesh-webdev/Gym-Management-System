@@ -6,6 +6,7 @@ const GymSettings = require('../models/GymSettings');
 const { getNextValue } = require('../models/Counter');
 const notificationService = require('../services/notification.service');
 const config = require('../config/env');
+const { parsePagination, sendPaginated } = require('../utils/pagination');
 
 /** Run when a payment is marked paid: extend membership if type=membership (and plan is not add-on), send notifications. */
 async function applyPaymentSuccess(payment) {
@@ -64,16 +65,35 @@ async function applyPaymentSuccess(payment) {
 
 /**
  * List payments. Admin: all; Member: own only.
+ * Query: page (default 1), limit (default 20, max 100), status?, search? (member name).
  * Populates plan/product so we can return planName and productName for the "for what" detail.
  */
 async function list(req, res, next) {
   try {
     const filter = req.user.role === 'admin' ? {} : { member: req.user.id };
-    const payments = await Payment.find(filter)
-      .populate('membershipPlanId', 'name')
-      .populate('product', 'name')
-      .sort({ createdAt: -1 })
-      .lean();
+    const { status, search, dateFrom, dateTo } = req.query;
+    if (status && status !== 'all' && ['paid', 'pending', 'overdue', 'cancelled'].includes(status)) {
+      filter.status = status;
+    }
+    if (search && typeof search === 'string' && search.trim()) {
+      filter.memberName = { $regex: search.trim(), $options: 'i' };
+    }
+    if (dateFrom || dateTo) {
+      filter.date = {};
+      if (dateFrom) filter.date.$gte = new Date(dateFrom);
+      if (dateTo) filter.date.$lte = new Date(dateTo);
+    }
+    const { page, limit, skip } = parsePagination(req.query, { defaultLimit: 20, maxLimit: 100 });
+    const [payments, total] = await Promise.all([
+      Payment.find(filter)
+        .populate('membershipPlanId', 'name')
+        .populate('product', 'name')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      Payment.countDocuments(filter),
+    ]);
     const list = payments.map((p) => ({
       id: p._id.toString(),
       memberId: p.member?.toString() || p.member,
@@ -89,7 +109,7 @@ async function list(req, res, next) {
       planName: p.membershipPlanId?.name || null,
       productName: p.product?.name || null,
     }));
-    res.json(list);
+    sendPaginated(res, list, total, page, limit);
   } catch (err) {
     next(err);
   }

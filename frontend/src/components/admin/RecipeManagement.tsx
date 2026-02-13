@@ -95,42 +95,46 @@ export function RecipeManagement() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [currentPage, setCurrentPage] = useState(1);
+  const [totalRecipes, setTotalRecipes] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
   const itemsPerPage = 6;
 
   useEffect(() => {
     loadRecipes();
-  }, []);
+  }, [currentPage, categoryFilter]);
 
   const loadRecipes = async () => {
     try {
       setLoading(true);
-      const data = await getRecipes();
-      setRecipes(data);
+      const categoryParam = categoryFilter === 'all' ? undefined : categoryFilter as any;
+      const res = await getRecipes(categoryParam, undefined, { page: currentPage, limit: itemsPerPage });
+      setRecipes(res.data);
+      setTotalRecipes(res.total);
+      setTotalPages(res.totalPages);
     } catch (error: any) {
       toast.error(error?.message || 'Failed to load recipes');
+      setRecipes([]);
+      setTotalRecipes(0);
+      setTotalPages(1);
     } finally {
       setLoading(false);
     }
   };
 
-  const filteredRecipes = recipes.filter((recipe) => {
-    const matchesSearch =
-      recipe.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      recipe.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      recipe.tags.some((tag) => tag.toLowerCase().includes(searchQuery.toLowerCase()));
-    const matchesCategory = categoryFilter === 'all' || recipe.category === categoryFilter;
-    return matchesSearch && matchesCategory;
-  });
-
-  const totalPages = Math.ceil(filteredRecipes.length / itemsPerPage);
-  const paginatedRecipes = filteredRecipes.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
-
   useEffect(() => {
     setCurrentPage(1);
   }, [searchQuery, categoryFilter]);
+
+  const filteredRecipes = recipes.filter((recipe) => {
+    if (!searchQuery.trim()) return true;
+    const q = searchQuery.toLowerCase();
+    return (
+      recipe.name.toLowerCase().includes(q) ||
+      (recipe.description || '').toLowerCase().includes(q) ||
+      recipe.tags.some((tag) => tag.toLowerCase().includes(q))
+    );
+  });
+  const paginatedRecipes = filteredRecipes;
 
   const handleAddRecipe = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -607,7 +611,7 @@ export function RecipeManagement() {
             {totalPages > 1 && (
               <div className="col-span-full flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-border mt-2">
                 <p className="text-sm text-muted-foreground">
-                  Showing {(currentPage - 1) * itemsPerPage + 1} to {Math.min(currentPage * itemsPerPage, filteredRecipes.length)} of {filteredRecipes.length} recipes
+                  Showing {(currentPage - 1) * itemsPerPage + 1} to {Math.min(currentPage * itemsPerPage, totalRecipes)} of {totalRecipes} recipes
                 </p>
                 <Pagination className="w-auto mx-0">
                   <PaginationContent>

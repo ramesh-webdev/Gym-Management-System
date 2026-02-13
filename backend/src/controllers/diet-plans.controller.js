@@ -1,10 +1,11 @@
 const DietPlan = require('../models/DietPlan');
 const User = require('../models/User');
 const notificationService = require('../services/notification.service');
+const { parsePagination, sendPaginated } = require('../utils/pagination');
 
 /**
  * List all diet plans. Admin/Trainer only.
- * Optionally filter by memberId query param.
+ * Query: memberId?, page (default 1), limit (default 20, max 100).
  * Trainers only see plans for their assigned clients.
  */
 async function list(req, res, next) {
@@ -18,15 +19,21 @@ async function list(req, res, next) {
     if (req.user.role === 'trainer') {
       const trainer = await User.findById(req.user.id).select('clients').lean();
       if (!trainer || !trainer.clients || trainer.clients.length === 0) {
-        return res.json([]);
+        return sendPaginated(res, [], 0, 1, 20);
       }
       filter.member = { $in: trainer.clients };
     }
-    const plans = await DietPlan.find(filter)
-      .populate('member', 'name phone')
-      .populate('nutritionist', 'name')
-      .sort({ createdAt: -1 })
-      .lean();
+    const { page, limit, skip } = parsePagination(req.query, { defaultLimit: 20, maxLimit: 100 });
+    const [plans, total] = await Promise.all([
+      DietPlan.find(filter)
+        .populate('member', 'name phone')
+        .populate('nutritionist', 'name')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      DietPlan.countDocuments(filter),
+    ]);
     const list = plans.map((p) => {
       const { _id, member, nutritionist, ...rest } = p;
       const item = {
@@ -47,7 +54,7 @@ async function list(req, res, next) {
       }
       return item;
     });
-    res.json(list);
+    sendPaginated(res, list, total, page, limit);
   } catch (err) {
     next(err);
   }

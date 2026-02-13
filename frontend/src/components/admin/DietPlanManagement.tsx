@@ -99,43 +99,51 @@ export function DietPlanManagement() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 6;
 
+  const [totalPlans, setTotalPlans] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+
   const loadDietPlans = useCallback(() => {
     setLoading(true);
-    getDietPlans()
-      .then(setDietPlans)
+    getDietPlans(undefined, { page: currentPage, limit: itemsPerPage })
+      .then((res) => {
+        setDietPlans(res.data);
+        setTotalPlans(res.total);
+        setTotalPages(res.totalPages);
+      })
       .catch(() => {
         toast.error('Failed to load diet plans');
         setDietPlans([]);
+        setTotalPlans(0);
+        setTotalPages(1);
       })
       .finally(() => setLoading(false));
-  }, []);
+  }, [currentPage]);
 
   useEffect(() => {
     loadDietPlans();
-    getMembers()
-      .then((allMembers) => {
-        setMembers(allMembers.filter((m) => m.hasPersonalTraining && m.status === 'active'));
+  }, [loadDietPlans]);
+
+  useEffect(() => {
+    getMembers({ page: 1, limit: 500 })
+      .then((res) => {
+        setMembers((res.data || []).filter((m) => m.hasPersonalTraining && m.status === 'active'));
       })
       .catch(() => {
         toast.error('Failed to load members');
         setMembers([]);
       });
-  }, [loadDietPlans]);
+  }, []);
 
   const filteredPlans = dietPlans.filter((plan) => {
     const member = members.find((m) => m.id === plan.memberId);
     const memberName = (plan as any).memberName || member?.name || '';
     const matchesSearch =
+      !searchQuery.trim() ||
       plan.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       memberName.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesSearch;
   });
-
-  const totalPages = Math.ceil(filteredPlans.length / itemsPerPage);
-  const paginatedPlans = filteredPlans.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
+  const paginatedPlans = filteredPlans;
 
   useEffect(() => {
     setCurrentPage(1);
@@ -600,7 +608,7 @@ export function DietPlanManagement() {
           {totalPages > 1 && (
             <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-border mt-2">
               <p className="text-sm text-muted-foreground">
-                Showing {(currentPage - 1) * itemsPerPage + 1} to {Math.min(currentPage * itemsPerPage, filteredPlans.length)} of {filteredPlans.length} plans
+                Showing {(currentPage - 1) * itemsPerPage + 1} to {Math.min(currentPage * itemsPerPage, totalPlans)} of {totalPlans} plans
               </p>
               <Pagination className="w-auto mx-0">
                 <PaginationContent>
