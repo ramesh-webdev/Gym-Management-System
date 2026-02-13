@@ -4,6 +4,7 @@ const { authMiddleware, requireRole } = require('../middleware/auth.middleware')
 
 const router = express.Router();
 
+router.get('/public', settingsController.getPublicSettings);
 router.get('/', authMiddleware, settingsController.getSettings);
 router.patch('/', authMiddleware, requireRole('admin'), settingsController.updateSettings);
 

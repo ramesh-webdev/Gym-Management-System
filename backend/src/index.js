@@ -7,7 +7,8 @@ const routes = require('./routes');
 const app = express();
 
 app.use(cors({ origin: true, credentials: true }));
-app.use(express.json());
+// Allow larger JSON payloads (e.g. testimonials with base64 images up to 1MB → ~1.35MB)
+app.use(express.json({ limit: '2mb' }));
 
 app.use('/api', routes);
 

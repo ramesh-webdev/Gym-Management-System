@@ -420,321 +420,321 @@ export function TrainersManagement() {
       </div>
 
       {/* Filters */}
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input
-              type="text"
-              placeholder="Search trainers..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="bg-muted/50 border-border text-foreground placeholder:text-muted-foreground pl-10"
-            />
-          </div>
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="h-10 px-4 rounded-lg bg-muted/50 border border-border text-foreground text-sm"
-          >
-            <option value="all">All Status</option>
-            <option value="active">Active</option>
-            <option value="inactive">Inactive</option>
-            <option value="suspended">Suspended</option>
-          </select>
+      <div className="flex flex-col sm:flex-row gap-4">
+        <div className="relative flex-1 max-w-md">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            type="text"
+            placeholder="Search trainers..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="bg-muted/50 border-border text-foreground placeholder:text-muted-foreground pl-10"
+          />
         </div>
-
-        {/* Trainers Grid */}
-        {
-          loading ? (
-            <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-6">
-              {Array.from({ length: 6 }).map((_, i) => <TrainerSkeleton key={i} />)}
-            </div>
-          ) : filteredTrainers.length === 0 ? (
-            <div className="text-center py-12">
-              <Users className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
-              <p className="text-muted-foreground">No trainers found. Create your first trainer!</p>
-            </div>
-          ) : (
-            <div className="space-y-6">
-              <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-6">
-                {paginatedTrainers.map((trainer) => (
-                  <div
-                    key={trainer.id}
-                    className="p-6 rounded-xl bg-card/50 border border-border hover:border-border transition-colors"
-                  >
-                    {/* Header */}
-                    <div className="flex items-start justify-between mb-4">
-                      <div className="flex items-center gap-4">
-                        <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-lime-500 to-lime-600 flex items-center justify-center text-primary-foreground font-bold text-xl">
-                          {trainer.name.charAt(0).toUpperCase()}
-                        </div>
-                        <div>
-                          <h3 className="font-display text-xl font-bold text-foreground">{trainer.name}</h3>
-                          <div className="flex items-center gap-1 text-lime-500">
-                            <Star className="w-4 h-4 fill-lime-500" />
-                            <span className="text-sm font-medium">{trainer.rating || 0}</span>
-                          </div>
-                        </div>
-                      </div>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground">
-                            <MoreHorizontal className="w-4 h-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="bg-card border-border">
-                          <DropdownMenuItem
-                            className="text-foreground hover:bg-muted/50 cursor-pointer"
-                            onClick={() => handleEdit(trainer)}
-                          >
-                            <Edit className="w-4 h-4 mr-2" />
-                            Edit
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            className="text-red-400 hover:bg-red-500/10 cursor-pointer"
-                            onClick={() => handleDelete(trainer.id)}
-                          >
-                            <Trash2 className="w-4 h-4 mr-2" />
-                            Remove
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-
-                    {/* Info */}
-                    <div className="space-y-3 mb-4">
-                      <div className="flex items-center gap-2 text-muted-foreground text-sm">
-                        <Phone className="w-4 h-4" />
-                        {trainer.phone}
-                      </div>
-                      <div className="flex items-center gap-2 text-muted-foreground text-sm">
-                        <Users className="w-4 h-4" />
-                        {trainer.clientsCount || 0} active clients
-                      </div>
-                    </div>
-
-                    {/* Specializations */}
-                    {trainer.specialization && trainer.specialization.length > 0 && (
-                      <div className="flex flex-wrap gap-2 mb-4">
-                        {trainer.specialization.map((spec, index) => (
-                          <Badge
-                            key={index}
-                            variant="secondary"
-                            className="bg-muted/50 text-muted-foreground hover:bg-muted"
-                          >
-                            {spec}
-                          </Badge>
-                        ))}
-                      </div>
-                    )}
-
-                    {/* Experience & Status */}
-                    <div className="flex items-center justify-between pt-4 border-t border-border">
-                      <div>
-                        <p className="text-muted-foreground text-sm">Experience</p>
-                        <p className="text-foreground font-medium">{trainer.experience || 0} years</p>
-                      </div>
-                      <Badge
-                        className={
-                          trainer.status === 'active'
-                            ? 'bg-lime-500/20 text-lime-500'
-                            : trainer.status === 'suspended'
-                              ? 'bg-red-500/20 text-red-500'
-                              : 'bg-muted text-muted-foreground'
-                        }
-                      >
-                        {trainer.status}
-                      </Badge>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Pagination UI */}
-              {totalPages > 1 && (
-                <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-border">
-                  <p className="text-sm text-muted-foreground">
-                    Showing {(currentPage - 1) * itemsPerPage + 1} to {Math.min(currentPage * itemsPerPage, filteredTrainers.length)} of {filteredTrainers.length} trainers
-                  </p>
-                  <Pagination className="w-auto mx-0">
-                    <PaginationContent>
-                      <PaginationItem>
-                        <PaginationPrevious
-                          href="#"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            if (currentPage > 1) setCurrentPage(currentPage - 1);
-                          }}
-                          className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
-                        />
-                      </PaginationItem>
-
-                      {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
-                        if (
-                          page === 1 ||
-                          page === totalPages ||
-                          (page >= currentPage - 1 && page <= currentPage + 1)
-                        ) {
-                          return (
-                            <PaginationItem key={page}>
-                              <PaginationLink
-                                href="#"
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  setCurrentPage(page);
-                                }}
-                                isActive={currentPage === page}
-                                className="cursor-pointer"
-                              >
-                                {page}
-                              </PaginationLink>
-                            </PaginationItem>
-                          );
-                        } else if (
-                          (page === 2 && currentPage > 3) ||
-                          (page === totalPages - 1 && currentPage < totalPages - 2)
-                        ) {
-                          return (
-                            <PaginationItem key={page}>
-                              <PaginationEllipsis />
-                            </PaginationItem>
-                          );
-                        }
-                        return null;
-                      })}
-
-                      <PaginationItem>
-                        <PaginationNext
-                          href="#"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            if (currentPage < totalPages) setCurrentPage(currentPage + 1);
-                          }}
-                          className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
-                        />
-                      </PaginationItem>
-                    </PaginationContent>
-                  </Pagination>
-                </div>
-              )}
-            </div>
-          )
-        }
-
-        {/* Edit Dialog */}
-        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-          <DialogContent className="bg-card border-border text-foreground max-w-lg max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle className="font-display text-2xl">Edit Trainer</DialogTitle>
-            </DialogHeader>
-            {editingTrainer && (
-              <form onSubmit={handleUpdateTrainer} className="space-y-4 pt-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-sm text-muted-foreground mb-2 block">First Name *</label>
-                    <Input
-                      className="bg-muted/50 border-border text-foreground"
-                      placeholder="John"
-                      value={editingTrainer.firstName}
-                      onChange={(e) => setEditingTrainer({ ...editingTrainer, firstName: e.target.value })}
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="text-sm text-muted-foreground mb-2 block">Last Name *</label>
-                    <Input
-                      className="bg-muted/50 border-border text-foreground"
-                      placeholder="Doe"
-                      value={editingTrainer.lastName}
-                      onChange={(e) => setEditingTrainer({ ...editingTrainer, lastName: e.target.value })}
-                      required
-                    />
-                  </div>
-                </div>
-                <div>
-                  <label className="text-sm text-muted-foreground mb-2 block">Phone *</label>
-                  <Input
-                    className="bg-muted/50 border-border text-foreground"
-                    placeholder="9876543210"
-                    value={editingTrainer.phone}
-                    onChange={(e) => setEditingTrainer({ ...editingTrainer, phone: e.target.value })}
-                    required
-                    maxLength={10}
-                  />
-                </div>
-                <div>
-                  <label className="text-sm text-muted-foreground mb-2 block">New Password (leave blank to keep current)</label>
-                  <div className="relative">
-                    <Input
-                      type={showNewPassword ? 'text' : 'password'}
-                      className="bg-muted/50 border-border text-foreground pr-10"
-                      placeholder="••••••••"
-                      value={(editingTrainer as any).newPassword || ''}
-                      onChange={(e) => setEditingTrainer({ ...editingTrainer, newPassword: e.target.value } as any)}
-                      minLength={6}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowNewPassword(!showNewPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                    >
-                      {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
-                  </div>
-                </div>
-                <div>
-                  <label className="text-sm text-muted-foreground mb-2 block">Specializations (comma-separated)</label>
-                  <Input
-                    className="bg-muted/50 border-border text-foreground"
-                    placeholder="e.g. Strength Training, HIIT, Yoga"
-                    value={Array.isArray(editingTrainer.specialization) ? editingTrainer.specialization.join(', ') : editingTrainer.specialization || ''}
-                    onChange={(e) => setEditingTrainer({ ...editingTrainer, specialization: e.target.value } as any)}
-                  />
-                </div>
-                <div>
-                  <label className="text-sm text-muted-foreground mb-2 block">Experience (years)</label>
-                  <Input
-                    type="number"
-                    className="bg-muted/50 border-border text-foreground"
-                    placeholder="5"
-                    value={editingTrainer.experience || ''}
-                    onChange={(e) => setEditingTrainer({ ...editingTrainer, experience: Number(e.target.value) } as any)}
-                    min="0"
-                  />
-                </div>
-                <div>
-                  <label className="text-sm text-muted-foreground mb-2 block">Bio</label>
-                  <Textarea
-                    className="bg-muted/50 border-border text-foreground"
-                    placeholder="Brief description about the trainer..."
-                    rows={3}
-                    value={editingTrainer.bio || ''}
-                    onChange={(e) => setEditingTrainer({ ...editingTrainer, bio: e.target.value } as any)}
-                  />
-                </div>
-                <div>
-                  <label className="text-sm text-muted-foreground mb-2 block">Status</label>
-                  <select
-                    className="w-full h-10 px-3 rounded-md bg-muted/50 border border-border text-foreground"
-                    value={editingTrainer.status}
-                    onChange={(e) => setEditingTrainer({ ...editingTrainer, status: e.target.value as any })}
-                  >
-                    <option value="active">Active</option>
-                    <option value="inactive">Inactive</option>
-                    <option value="suspended">Suspended</option>
-                  </select>
-                </div>
-                <Button
-                  type="submit"
-                  disabled={saving}
-                  className="w-full bg-lime-500 text-primary-foreground hover:bg-lime-400"
-                >
-                  {saving ? 'Saving...' : 'Save Changes'}
-                </Button>
-              </form>
-            )}
-          </DialogContent>
-        </Dialog>
+        <select
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+          className="h-10 px-4 rounded-lg bg-muted/50 border border-border text-foreground text-sm"
+        >
+          <option value="all">All Status</option>
+          <option value="active">Active</option>
+          <option value="inactive">Inactive</option>
+          <option value="suspended">Suspended</option>
+        </select>
       </div>
-      );
+
+      {/* Trainers Grid */}
+      {
+        loading ? (
+          <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-6">
+            {Array.from({ length: 6 }).map((_, i) => <TrainerSkeleton key={i} />)}
+          </div>
+        ) : filteredTrainers.length === 0 ? (
+          <div className="text-center py-12">
+            <Users className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
+            <p className="text-muted-foreground">No trainers found. Create your first trainer!</p>
+          </div>
+        ) : (
+          <div className="space-y-6">
+            <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-6">
+              {paginatedTrainers.map((trainer) => (
+                <div
+                  key={trainer.id}
+                  className="p-6 rounded-xl bg-card/50 border border-border hover:border-border transition-colors"
+                >
+                  {/* Header */}
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex items-center gap-4">
+                      <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-lime-500 to-lime-600 flex items-center justify-center text-primary-foreground font-bold text-xl">
+                        {trainer.name.charAt(0).toUpperCase()}
+                      </div>
+                      <div>
+                        <h3 className="font-display text-xl font-bold text-foreground">{trainer.name}</h3>
+                        <div className="flex items-center gap-1 text-lime-500">
+                          <Star className="w-4 h-4 fill-lime-500" />
+                          <span className="text-sm font-medium">{trainer.rating || 0}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground">
+                          <MoreHorizontal className="w-4 h-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="bg-card border-border">
+                        <DropdownMenuItem
+                          className="text-foreground hover:bg-muted/50 cursor-pointer"
+                          onClick={() => handleEdit(trainer)}
+                        >
+                          <Edit className="w-4 h-4 mr-2" />
+                          Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          className="text-red-400 hover:bg-red-500/10 cursor-pointer"
+                          onClick={() => handleDelete(trainer.id)}
+                        >
+                          <Trash2 className="w-4 h-4 mr-2" />
+                          Remove
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+
+                  {/* Info */}
+                  <div className="space-y-3 mb-4">
+                    <div className="flex items-center gap-2 text-muted-foreground text-sm">
+                      <Phone className="w-4 h-4" />
+                      {trainer.phone}
+                    </div>
+                    <div className="flex items-center gap-2 text-muted-foreground text-sm">
+                      <Users className="w-4 h-4" />
+                      {trainer.clientsCount || 0} active clients
+                    </div>
+                  </div>
+
+                  {/* Specializations */}
+                  {trainer.specialization && trainer.specialization.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mb-4">
+                      {trainer.specialization.map((spec, index) => (
+                        <Badge
+                          key={index}
+                          variant="secondary"
+                          className="bg-muted/50 text-muted-foreground hover:bg-muted"
+                        >
+                          {spec}
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Experience & Status */}
+                  <div className="flex items-center justify-between pt-4 border-t border-border">
+                    <div>
+                      <p className="text-muted-foreground text-sm">Experience</p>
+                      <p className="text-foreground font-medium">{trainer.experience || 0} years</p>
+                    </div>
+                    <Badge
+                      className={
+                        trainer.status === 'active'
+                          ? 'bg-lime-500/20 text-lime-500'
+                          : trainer.status === 'suspended'
+                            ? 'bg-red-500/20 text-red-500'
+                            : 'bg-muted text-muted-foreground'
+                      }
+                    >
+                      {trainer.status}
+                    </Badge>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Pagination UI */}
+            {totalPages > 1 && (
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-border">
+                <p className="text-sm text-muted-foreground">
+                  Showing {(currentPage - 1) * itemsPerPage + 1} to {Math.min(currentPage * itemsPerPage, filteredTrainers.length)} of {filteredTrainers.length} trainers
+                </p>
+                <Pagination className="w-auto mx-0">
+                  <PaginationContent>
+                    <PaginationItem>
+                      <PaginationPrevious
+                        href="#"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          if (currentPage > 1) setCurrentPage(currentPage - 1);
+                        }}
+                        className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                      />
+                    </PaginationItem>
+
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
+                      if (
+                        page === 1 ||
+                        page === totalPages ||
+                        (page >= currentPage - 1 && page <= currentPage + 1)
+                      ) {
+                        return (
+                          <PaginationItem key={page}>
+                            <PaginationLink
+                              href="#"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                setCurrentPage(page);
+                              }}
+                              isActive={currentPage === page}
+                              className="cursor-pointer"
+                            >
+                              {page}
+                            </PaginationLink>
+                          </PaginationItem>
+                        );
+                      } else if (
+                        (page === 2 && currentPage > 3) ||
+                        (page === totalPages - 1 && currentPage < totalPages - 2)
+                      ) {
+                        return (
+                          <PaginationItem key={page}>
+                            <PaginationEllipsis />
+                          </PaginationItem>
+                        );
+                      }
+                      return null;
+                    })}
+
+                    <PaginationItem>
+                      <PaginationNext
+                        href="#"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          if (currentPage < totalPages) setCurrentPage(currentPage + 1);
+                        }}
+                        className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                      />
+                    </PaginationItem>
+                  </PaginationContent>
+                </Pagination>
+              </div>
+            )}
+          </div>
+        )
+      }
+
+      {/* Edit Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="bg-card border-border text-foreground max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="font-display text-2xl">Edit Trainer</DialogTitle>
+          </DialogHeader>
+          {editingTrainer && (
+            <form onSubmit={handleUpdateTrainer} className="space-y-4 pt-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm text-muted-foreground mb-2 block">First Name *</label>
+                  <Input
+                    className="bg-muted/50 border-border text-foreground"
+                    placeholder="John"
+                    value={editingTrainer.firstName}
+                    onChange={(e) => setEditingTrainer({ ...editingTrainer, firstName: e.target.value })}
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="text-sm text-muted-foreground mb-2 block">Last Name *</label>
+                  <Input
+                    className="bg-muted/50 border-border text-foreground"
+                    placeholder="Doe"
+                    value={editingTrainer.lastName}
+                    onChange={(e) => setEditingTrainer({ ...editingTrainer, lastName: e.target.value })}
+                    required
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="text-sm text-muted-foreground mb-2 block">Phone *</label>
+                <Input
+                  className="bg-muted/50 border-border text-foreground"
+                  placeholder="9876543210"
+                  value={editingTrainer.phone}
+                  onChange={(e) => setEditingTrainer({ ...editingTrainer, phone: e.target.value })}
+                  required
+                  maxLength={10}
+                />
+              </div>
+              <div>
+                <label className="text-sm text-muted-foreground mb-2 block">New Password (leave blank to keep current)</label>
+                <div className="relative">
+                  <Input
+                    type={showNewPassword ? 'text' : 'password'}
+                    className="bg-muted/50 border-border text-foreground pr-10"
+                    placeholder="••••••••"
+                    value={(editingTrainer as any).newPassword || ''}
+                    onChange={(e) => setEditingTrainer({ ...editingTrainer, newPassword: e.target.value } as any)}
+                    minLength={6}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowNewPassword(!showNewPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  >
+                    {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+              <div>
+                <label className="text-sm text-muted-foreground mb-2 block">Specializations (comma-separated)</label>
+                <Input
+                  className="bg-muted/50 border-border text-foreground"
+                  placeholder="e.g. Strength Training, HIIT, Yoga"
+                  value={Array.isArray(editingTrainer.specialization) ? editingTrainer.specialization.join(', ') : editingTrainer.specialization || ''}
+                  onChange={(e) => setEditingTrainer({ ...editingTrainer, specialization: e.target.value } as any)}
+                />
+              </div>
+              <div>
+                <label className="text-sm text-muted-foreground mb-2 block">Experience (years)</label>
+                <Input
+                  type="number"
+                  className="bg-muted/50 border-border text-foreground"
+                  placeholder="5"
+                  value={editingTrainer.experience || ''}
+                  onChange={(e) => setEditingTrainer({ ...editingTrainer, experience: Number(e.target.value) } as any)}
+                  min="0"
+                />
+              </div>
+              <div>
+                <label className="text-sm text-muted-foreground mb-2 block">Bio</label>
+                <Textarea
+                  className="bg-muted/50 border-border text-foreground"
+                  placeholder="Brief description about the trainer..."
+                  rows={3}
+                  value={editingTrainer.bio || ''}
+                  onChange={(e) => setEditingTrainer({ ...editingTrainer, bio: e.target.value } as any)}
+                />
+              </div>
+              <div>
+                <label className="text-sm text-muted-foreground mb-2 block">Status</label>
+                <select
+                  className="w-full h-10 px-3 rounded-md bg-muted/50 border border-border text-foreground"
+                  value={editingTrainer.status}
+                  onChange={(e) => setEditingTrainer({ ...editingTrainer, status: e.target.value as any })}
+                >
+                  <option value="active">Active</option>
+                  <option value="inactive">Inactive</option>
+                  <option value="suspended">Suspended</option>
+                </select>
+              </div>
+              <Button
+                type="submit"
+                disabled={saving}
+                className="w-full bg-lime-500 text-primary-foreground hover:bg-lime-400"
+              >
+                {saving ? 'Saving...' : 'Save Changes'}
+              </Button>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
 }

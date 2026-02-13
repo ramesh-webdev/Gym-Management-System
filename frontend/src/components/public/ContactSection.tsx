@@ -1,15 +1,26 @@
 import { useEffect, useRef, useState } from 'react';
-import { MapPin, Phone, Clock, Send } from 'lucide-react';
+import { MapPin, Phone, Clock, Send, ArrowDown, Mail } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { getPublicSettings, type PublicSettingsResponse } from '@/api/settings';
 
 gsap.registerPlugin(ScrollTrigger);
 
+function formatTime(t: string) {
+  if (!t) return '';
+  const [h, m] = t.split(':');
+  const hour = parseInt(h || '0', 10);
+  const ampm = hour >= 12 ? 'PM' : 'AM';
+  const h12 = hour % 12 || 12;
+  return `${h12}:${m || '00'} ${ampm}`;
+}
+
 export function ContactSection() {
   const sectionRef = useRef<HTMLDivElement>(null);
+  const [publicSettings, setPublicSettings] = useState<PublicSettingsResponse | null>(null);
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
@@ -17,6 +28,12 @@ export function ContactSection() {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+
+  useEffect(() => {
+    getPublicSettings()
+      .then(setPublicSettings)
+      .catch(() => setPublicSettings(null));
+  }, []);
 
   useEffect(() => {
     const ctx = gsap.context(() => {
@@ -60,19 +77,63 @@ export function ContactSection() {
     {
       icon: MapPin,
       title: 'Location',
-      content: '123 Fitness Street, Gym City, GC 12345',
+      content: publicSettings?.address || 'Address will appear here once set in Settings.',
     },
     {
       icon: Phone,
       title: 'Phone',
-      content: '+1 (555) 123-4567',
+      content: publicSettings?.phone || 'Phone will appear here once set in Settings.',
+    },
+    {
+      icon: Mail,
+      title: 'Email',
+      content: publicSettings?.email || 'Email will appear here once set in Settings.',
     },
     {
       icon: Clock,
       title: 'Working Hours',
-      content: 'Mon - Sun: 5:00 AM - 11:00 PM',
+      content:
+        publicSettings?.workingHours?.entries?.length
+          ? publicSettings.workingHours.entries
+              .map((e) => `${e.days}: ${formatTime(e.open)} - ${formatTime(e.close)}`)
+              .join(' · ')
+          : 'Working hours will appear here once set in Settings.',
     },
   ];
+
+  const mapRef = useRef<HTMLDivElement>(null);
+  const [showScrollHint, setShowScrollHint] = useState(true);
+
+  useEffect(() => {
+    // Hide after 10 seconds
+    const timer = setTimeout(() => {
+      setShowScrollHint(false);
+    }, 10000);
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setShowScrollHint(false);
+        }
+      },
+      { threshold: 0.2 } // Trigger when 20% of the map is visible
+    );
+
+    if (mapRef.current) {
+      observer.observe(mapRef.current);
+    }
+
+    return () => observer.disconnect();
+  }, []);
+
+  const scrollToMap = () => {
+    mapRef.current?.scrollIntoView({ behavior: 'smooth' });
+    setShowScrollHint(false); // Hide immediately on click
+  };
 
   return (
     <section
@@ -80,6 +141,16 @@ export function ContactSection() {
       id="contact"
       className="relative py-24 lg:py-32 overflow-hidden bg-background"
     >
+      {/* Scroll Down Hint - Fixed Bottom */}
+      <div
+        onClick={scrollToMap}
+        className={`fixed bottom-8 left-1/2 -translate-x-1/2 z-50 flex flex-col items-center cursor-pointer animate-bounce bg-background/80 backdrop-blur-sm p-2 rounded-xl border border-border/50 shadow-sm hover:border-lime-500/50 transition-all duration-500 ${showScrollHint ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10 pointer-events-none'
+          }`}
+      >
+        <span className="text-xs font-medium text-muted-foreground mb-1">View Location</span>
+        <ArrowDown className="w-5 h-5 text-lime-500" />
+      </div>
+
       <div className="w-full px-4 sm:px-6 lg:px-12 xl:px-20">
         <div className="grid lg:grid-cols-2 gap-12 lg:gap-20">
           {/* Contact Info */}
@@ -200,6 +271,21 @@ export function ContactSection() {
                 </form>
               )}
             </div>
+          </div>
+        </div>
+
+        {/* Map Section */}
+        <div ref={mapRef} className="mt-12 lg:mt-20 scroll-mt-24">
+          <div className="w-full h-[400px] lg:h-[500px] rounded-2xl overflow-hidden border border-border shadow-lg">
+            <iframe
+              title="Gym Location"
+              src="https://maps.google.com/maps?q=10.751142,79.119317&z=15&output=embed"
+              className="w-full h-full grayscale-[0.5] hover:grayscale-0 transition-all duration-500"
+              style={{ border: 0 }}
+              allowFullScreen
+              loading="lazy"
+              referrerPolicy="no-referrer-when-downgrade"
+            />
           </div>
         </div>
       </div>

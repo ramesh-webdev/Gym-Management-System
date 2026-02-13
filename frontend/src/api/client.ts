@@ -39,12 +39,24 @@ async function handleError(res: Response): Promise<never> {
 }
 
 /**
- * GET request
+ * GET request (with auth when token present)
  */
 export async function get<T>(path: string): Promise<T> {
   const res = await fetch(buildUrl(path), {
     method: 'GET',
     headers: getHeaders(true),
+  });
+  if (!res.ok) await handleError(res);
+  return res.json();
+}
+
+/**
+ * GET request without auth (for public endpoints e.g. /settings/public)
+ */
+export async function getPublic<T>(path: string): Promise<T> {
+  const res = await fetch(buildUrl(path), {
+    method: 'GET',
+    headers: getHeaders(false),
   });
   if (!res.ok) await handleError(res);
   return res.json();
@@ -119,9 +131,10 @@ export async function postFormData<T>(path: string, formData: FormData): Promise
   return res.json();
 }
 
-/** Single api object - use api.get(), api.post(), etc. */
+/** Single api object - use api.get(), api.post(), api.getPublic(), etc. */
 export const api = {
   get,
+  getPublic,
   post,
   put,
   patch,
