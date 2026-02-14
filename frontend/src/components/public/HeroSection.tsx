@@ -78,9 +78,9 @@ export function HeroSection() {
             ref={headingRef}
             className="font-display text-6xl sm:text-7xl lg:text-8xl xl:text-9xl font-bold text-foreground leading-[0.9] mb-6"
           >
-            MAKE YOUR
+            DO THE
             <br />
-            BODY <span className="bg-gradient-to-r from-ko-500 to-ko-600 bg-clip-text text-transparent glow-text">SHAPE</span>
+            <span className="bg-gradient-to-r from-ko-500 to-ko-600 bg-clip-text text-transparent glow-text">IMPOSSIBLE</span>
           </h1>
 
           {/* Subheading */}
@@ -102,22 +102,13 @@ export function HeroSection() {
               Get Started
               <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
             </Button>
-            <Button
-              size="lg"
-              variant="outline"
-              onClick={() => navigate('/about')}
-              className="border-foreground/30 text-foreground hover:bg-muted font-semibold text-lg px-8 py-6 group"
-            >
-              <Play className="mr-2 w-5 h-5" />
-              Watch Demo
-            </Button>
           </div>
 
           {/* Stats */}
           <div className="flex flex-wrap gap-8 sm:gap-12 mt-16 pt-8 border-t border-ko-500/20">
             {[
               { value: '10+', label: 'Years Experience' },
-              { value: '5K+', label: 'Active Members' },
+              { value: '1K+', label: 'Active Members' },
               { value: '50+', label: 'Expert Trainers' },
               { value: '98%', label: 'Success Rate' },
             ].map((stat, index) => (

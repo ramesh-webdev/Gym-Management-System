@@ -8,7 +8,6 @@ import {
   CheckCircle,
   XCircle,
   Clock,
-  TrendingUp,
   Receipt,
   Info,
   Wallet,
