@@ -106,7 +106,7 @@ export function openRazorpayCheckout(options: OpenRazorpayOptions): Promise<Razo
         },
       });
 
-      rzp.on('payment.failed', (response: { error?: { description?: string } }) => {
+      rzp.on('payment.failed', (response: any) => {
         reject(new Error(response?.error?.description || 'Payment failed'));
       });
 
