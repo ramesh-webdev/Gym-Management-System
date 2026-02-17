@@ -103,23 +103,6 @@ export function HeroSection() {
               <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
             </Button>
           </div>
-
-          {/* Stats */}
-          <div className="flex flex-wrap gap-8 sm:gap-12 mt-16 pt-8 border-t border-ko-500/20">
-            {[
-              { value: '10+', label: 'Years Experience' },
-              { value: '1K+', label: 'Active Members' },
-              { value: '50+', label: 'Expert Trainers' },
-              { value: '98%', label: 'Success Rate' },
-            ].map((stat, index) => (
-              <div key={index} className="text-center sm:text-left">
-                <div className="font-display text-3xl sm:text-4xl font-bold bg-gradient-to-r from-ko-500 to-ko-600 bg-clip-text text-transparent drop-shadow-sm">
-                  {stat.value}
-                </div>
-                <div className="text-base font-medium text-foreground/90 mt-1">{stat.label}</div>
-              </div>
-            ))}
-          </div>
         </div>
       </div>
 
